@@ -60,6 +60,46 @@
     .typing-dots i:nth-child(2){animation-delay:.2s}.typing-dots i:nth-child(3){animation-delay:.4s}
     @keyframes typingPulse{0%,65%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
     @media(prefers-reduced-motion:reduce){.typing-dots i{animation:none}}
+    /* User-selected complete chat palette. Role name effects retain their own colours. */
+    :root{
+      --theme-page:#f4f6fb;--theme-surface:#ffffff;--theme-panel:#f8faff;
+      --theme-message:#ffffff;--theme-text:#202437;--theme-secondary:#697087;
+      --theme-border:#dce1ec;--theme-input:#ffffff;--theme-button-text:#ffffff;
+      --theme-header-text:#ffffff;
+    }
+    body{background:var(--theme-page)!important;color:var(--theme-text)}
+    .chat{background:var(--theme-surface);border-color:var(--theme-border)}
+    header{color:var(--theme-header-text)}
+    header h1,header p,.header-right{color:inherit}
+    .fullscreen-toggle,.rooms-toggle,.settings-btn,.presence-pill,.status{color:var(--theme-header-text)}
+    .auth-gate,.join,.signed-account,.admin,.rooms-drawer,.room-tools,.xp-status,.typing-indicator{
+      background:var(--theme-panel);color:var(--theme-text);border-color:var(--theme-border)
+    }
+    .presence-list,.settings-dialog,.attach-menu,.emoji-menu,.rooms-grid button,.shop-item,
+    .user-options,.advanced-options,.experimental-panel,.role-effects-box,.plus-preview,
+    .role-choices,.shop-items,.profile-card{background:var(--theme-surface);color:var(--theme-text);border-color:var(--theme-border)}
+    .settings-overlay .settings-dialog{background:var(--theme-surface);color:var(--theme-text)}
+    #messages{background:var(--theme-page)}
+    .bubble{background:var(--theme-message);color:var(--theme-text);border-color:var(--theme-border)}
+    .meta,.system,.typing-indicator,.room-tools span{color:var(--theme-secondary)}
+    .compose{background:var(--theme-surface);border-color:var(--theme-border)}
+    input:not([type="checkbox"]):not([type="color"]):not([type="file"]),textarea,select{
+      background:var(--theme-input);color:var(--theme-text);border-color:var(--theme-border)
+    }
+    input::placeholder,textarea::placeholder{color:var(--theme-secondary);opacity:.8}
+    button:not(.fullscreen-toggle):not(.rooms-toggle):not(.settings-btn):not(.presence-pill){
+      color:var(--theme-button-text)
+    }
+    .theme-editor{border-top:1px solid var(--theme-border);padding-top:12px;margin-top:12px}
+    .theme-editor>p{font-size:12px;color:var(--theme-secondary);margin:4px 0 10px}
+    .theme-color-row{display:grid;grid-template-columns:minmax(100px,1fr) 43px 100px;gap:7px;align-items:center;margin:8px 0}
+    .theme-color-row label{font-size:12px!important;color:var(--theme-text)!important;padding:0!important}
+    .theme-color-row input[type=color]{width:43px;height:38px;padding:2px;cursor:pointer;border:1px solid var(--theme-border);border-radius:7px}
+    .theme-color-row input[type=text]{width:100%;min-width:0;margin:0!important;padding:7px!important;font-size:12px}
+    .theme-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+    .theme-actions button{padding:8px 10px;font-size:12px}
+    .theme-actions .theme-reset{background:#64748b;color:#fff}
+    #themeFeedback{font-size:12px;color:var(--theme-secondary);margin-top:8px}
     .settings-btn{background:#ffffff24;color:white;padding:6px 10px;font-size:19px;border-radius:9px}
     .settings-overlay{position:fixed;inset:0;background:#101528aa;display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
     .settings-overlay[hidden]{display:none}
@@ -367,6 +407,18 @@
                 <button type="button" id="chatColorReset" class="chat-color-reset">Reset</button>
               </div>
               <p id="chatHexHelp" role="status">Default purple: #5865F2. Example: #FF6699.</p>
+            </div>
+            <div class="theme-editor" data-setting-label="all colours background white text buttons surfaces bubbles full theme">
+              <strong>🎨 Customise every chat colour</strong>
+              <p>Pick a colour or paste a #RRGGBB HEX code for each part of your chat. Changes are only for your browser.</p>
+              <div id="themeColorRows"></div>
+              <div class="theme-actions">
+                <button type="button" id="themeApply">Apply all colours</button>
+                <button type="button" id="themeCopy">Copy palette</button>
+                <button type="button" id="themePaste">Paste palette</button>
+                <button type="button" id="themeReset" class="theme-reset">Reset all</button>
+              </div>
+              <p id="themeFeedback" role="status">The white chat background can be changed here.</p>
             </div>
           </div>
         </div>
@@ -1165,6 +1217,107 @@
       setChatColor(DEFAULT_CHAT_COLOR);
       try{localStorage.removeItem(CHAT_COLOR_KEY);}catch{}
       $("chatHexHelp").textContent="Default purple restored: "+DEFAULT_CHAT_COLOR;
+    });
+    // Complete local theme palette. Colour input is validated before touching CSS.
+    const THEME_KEY="communityChatFullPaletteV1";
+    const THEME_FIELDS=[
+      ["page","Chat background","#f4f6fb","--theme-page"],
+      ["surface","White panels / window","#ffffff","--theme-surface"],
+      ["panel","Secondary panels","#f8faff","--theme-panel"],
+      ["message","Message bubbles","#ffffff","--theme-message"],
+      ["text","Main text","#202437","--theme-text"],
+      ["secondary","Secondary text","#697087","--theme-secondary"],
+      ["border","Borders","#dce1ec","--theme-border"],
+      ["input","Input boxes","#ffffff","--theme-input"],
+      ["headerText","Header text","#ffffff","--theme-header-text"],
+      ["buttonText","Button text","#ffffff","--theme-button-text"],
+      ["accent","Buttons / header","#5865F2","--accent"]
+    ];
+    const defaultPalette=()=>Object.fromEntries(THEME_FIELDS.map(([key,,value])=>[key,value]));
+    let themePalette=defaultPalette();
+    function themeApplyPalette(palette){
+      for(const [key,,fallback,cssVar] of THEME_FIELDS){
+        const value=validChatHex(palette[key])?palette[key]:fallback;
+        document.documentElement.style.setProperty(cssVar,value);
+      }
+      setChatColor(palette.accent||DEFAULT_CHAT_COLOR);
+    }
+    function themeReadInputs(){
+      const palette={};
+      for(const [key] of THEME_FIELDS){
+        const value=$("themeHex_"+key).value.trim().toUpperCase();
+        if(!validChatHex(value))throw new Error("Invalid HEX for "+key+". Use #RRGGBB.");
+        palette[key]=value;
+      }
+      return palette;
+    }
+    function themeShowInputs(palette){
+      for(const [key,,fallback] of THEME_FIELDS){
+        const hex=validChatHex(palette[key])?palette[key]:fallback;
+        $("themeHex_"+key).value=hex.toUpperCase();
+        $("themePicker_"+key).value=hex;
+      }
+    }
+    for(const [key,label,defaultValue] of THEME_FIELDS){
+      const row=document.createElement("div");row.className="theme-color-row";
+      const caption=document.createElement("label");caption.htmlFor="themeHex_"+key;caption.textContent=label;
+      const picker=document.createElement("input");picker.type="color";picker.id="themePicker_"+key;picker.value=defaultValue;
+      picker.title="Pick "+label+" colour";
+      const hex=document.createElement("input");hex.type="text";hex.id="themeHex_"+key;hex.maxLength=7;hex.value=defaultValue;hex.placeholder="#RRGGBB";
+      picker.addEventListener("input",()=>{hex.value=picker.value.toUpperCase();});
+      hex.addEventListener("input",()=>{if(validChatHex(hex.value))picker.value=hex.value;});
+      row.append(caption,picker,hex);$("themeColorRows").append(row);
+    }
+    try{
+      const stored=JSON.parse(localStorage.getItem(THEME_KEY)||"null");
+      if(stored&&typeof stored==="object"){
+        for(const [key] of THEME_FIELDS)if(validChatHex(stored[key]))themePalette[key]=stored[key];
+      }else{themePalette.accent=savedChatColor;}
+    }catch{themePalette.accent=savedChatColor;}
+    themeShowInputs(themePalette);themeApplyPalette(themePalette);
+    $("themeApply").addEventListener("click",()=>{
+      if(!hasExperimentalAccess())return;
+      try{
+        themePalette=themeReadInputs();themeApplyPalette(themePalette);
+        localStorage.setItem(THEME_KEY,JSON.stringify(themePalette));
+        localStorage.setItem(CHAT_COLOR_KEY,themePalette.accent);
+        $("themeFeedback").textContent="All chat colours saved in this browser!";
+      }catch(err){$("themeFeedback").textContent=err.message;}
+    });
+    $("themeReset").addEventListener("click",()=>{
+      if(!hasExperimentalAccess())return;
+      themePalette=defaultPalette();themeShowInputs(themePalette);themeApplyPalette(themePalette);
+      localStorage.removeItem(THEME_KEY);localStorage.removeItem(CHAT_COLOR_KEY);
+      $("themeFeedback").textContent="Original colours restored.";
+    });
+    $("themeCopy").addEventListener("click",async()=>{
+      try{
+        const value=JSON.stringify(themeReadInputs());
+        await navigator.clipboard.writeText(value);
+        $("themeFeedback").textContent="Full palette copied!";
+      }catch(err){$("themeFeedback").textContent="Could not copy. Check HEX codes and clipboard permission.";}
+    });
+    $("themePaste").addEventListener("click",async()=>{
+      try{
+        const pasted=JSON.parse(await navigator.clipboard.readText());
+        const valid=THEME_FIELDS.every(([key])=>validChatHex(pasted[key]));
+        if(!valid)throw Error("Invalid palette");
+        themeShowInputs(pasted);$("themeFeedback").textContent="Palette pasted. Click Apply all colours.";
+      }catch{$("themeFeedback").textContent="Paste a palette copied from this chat (clipboard permission required).";}
+    });
+    // Keep the original accent picker in sync with the full palette.
+    $("chatColorApply").addEventListener("click",()=>{
+      if(!hasExperimentalAccess())return;
+      themePalette.accent=$("chatHexInput").value.trim().toUpperCase();
+      $("themeHex_accent").value=themePalette.accent;
+      $("themePicker_accent").value=themePalette.accent;
+      try{localStorage.setItem(THEME_KEY,JSON.stringify(themePalette));}catch{}
+    });
+    $("chatColorReset").addEventListener("click",()=>{
+      themePalette.accent=DEFAULT_CHAT_COLOR;
+      $("themeHex_accent").value=DEFAULT_CHAT_COLOR;
+      $("themePicker_accent").value=DEFAULT_CHAT_COLOR;
+      try{localStorage.setItem(THEME_KEY,JSON.stringify(themePalette));}catch{}
     });
     // Five-click unlock is a UI discovery feature, not a security barrier.
     const EXP_UNLOCK_KEY="communityChatExperimentalUnlockedV1";
