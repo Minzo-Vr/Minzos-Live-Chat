@@ -53,6 +53,13 @@
     .role-effects-box small,.plus-preview small{color:#64748b;display:block;line-height:1.45}
     .plus-preview[hidden]{display:none!important}
     .profile-role-visibility[hidden]{display:none!important}
+    .typing-indicator{min-height:22px;padding:5px 15px 3px;font-size:12px;color:#64748b;background:#fff;font-weight:500}
+    .typing-indicator[hidden]{display:none}
+    .typing-dots{display:inline-flex;gap:3px;margin-left:5px;vertical-align:middle}
+    .typing-dots i{height:4px;width:4px;border-radius:50%;background:#8b8fa3;animation:typingPulse 1.2s infinite}
+    .typing-dots i:nth-child(2){animation-delay:.2s}.typing-dots i:nth-child(3){animation-delay:.4s}
+    @keyframes typingPulse{0%,65%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+    @media(prefers-reduced-motion:reduce){.typing-dots i{animation:none}}
     .settings-btn{background:#ffffff24;color:white;padding:6px 10px;font-size:19px;border-radius:9px}
     .settings-overlay{position:fixed;inset:0;background:#101528aa;display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
     .settings-overlay[hidden]{display:none}
@@ -488,6 +495,7 @@
       <p id="customEmojiStatus" class="media-status" role="status"></p>
       <button type="button" id="customEmojiClose" style="background:#73798c">Close</button>
     </section>
+    <div id="typingIndicator" class="typing-indicator" aria-live="polite" aria-atomic="true" hidden></div>
     <form class="compose" id="sendForm">
       <div class="attach-wrap"><button type="button" id="attachBtn" class="attach-btn" aria-expanded="false" aria-controls="attachMenu" title="Attachments">+</button>
         <div class="attach-menu" id="attachMenu" hidden>
@@ -801,6 +809,7 @@
       updateLockdownUI();
       addSystem(`You joined as ${name}.`);
       await registerPresence();
+      listenTyping();
       renderRooms();
       if(!fromProfile) messageInput.focus();
     }
@@ -812,6 +821,7 @@
       usernameInput.value="";
       usernameInput.placeholder="Re-enter username to rejoin";
       await stopMyPresence();
+      await clearMyTyping();
       updateLockdownUI();
       addSystem("You were marked offline after 5 minutes without sending a message. Enter your username to rejoin.");
     }
@@ -822,6 +832,7 @@
       usernameInput.value=savedUsername || "";
       usernameInput.placeholder="Re-enter username to rejoin";
       await stopMyPresence();
+      await clearMyTyping();
       updateLockdownUI();
       addSystem("An admin cleared the online members list. Re-enter your username to rejoin.");
     }
@@ -993,6 +1004,7 @@
     }
     async function switchRoom(n){
       if(n===activeRoom)return;
+      await clearMyTyping();
       if(activeRoom && roomIsMember()) await leaveRoom();
       if(stopRoomMembers){stopRoomMembers();stopRoomMembers=null;}
       activeRoom=n;roomMeta=roomMetaById[n]||{};roomMembers={};
@@ -1004,7 +1016,7 @@
           if(!Object.keys(roomMembers).length && roomMeta.owner) cleanupEmptyRoom(n);
         },err=>showError("Room membership unavailable: "+(err.code||err.message)));
       }
-      lastRoomView=roomCanView();renderRooms();updateLockdownUI();listenMessages();
+      lastRoomView=roomCanView();renderRooms();updateLockdownUI();listenMessages();listenTyping();
     }
     async function cleanupEmptyRoom(n){
       try {
@@ -1494,6 +1506,69 @@
       messages.scrollTop = messages.scrollHeight;
     }
 
+    // Ephemeral, per-room typing presence. One record per account, automatically
+    // removed on disconnect; old records are ignored after five seconds.
+    let typingUnsub=null,typingRef=null,typingDisconnect=null,typingClearTimer=null;
+    let typingLastWrite=0,typingEntries={},typingEpoch=0;
+    const typingRoomKey=()=>activeRoom?roomKey(activeRoom):"general";
+    function drawTyping(){
+      const now=Date.now(), names=[];
+      for(const [uid,entry] of Object.entries(typingEntries)){
+        if(uid===user?.uid||!entry||!Number.isFinite(entry.at)||now-entry.at>5000||entry.at>now+5000)continue;
+        if(typeof entry.name==="string"&&entry.name.trim())names.push(entry.name.slice(0,24));
+      }
+      const target=$("typingIndicator");
+      target.replaceChildren();
+      if(!names.length){target.hidden=true;return;}
+      target.hidden=false;
+      const who=document.createElement("strong");
+      who.textContent=names.length===1?names[0]:names.length===2?names.join(" and "):names.slice(0,2).join(", ")+` and ${names.length-2} others`;
+      target.append(who,document.createTextNode(names.length===1?" is typing":" are typing"));
+      const dots=document.createElement("span");dots.className="typing-dots";dots.setAttribute("aria-hidden","true");
+      for(let i=0;i<3;i++)dots.append(document.createElement("i"));
+      target.append(dots);
+    }
+    async function clearMyTyping(){
+      clearTimeout(typingClearTimer);typingClearTimer=null;
+      const old=typingRef,disconnect=typingDisconnect;
+      typingRef=null;typingDisconnect=null;typingLastWrite=0;
+      if(old&&db){try{await remove(old);}catch(err){console.warn("Typing cleanup",err);}}
+      if(disconnect){try{await disconnect.cancel();}catch(err){console.warn("Typing disconnect cleanup",err);}}
+    }
+    function listenTyping(){
+      ++typingEpoch;
+      if(typingUnsub){typingUnsub();typingUnsub=null;}
+      typingEntries={};drawTyping();
+      if(!db||!user)return;
+      const epoch=typingEpoch,room=typingRoomKey();
+      typingUnsub=onValue(ref(db,`chatTyping/${room}`),snap=>{
+        if(epoch!==typingEpoch)return;
+        typingEntries=snap.val()||{};drawTyping();
+      },err=>console.warn("Typing indicator unavailable",err));
+    }
+    async function publishTyping(){
+      if(!db||!user||!joined||!username||messageInput.disabled||!messageInput.value.trim()||blockedFromChat())return;
+      const now=Date.now();
+      if(now-typingLastWrite<1700)return;
+      typingLastWrite=now;
+      const target=ref(db,`chatTyping/${typingRoomKey()}/${user.uid}`);
+      try{
+        if(typingRef?.toString()!==target.toString()){
+          await clearMyTyping();
+          typingRef=target;
+          typingDisconnect=onDisconnect(target);
+          await typingDisconnect.remove();
+        }
+        await set(target,{name:username,at:Date.now()});
+      }catch(err){console.warn("Typing update unavailable",err);}
+    }
+    messageInput.addEventListener("input",()=>{
+      clearTimeout(typingClearTimer);
+      if(!messageInput.value.trim()){clearMyTyping().catch(console.warn);return;}
+      publishTyping().catch(console.warn);
+      typingClearTimer=setTimeout(()=>clearMyTyping().catch(console.warn),3200);
+    });
+    setInterval(drawTyping,1000);
     function listenMessages() {
       if (stopMessages) stopMessages();
       if (stopRemovedMessages) stopRemovedMessages();
@@ -1565,10 +1640,14 @@
       displayedMessages.clear();messages.replaceChildren();
     }
     function resetChatIdentity() {
+      clearMyTyping().catch(console.warn);
+      if(typingUnsub){typingUnsub();typingUnsub=null;}
+      typingEntries={};drawTyping();
       joined=false;username="";savedUsername="";lastMessageActivity=0;usernameInput.value="";usernameInput.disabled=false;joinBtn.disabled=false;
     }
     async function applyAuthAccount(account) {
       stopChatListeners();
+      if(user?.uid!==account?.uid){clearMyTyping().catch(console.warn);if(typingUnsub){typingUnsub();typingUnsub=null;}typingEntries={};drawTyping();}
       user=account;
       if(stopEconomy){stopEconomy();stopEconomy=null;}
       $("xpStatus").hidden=!account || !hasExperimentalAccess() || !chatPrefs.enableXp;
@@ -2130,6 +2209,7 @@
           createdAt: serverTimestamp()
         });
         messageInput.value = "";
+        clearMyTyping().catch(console.warn);
         await rewardMessageXp();
         lastMessageActivity = Date.now();
         lastSentAt = Date.now();
