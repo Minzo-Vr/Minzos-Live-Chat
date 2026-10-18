@@ -90,6 +90,8 @@
     button:not(.fullscreen-toggle):not(.rooms-toggle):not(.settings-btn):not(.presence-pill){
       color:var(--theme-button-text)
     }
+    .panic-settings{border-top:1px solid var(--theme-border);margin-top:12px;padding-top:12px}
+    .panic-settings strong{color:var(--theme-text)!important}
     .theme-editor{border-top:1px solid var(--theme-border);padding-top:12px;margin-top:12px}
     .theme-editor>p{font-size:12px;color:var(--theme-secondary);margin:4px 0 10px}
     .theme-color-row{display:grid;grid-template-columns:minmax(100px,1fr) 43px 100px;gap:7px;align-items:center;margin:8px 0}
@@ -408,8 +410,9 @@
               </div>
               <p id="chatHexHelp" role="status">Default purple: #5865F2. Example: #FF6699.</p>
             </div>
-            <div class="theme-editor" data-setting-label="all colours background white text buttons surfaces bubbles full theme">
-              <strong>🎨 Customise every chat colour</strong>
+            <details class="theme-editor" data-setting-label="all colours background white text buttons surfaces bubbles full theme">
+              <summary style="cursor:pointer;font-weight:700;color:var(--theme-text)">🎨 Secondary colours &amp; full theme ▾</summary>
+              <strong style="margin-top:12px">Customise every chat colour</strong>
               <p>Pick a colour or paste a #RRGGBB HEX code for each part of your chat. Changes are only for your browser.</p>
               <div id="themeColorRows"></div>
               <div class="theme-actions">
@@ -419,6 +422,17 @@
                 <button type="button" id="themeReset" class="theme-reset">Reset all</button>
               </div>
               <p id="themeFeedback" role="status">The white chat background can be changed here.</p>
+            </details>
+            <div class="panic-settings" data-setting-label="dead mans switch panic key quick exit close tab emergency">
+              <strong>⚠️ Dead man's switch (Quick Exit)</strong>
+              <p style="font-size:12px;color:var(--theme-secondary)">Instantly hides the chat and tries to close this tab. Browsers generally only allow scripts to close tabs they opened. No deliberate browser crash.</p>
+              <label><input type="checkbox" id="panicEnabled"> Enable quick-exit key</label>
+              <div style="display:flex;align-items:center;gap:9px;margin:8px 0">
+                <label for="panicKey" style="white-space:nowrap">Shortcut key</label>
+                <input type="text" id="panicKey" maxlength="1" value="`" style="max-width:65px;text-align:center" aria-label="Quick exit key">
+                <button type="button" id="panicSave">Save shortcut</button>
+              </div>
+              <p id="panicFeedback" role="status" style="font-size:12px;color:var(--theme-secondary)">Disabled by default. Shortcut is ignored while typing in a field.</p>
             </div>
           </div>
         </div>
@@ -645,14 +659,14 @@
     // Paste your GIPHY API key between the quotation marks to enable GIF search.
     // Direct GIF links work without a key. This key is public in browser HTML;
     // restrict its usage in the provider console where possible.
-    const GIPHY_API_KEY = "PASTE_GIPHY_API_KEY_HERE";
+    const GIPHY_API_KEY = "qI6rCR98J5lheRdADClfYroTO7y8yGsK";
     // Cloudinary unsigned RAW upload preset: configure both values in Cloudinary.
     // This is public browser configuration, NOT a secret API key.
-    const CLOUDINARY_CLOUD_NAME = "PASTE_CLOUD_NAME_HERE";
-    const CLOUDINARY_UPLOAD_PRESET = "PASTE_UNSIGNED_PRESET_HERE";
+    const CLOUDINARY_CLOUD_NAME = "lplbbbdh";
+    const CLOUDINARY_UPLOAD_PRESET = "chat_files";
     // Optional: a separate unsigned Cloudinary preset allowing image/upload.
     // Leave blank to use the existing file preset (if it permits images).
-    const CLOUDINARY_IMAGE_PRESET = "";
+    const CLOUDINARY_IMAGE_PRESET = "chat_images";
     const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
     const FILE_EXTENSIONS = new Set(["pdf","txt","csv","doc","docx","xls","xlsx","ppt","pptx","zip","jpg","jpeg","png","webp"]);
     const $ = (id) => document.getElementById(id);
@@ -1318,6 +1332,42 @@
       $("themeHex_accent").value=DEFAULT_CHAT_COLOR;
       $("themePicker_accent").value=DEFAULT_CHAT_COLOR;
       try{localStorage.setItem(THEME_KEY,JSON.stringify(themePalette));}catch{}
+    });
+    // Local quick exit. A web page cannot reliably close a user-opened tab or
+    // force a browser crash; blank the document and attempt window.close().
+    const PANIC_PREF_KEY="communityChatQuickExitV1";
+    let panicPrefs={enabled:false,key:"`"};
+    try{
+      const stored=JSON.parse(localStorage.getItem(PANIC_PREF_KEY)||"null");
+      if(stored&&typeof stored.key==="string"&&stored.key.length===1)
+        panicPrefs={enabled:stored.enabled===true,key:stored.key};
+    }catch{}
+    $("panicEnabled").checked=panicPrefs.enabled;
+    $("panicKey").value=panicPrefs.key;
+    $("panicSave").addEventListener("click",()=>{
+      if(!hasExperimentalAccess())return;
+      const key=$("panicKey").value;
+      if(key.length!==1||key===" "){
+        $("panicFeedback").textContent="Choose one non-space character.";return;
+      }
+      panicPrefs={enabled:$("panicEnabled").checked,key};
+      try{localStorage.setItem(PANIC_PREF_KEY,JSON.stringify(panicPrefs));}catch{}
+      $("panicFeedback").textContent=panicPrefs.enabled?`Quick Exit enabled. Press ${key} outside text fields.`:"Quick Exit disabled.";
+    });
+    function quickExit(){
+      // Stop exposing chat content immediately, before the browser decides
+      // whether window.close() is permitted.
+      document.documentElement.replaceChildren();
+      document.documentElement.style.cssText="background:#fff!important;color:#111!important";
+      document.title="Blank";
+      try{window.close();}catch{}
+    }
+    document.addEventListener("keydown",event=>{
+      if(!panicPrefs.enabled||!hasExperimentalAccess()||event.repeat||event.ctrlKey||event.altKey||event.metaKey)return;
+      const element=event.target;
+      if(element?.isContentEditable||["INPUT","TEXTAREA","SELECT"].includes(element?.tagName))return;
+      if(event.key!==panicPrefs.key)return;
+      event.preventDefault();quickExit();
     });
     // Five-click unlock is a UI discovery feature, not a security barrier.
     const EXP_UNLOCK_KEY="communityChatExperimentalUnlockedV1";
