@@ -148,6 +148,17 @@
     .console-form label{font:13px Consolas,"Courier New",monospace;color:#e8e8e8;white-space:nowrap}
     .console-form input{flex:1;min-width:0;background:#0c0c0c!important;color:#f9fafb!important;border:0!important;outline:0!important;font:13px Consolas,"Courier New",monospace;padding:5px!important}
     .console-form button{background:#444!important;color:#fff!important;padding:5px 10px}
+    .friends-dialog{width:min(650px,95vw);max-height:85vh;overflow:auto}
+    .friends-list{display:grid;gap:8px;margin:10px 0}
+    .friends-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px;border:1px solid var(--theme-border,#ddd);border-radius:10px;color:var(--theme-text,#222)}
+    .friends-item button{font-size:12px;padding:7px 9px}
+    .friends-toolbar{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+    .friends-toolbar input{min-width:150px;flex:1}
+    .dm-log{height:220px;overflow:auto;background:var(--theme-page,#f4f6fb);border-radius:9px;padding:10px;margin:10px 0;display:grid;align-content:start;gap:8px}
+    .dm-line{padding:8px 10px;border-radius:9px;background:var(--theme-message,#fff);color:var(--theme-text,#222);overflow-wrap:anywhere}
+    .dm-line.mine{border-left:3px solid var(--accent,#5865f2)}
+    .dm-form{display:flex;gap:7px}.dm-form input{flex:1;min-width:0}
+    .friends-note{font-size:12px;color:var(--theme-secondary,#667085)}
     .settings-btn{background:#ffffff24;color:white;padding:6px 10px;font-size:19px;border-radius:9px}
     .settings-overlay{position:fixed;inset:0;background:#101528aa;display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
     .settings-overlay[hidden]{display:none}
@@ -360,14 +371,53 @@
     }
     #googleSignIn:hover { background: #f1f4fa; }
     #googleSignIn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+    /* Discord-style collapsible DM sidebar */
+    #dmSidebar[hidden]{display:none!important}
+    #dmSidebar{position:fixed;z-index:48;left:0;top:0;bottom:0;width:260px;display:flex;flex-direction:column;background:#222638;color:#f5f6fb;box-shadow:3px 0 22px #0004;font-size:13px}
+    .dm-side-head{padding:13px 12px;border-bottom:1px solid #454b61;display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .dm-side-head strong{font-size:15px}
+    #dmSideClose{background:#414963!important;color:#fff!important;padding:5px 10px;border-radius:7px}
+    .dm-side-content{padding:10px;display:flex;flex-direction:column;gap:10px;min-height:0;flex:1;overflow:auto}
+    .dm-side-tools{display:flex;gap:7px}
+    .dm-side-tools button{background:#444e72!important;color:#fff!important;flex:1;padding:8px 6px;font-size:12px}
+    .dm-side-label{font-size:11px;letter-spacing:.08em;color:#b7bed5;font-weight:700;margin:5px 0}
+    #dmSideFriends{display:flex;flex-direction:column;gap:4px}
+    .dm-side-friend{display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:transparent!important;color:#e4e7f3!important;border-radius:7px;padding:9px 10px;cursor:pointer;overflow:hidden}
+    .dm-side-friend:hover,.dm-side-friend.active{background:#424962!important}
+    .dm-side-friend span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #dmSidebar #dmSection{display:flex;flex-direction:column;gap:9px;min-height:0;flex:1}
+    #dmSidebar #dmSection[hidden]{display:none!important}
+    #dmSidebar #dmTitle{font-size:13px;color:#f8fafc;margin:5px 0}
+    #dmSidebar #dmLog{min-height:150px;max-height:none;flex:1;overflow:auto;background:#151a29;border:1px solid #444e65;border-radius:9px;padding:9px}
+    #dmSidebar .dm-line{overflow-wrap:anywhere}
+    #dmSidebar .dm-form{display:flex;flex-wrap:wrap;gap:5px}
+    #dmSidebar .dm-form input{min-width:0;flex:1 1 110px;background:#30374b!important;color:#fff!important}
+    #dmSidebar .dm-form button{padding:7px 10px}
+    #dmSidebar #giftAmount{min-width:0;flex:1 1 100px;background:#30374b!important;color:#fff!important}
+    #dmSidebar .friends-note{color:#b7bed5}
+    #dmSidebar .friends-toolbar button{font-size:11px}
+    body.dm-sidebar-open{padding-left:270px}
+    @media(max-width:700px){body.dm-sidebar-open{padding-left:0}#dmSidebar{width:min(300px,90vw);box-shadow:0 0 0 100vw #0006,4px 0 20px #0007}}
   </style>
 </head>
 <body>
+  <aside id="dmSidebar" hidden aria-label="Direct Messages sidebar">
+    <div class="dm-side-head"><strong>💬 Direct Messages</strong><button id="dmSideClose" type="button" aria-label="Collapse Direct Messages">✕</button></div>
+    <div class="dm-side-content">
+      <div class="dm-side-tools"><button id="dmSideRequests" type="button">👥 Friends & Requests</button></div>
+      <div class="dm-side-label">YOUR FRIENDS</div>
+      <nav id="dmSideFriends" aria-label="Friends to message"></nav>
+      <div id="dmSideConversation"></div>
+    </div>
+  </aside>
+
   <main class="chat" aria-label="Website visitor live chat">
     <header>
       <div><div style="display:flex;align-items:center;gap:8px"><h1>Community Chat</h1><button type="button" class="settings-btn" id="settingsBtn" aria-label="Chat settings" title="Chat settings" hidden>⚙️</button></div><p>General Chat · Messages and group calls</p></div>
       <div class="header-right">
         <button type="button" id="announcementsToggle" class="fullscreen-toggle" aria-label="Open announcements" aria-haspopup="dialog" title="What’s new">📢</button>
+        <button type="button" id="friendsToggle" class="fullscreen-toggle" title="Show or hide Direct Messages" aria-controls="dmSidebar" aria-expanded="false">💬 DMs ☰</button>
         <button type="button" id="consoleToggle" class="fullscreen-toggle" aria-label="Open command console" title="Command console">⌨️ Console</button>
         <button type="button" id="fullscreenToggle" class="fullscreen-toggle" aria-label="Enter full screen" title="Toggle full screen">⛶ Full screen</button>
         <button type="button" id="roomsToggle" class="rooms-toggle" aria-label="Open chat rooms" title="Chat rooms">☰ Rooms</button>
@@ -558,6 +608,23 @@
         </form>
       </div>
     </div>
+    <div id="friendsOverlay" class="settings-overlay" hidden>
+      <div class="settings-dialog friends-dialog" role="dialog" aria-modal="true" aria-labelledby="friendsTitle">
+        <h2 id="friendsTitle">👥 Friends & Direct Messages</h2>
+        <p class="friends-note">Send a request from someone's profile in General Chat. Both people must accept friendship before private messages work.</p>
+        <h3>📨 Friend requests</h3><div id="friendRequests" class="friends-list"></div>
+        <h3>💜 Your friends</h3><div id="friendList" class="friends-list"></div>
+        <section id="dmSection" hidden>
+          <h3 id="dmTitle">💬 Direct Messages</h3>
+          <div id="dmLog" class="dm-log" role="log" aria-live="polite"></div>
+          <form id="dmForm" class="dm-form"><input id="dmInput" maxlength="500" placeholder="Write a private message…" required><button type="submit">Send</button></form>
+          <div class="friends-toolbar" style="margin-top:10px"><input id="giftAmount" type="number" min="4" max="100000" step="4" placeholder="XP to gift (multiple of 4)"><button type="button" id="giftXpButton">🎁 Gift XP</button></div>
+          <p class="friends-note">Gifting deducts 25%: sending 100 XP gives your friend 75 XP. Gift transfers require the secure server function to be deployed.</p>
+        </section>
+        <p id="friendsFeedback" role="status" class="friends-note"></p>
+        <button type="button" id="friendsClose">Close</button>
+      </div>
+    </div>
     <div id="profileOverlay" class="settings-overlay" hidden>
       <div class="settings-dialog profile-card" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
         <img id="profileCardAvatar" alt="Profile picture">
@@ -579,6 +646,8 @@
           <button type="button" id="profileUnbanBtn">Remove ban / timeout</button>
           <p id="profileActionFeedback" role="status" style="font-size:12px"></p>
         </div>
+        <button type="button" id="profileAddFriend">➕ Add friend</button>
+        <button type="button" id="profileOpenDm">💬 Direct message</button>
         <button type="button" id="profileClose">Close</button>
       </div>
     </div>
@@ -764,6 +833,7 @@
       5. Apply the database rules supplied with the setup instructions.
     */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
     import {
       getDatabase, ref, push, query, limitToLast, limitToFirst, orderByKey, get, update, onChildAdded, onChildRemoved, onValue, set, remove, serverTimestamp, runTransaction, onDisconnect
@@ -1080,6 +1150,8 @@
       $("profileRoleLabel").hidden=anonymous||appearanceByUid[uid]?.showRole===false;
       $("profileIncognitoNotice").hidden=!anonymous;
       $("profileRoleActions").hidden=!isModerator()||!uid;
+      $("profileAddFriend").hidden=!user||!uid||uid===user.uid||!!friendMap[uid];
+      $("profileOpenDm").hidden=!user||!uid||!friendMap[uid];
       $("profileAssignRole").hidden=!isAdmin;
       renderRoleChoices(uid);
       $("profileActionFeedback").textContent="";
@@ -1461,7 +1533,11 @@
         added:[
           "📝 Added automatic changelog suggestions for the active announcement version!",
           "🔄 Added a Log recent changes button to refill missing release notes!",
-          "🕵️ Improved Incognito profiles: hide public role badges, bio and personal avatar while preserving Firebase identity!"
+          "🕵️ Improved Incognito profiles: hide public role badges, bio and personal avatar while preserving Firebase identity!",
+          "💬 NEW! Collapsible Discord-style DM sidebar on the left, with friend conversations and XP gifting!",
+          "👥 NEW! Friends list, send/accept/decline friend requests from member profiles!",
+          "💬 NEW! Private direct messages between accepted friends!",
+          "🎁 NEW! XP gifting with a 25% transfer deduction, protected by a server function (requires deployment)!"
         ],
         fixed:[
           "📢 Fixed announcement drafts resetting to an older version after refresh!",
@@ -1717,6 +1793,146 @@
     updateAnnouncementPreferences();
     maybeNotifyAnnouncement();
 
+    // Friends: mutual edges. DMs: each message is mirrored to both members'
+    // private inboxes; database rules require mutual friendship.
+    let friendUnsubs=[],dmUnsub=null,activeDmUid=null,friendMap={},friendRequests={};
+    const friendName=uid=>friendMap[uid]?.name||uid.slice(0,12);
+    function stopFriends(){
+      for(const stop of friendUnsubs)stop();friendUnsubs=[];
+      if(dmUnsub){dmUnsub();dmUnsub=null;}
+      friendMap={};friendRequests={};activeDmUid=null;
+      $("dmSection").hidden=true;drawFriends();
+      closeDmSidebar();
+    }
+    function friendStatus(text){$("friendsFeedback").textContent=text;}
+    function drawFriends(){
+      const side=$("dmSideFriends");side.replaceChildren();
+      const friendsForSide=Object.keys(friendMap);
+      if(!friendsForSide.length){const empty=document.createElement("p");empty.className="friends-note";empty.textContent="No friends yet. Open Friends & Requests to add someone!";side.append(empty);}
+      for(const uid of friendsForSide){
+        const button=document.createElement("button");button.type="button";button.className="dm-side-friend"+(activeDmUid===uid?" active":"");
+        const symbol=document.createElement("span");symbol.textContent="💜";
+        const label=document.createElement("span");label.textContent=friendName(uid);
+        button.append(symbol,label);button.addEventListener("click",()=>openDm(uid));side.append(button);
+      }
+      const requests=$("friendRequests"),list=$("friendList");requests.replaceChildren();list.replaceChildren();
+      const incoming=Object.entries(friendRequests);
+      if(!incoming.length)requests.textContent="No pending requests.";
+      for(const [uid,data] of incoming){
+        const row=document.createElement("div");row.className="friends-item";
+        const label=document.createElement("span");label.textContent=(data.name||"Member")+" wants to be friends";
+        const accept=document.createElement("button");accept.textContent="Accept 💜";
+        accept.addEventListener("click",()=>acceptFriend(uid));
+        const decline=document.createElement("button");decline.textContent="Decline";
+        decline.addEventListener("click",()=>remove(ref(db,`chatFriendRequests/${user.uid}/${uid}`)).catch(err=>friendStatus(err.message)));
+        row.append(label,accept,decline);requests.append(row);
+      }
+      const friends=Object.keys(friendMap);
+      if(!friends.length)list.textContent="No friends yet. Click someone's profile to send a request.";
+      for(const uid of friends){
+        const row=document.createElement("div");row.className="friends-item";
+        const label=document.createElement("span");label.textContent="💜 "+friendName(uid);
+        const dm=document.createElement("button");dm.textContent="💬 Message";dm.addEventListener("click",()=>openDm(uid));
+        const removeBtn=document.createElement("button");removeBtn.textContent="Remove";removeBtn.addEventListener("click",()=>removeFriend(uid));
+        row.append(label,dm,removeBtn);list.append(row);
+      }
+    }
+    function startFriends(){
+      stopFriends();if(!user||!db)return;
+      const uid=user.uid;
+      friendUnsubs.push(onValue(ref(db,`chatFriends/${uid}`),snap=>{
+        if(user?.uid!==uid)return;friendMap=snap.val()||{};drawFriends();
+        if(activeDmUid&&!friendMap[activeDmUid]){$("dmSection").hidden=true;activeDmUid=null;if(dmUnsub){dmUnsub();dmUnsub=null;}}
+      },err=>friendStatus("Friends unavailable: "+(err.code||err.message))));
+      friendUnsubs.push(onValue(ref(db,`chatFriendRequests/${uid}`),snap=>{
+        if(user?.uid!==uid)return;friendRequests=snap.val()||{};drawFriends();
+      },err=>friendStatus("Requests unavailable: "+(err.code||err.message))));
+    }
+    async function sendFriendRequest(uid){
+      if(!user||!joined||!uid||uid===user.uid)return friendStatus("Join the chat first, then select another member.");
+      if(friendMap[uid])return friendStatus("You're already friends!");
+      try{
+        await set(ref(db,`chatFriendRequests/${uid}/${user.uid}`),{name:username||user.displayName||"Member",at:Date.now()});
+        friendStatus("Friend request sent! 💌");
+      }catch(err){friendStatus("Request failed: "+(err.code||err.message));}
+    }
+    async function acceptFriend(uid){
+      if(!user||!friendRequests[uid])return;
+      try{
+        const otherName=friendRequests[uid].name||"Member";
+        const changes={};
+        changes[`chatFriends/${user.uid}/${uid}`]={name:otherName};
+        changes[`chatFriends/${uid}/${user.uid}`]={name:username||user.displayName||"Member"};
+        changes[`chatFriendRequests/${user.uid}/${uid}`]=null;
+        await update(ref(db),changes);friendStatus("You're friends now! 💜");
+      }catch(err){friendStatus("Accept failed: "+(err.code||err.message));}
+    }
+    async function removeFriend(uid){
+      if(!user||!confirm("Remove this friend? Your private messages will no longer be accessible unless you become friends again."))return;
+      try{const changes={};changes[`chatFriends/${user.uid}/${uid}`]=null;changes[`chatFriends/${uid}/${user.uid}`]=null;await update(ref(db),changes);friendStatus("Friend removed.");}
+      catch(err){friendStatus("Remove failed: "+(err.code||err.message));}
+    }
+    function openDmSidebar(){
+      if(!user||!joined){showError("Sign in and join before opening DMs.");return;}
+      $("dmSidebar").hidden=false;document.body.classList.add("dm-sidebar-open");
+      $("friendsToggle").setAttribute("aria-expanded","true");drawFriends();
+    }
+    function closeDmSidebar(){
+      $("dmSidebar").hidden=true;document.body.classList.remove("dm-sidebar-open");
+      $("friendsToggle").setAttribute("aria-expanded","false");
+    }
+    // Keep the conversation attached to the sidebar, never inside the popup.
+    $("dmSideConversation").append($("dmSection"));
+    $("dmSideClose").addEventListener("click",closeDmSidebar);
+    $("dmSideRequests").addEventListener("click",()=>openFriends());
+    function openFriends(){
+      if(!user||!joined){showError("Sign in and join before opening Friends.");return;}
+      $("friendsOverlay").hidden=false;drawFriends();
+    }
+    function openDm(uid){
+      if(!user||!friendMap[uid]){friendStatus("Accept a friend request first.");return;}
+      $("friendsOverlay").hidden=true;openDmSidebar();if(dmUnsub){dmUnsub();dmUnsub=null;}
+      activeDmUid=uid;$("dmSection").hidden=false;drawFriends();
+      $("dmTitle").textContent="💬 DM with "+friendName(uid);
+      $("dmLog").replaceChildren();
+      dmUnsub=onValue(query(ref(db,`chatDMs/${user.uid}/${uid}`),limitToLast(80)),snap=>{
+        const log=$("dmLog");log.replaceChildren();
+        snap.forEach(child=>{
+          const msg=child.val();if(!msg||typeof msg.text!=="string")return;
+          const line=document.createElement("div");line.className="dm-line"+(msg.from===user.uid?" mine":"");
+          const who=msg.from===user.uid?"You":friendName(uid);
+          line.textContent=who+": "+msg.text;log.append(line);
+        });log.scrollTop=log.scrollHeight;
+      },err=>friendStatus("DMs unavailable: "+(err.code||err.message)));
+    }
+    $("friendsToggle").addEventListener("click",()=>$("dmSidebar").hidden?openDmSidebar():closeDmSidebar());
+    $("friendsClose").addEventListener("click",()=>{$("friendsOverlay").hidden=true;});
+    $("friendsOverlay").addEventListener("click",e=>{if(e.target===$("friendsOverlay"))$("friendsOverlay").hidden=true;});
+    $("profileAddFriend").addEventListener("click",()=>{const uid=profileTargetUid;$("profileOverlay").hidden=true;openFriends();sendFriendRequest(uid);});
+    $("profileOpenDm").addEventListener("click",()=>{const uid=profileTargetUid;$("profileOverlay").hidden=true;openDm(uid);});
+    $("dmForm").addEventListener("submit",async e=>{
+      e.preventDefault();const text=$("dmInput").value.trim();
+      if(!text||!user||!activeDmUid||!friendMap[activeDmUid])return;
+      if(blockedFromChat()){friendStatus("You cannot send messages while timed out or banned.");return;}
+      const target=activeDmUid,key=push(ref(db,`chatDMs/${user.uid}/${target}`)).key;
+      const message={from:user.uid,text:text.slice(0,500),at:Date.now()};
+      const updates={};updates[`chatDMs/${user.uid}/${target}/${key}`]=message;
+      updates[`chatDMs/${target}/${user.uid}/${key}`]=message;
+      try{await update(ref(db),updates);$("dmInput").value="";friendStatus("Message sent privately. 💬");}
+      catch(err){friendStatus("DM failed: "+(err.code||err.message));}
+    });
+    $("giftXpButton").addEventListener("click",async()=>{
+      if(!user||!activeDmUid||!friendMap[activeDmUid])return;
+      const amount=Number($("giftAmount").value);
+      if(!Number.isSafeInteger(amount)||amount<4||amount>100000||amount%4!==0){friendStatus("Enter a whole XP amount from 4 to 100,000, divisible by 4.");return;}
+      if(!confirm(`Gift ${amount} XP? Your friend will receive ${amount*0.75} XP after the 25% fee. This cannot be undone.`))return;
+      try{
+        friendStatus("Processing secure XP transfer…");
+        const gift=httpsCallable(getFunctions(undefined,"us-central1"),"giftFriendXp");
+        const result=await gift({recipientUid:activeDmUid,amount});
+        friendStatus(`🎁 Sent ${amount} XP! Your friend received ${result.data.received} XP.`);
+      }catch(err){friendStatus("Gift unavailable: "+(err.code||err.message)+". Deploy the supplied secure Cloud Function first.");}
+    });
     // Command Prompt-style UI. Deliberately uses a fixed allowlist of safe
     // commands, not eval(), shell execution or arbitrary Firebase writes.
     const consoleOverlay=$("consoleOverlay"),consoleOutput=$("consoleOutput"),consoleInput=$("consoleInput");
@@ -2553,7 +2769,7 @@
       $("xpStatus").hidden=!account || !hasExperimentalAccess() || !chatPrefs.enableXp;
       if(roleUnsub){roleUnsub();roleUnsub=null;}if(moderationUnsub){moderationUnsub();moderationUnsub=null;}
       if(!account) {
-        isAdmin=false;startAnnouncementListeners();resetChatIdentity();setAuthDisplay(false);
+        stopFriends();isAdmin=false;startAnnouncementListeners();resetChatIdentity();setAuthDisplay(false);
         $("adminPanel").hidden=true;$("adminLogin").hidden=false;
         status.textContent="Sign in required";
         return;
@@ -2571,7 +2787,7 @@
       }
       resetChatIdentity();setAuthDisplay(true);
       startAnnouncementListeners();
-      startEconomy();startRoleListeners();
+      startEconomy();startFriends();startRoleListeners();
       $("adminPanel").hidden=!isAdmin;$("adminLogin").hidden=isAdmin;
       status.textContent=isAdmin?"Admin online":"Online";
       listenMessages();subscribeSettings();startPresence();startRoomIndex();
