@@ -10,6 +10,9 @@
     body { margin:0; padding:12px; background:transparent; color:var(--ink); font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
     .chat:fullscreen{width:100vw;height:100dvh;max-width:none;border:0;border-radius:0;display:flex;flex-direction:column;overflow:auto}
     .chat:fullscreen #messages{height:auto;min-height:0;flex:1;overflow-y:auto}
+    .chat:fullscreen{position:relative}
+    .chat:fullscreen #dmSidebar{position:absolute;left:0;top:0;bottom:0;z-index:60;height:100%;max-height:100%}
+    .chat:fullscreen #dmSidebar[hidden]{display:none!important}
     .fullscreen-toggle{border:0;background:#ffffff24;color:white;border-radius:8px;padding:7px 10px;cursor:pointer;font-size:13px;white-space:nowrap}
     .chat { max-width:760px; margin:0 auto; border:1px solid #e0e4ef; border-radius:18px; overflow:hidden; background:white; box-shadow:0 8px 28px #17255412; }
     header { padding:16px 18px; background:var(--accent); color:white; display:flex; align-items:center; justify-content:space-between; gap:12px; }
@@ -449,17 +452,17 @@
   </style>
 </head>
 <body>
-  <aside id="dmSidebar" hidden aria-label="Direct Messages sidebar">
-    <div class="dm-side-head"><strong>💬 Direct Messages</strong><button id="dmSideClose" type="button" aria-label="Collapse Direct Messages">✕</button></div>
-    <div class="dm-side-content">
-      <div class="dm-side-tools"><button id="dmSideRequests" type="button">👥 Friends & Requests</button></div>
-      <div class="dm-side-label">YOUR FRIENDS</div>
-      <nav id="dmSideFriends" aria-label="Friends to message"></nav>
-      <div id="dmSideConversation"></div>
-    </div>
-  </aside>
-
   <main class="chat" aria-label="Website visitor live chat">
+    <aside id="dmSidebar" hidden aria-label="Direct Messages sidebar">
+      <div class="dm-side-head"><strong>💬 Direct Messages</strong><button id="dmSideClose" type="button" aria-label="Collapse Direct Messages">✕</button></div>
+      <div class="dm-side-content">
+        <div class="dm-side-tools"><button id="dmSideRequests" type="button">👥 Friends & Requests</button></div>
+        <div class="dm-side-label">YOUR FRIENDS</div>
+        <nav id="dmSideFriends" aria-label="Friends to message"></nav>
+        <div id="dmSideConversation"></div>
+      </div>
+    </aside>
+
     <header>
       <div><div style="display:flex;align-items:center;gap:8px"><h1>Community Chat</h1><button type="button" class="settings-btn" id="settingsBtn" aria-label="Chat settings" title="Chat settings" hidden>⚙️</button></div><p>General Chat · Messages and group calls</p></div>
       <div class="header-right">
@@ -1630,7 +1633,8 @@
           "📢 Fixed announcement drafts resetting to an older version after refresh!",
           "🔐 Corrected Firebase version validation for Next Update / Reset!",
           "📝 Fixed saving empty announcement drafts without requiring an entry!",
-          "🐛 Fixed new update versions showing empty changelogs when known changes exist!"
+          "🐛 Fixed new update versions showing empty changelogs when known changes exist!",
+          "🖥️ Fixed the DM sidebar disappearing outside the fullscreen chat view!"
         ],removed:[]
       }
     };
