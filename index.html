@@ -1443,7 +1443,8 @@
         "🔐 Incognito retains Firebase account identity, roles and moderation controls!",
         "📝 Announcement drafts now accept emojis, symbols, Unicode and much longer entries without the old 30-entry / 180-character limit!",
         "⏮️ Previous update button restores earlier unpublished announcement drafts after using Next Update!",
-        "🕵️ Incognito message profiles now hide public role labels, bios and personal avatars while retaining Firebase UID and moderator controls!"
+        "🕵️ Incognito message profiles now hide public role labels, bios and personal avatars while retaining Firebase UID and moderator controls!",
+        "🐛 FIXED: Empty announcement drafts can now be saved without adding release notes first!"
       ],
       fixed:[
         "🎨 Fixed invisible text on the white Google sign-in button!",
@@ -1599,7 +1600,6 @@
       const version=$("announcementDraftVersion").value.trim();
       const features=collectDraftFeatures();
       if(!/^[0-9]+\.[0-9]+(?:\.[0-9]+)?$/.test(version)||version.length>20)throw Error("Use a version like 0.3 or 0.3.1.");
-      if(!features.length)throw Error("Add at least one announcement entry before saving.");
       if(features.length>500)throw Error("This draft is too large (maximum 500 entries).");
       if(features.some(f=>f.length>4000))throw Error("One entry is over 4,000 characters. Split it into multiple lines.");
       if(features.reduce((total,f)=>total+f.length,0)>100000)throw Error("Draft is over 100,000 characters. Please split it into releases.");
@@ -1610,7 +1610,8 @@
       if(!isAdmin||!user||!db)return;
       try{
         const draft=readAnnouncementDraft();
-        await set(ref(db,"chatAnnouncementDraft"),draft);
+        // Firebase represents an empty array as null; omit it for blank drafts.
+        await set(ref(db,"chatAnnouncementDraft"),draft.features.length?draft:{version:draft.version});
         $("announcementDraftStatus").textContent="💾 Draft saved. Only admins can see it.";
       }catch(err){$("announcementDraftStatus").textContent="Could not save: "+(err.code||err.message);}
     });
@@ -1618,6 +1619,7 @@
       if(!isAdmin||!user||!db)return;
       try{
         const draft=readAnnouncementDraft();
+        if(!draft.features.length)throw Error("Add at least one announcement entry before publishing.");
         if(!confirm(`Publish Version ${draft.version} to EVERYONE now?`))return;
         const key="v"+draft.version.replace(/\./g,"_");
         $("announcementPublishNow").disabled=true;
