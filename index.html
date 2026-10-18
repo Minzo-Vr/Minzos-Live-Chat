@@ -114,6 +114,13 @@
     .release-card li{margin:8px 0;line-height:1.4;font-size:14px;color:var(--theme-text,#202437)}
     .announcements-unread{position:relative}
     .announcements-unread::after{content:"";position:absolute;top:3px;right:3px;width:7px;height:7px;background:#ff4d6d;border:2px solid white;border-radius:50%}
+    .chat-toast-stack{position:fixed;right:16px;bottom:18px;z-index:180;display:grid;gap:9px;max-width:min(360px,calc(100vw - 32px));pointer-events:none}
+    .chat-toast{background:#202437;color:white;padding:12px 15px;border-radius:12px;box-shadow:0 8px 26px #0004;font-size:13px;line-height:1.45;pointer-events:auto;animation:toastSlide .22s ease-out}
+    .chat-toast strong{display:block;margin-bottom:3px}
+    @keyframes toastSlide{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .notification-settings{border-top:1px solid var(--theme-border,#dce1ec);margin-top:13px;padding-top:12px}
+    .notification-settings label{display:flex;align-items:center;gap:8px;margin:9px 0;font-size:13px}
+    .notification-settings small{display:block;color:var(--theme-secondary,#64748b);font-size:12px}
     .settings-btn{background:#ffffff24;color:white;padding:6px 10px;font-size:19px;border-radius:9px}
     .settings-overlay{position:fixed;inset:0;background:#101528aa;display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
     .settings-overlay[hidden]{display:none}
@@ -338,6 +345,7 @@
       </div>
       <audio id="backgroundMusic" preload="none"></audio>
     </div>
+    <div id="chatToastStack" class="chat-toast-stack" aria-live="polite" aria-atomic="false"></div>
     <div id="announcementsOverlay" class="settings-overlay" hidden>
       <div class="settings-dialog announcements-dialog" role="dialog" aria-modal="true" aria-labelledby="announcementsTitle" tabindex="-1">
         <div class="announcements-heading">
@@ -353,7 +361,7 @@
         <label for="settingsSearch">Search settings</label>
         <input id="settingsSearch" class="settings-search" type="search" placeholder="Search settings, e.g. music, bio, XP…" autocomplete="off">
         <p id="settingsSearchEmpty" hidden style="color:#64748b;font-size:12px">No matching settings found.</p>
-        <details id="userSettingsSection" class="user-options" data-setting-label="user settings profile picture username bio biography username effects role visibility">
+        <details id="userSettingsSection" class="user-options" data-setting-label="user settings profile picture username bio biography username effects role visibility notifications announcement red circle button alerts">
           <summary>👤 User Settings ▾</summary>
           <div class="user-options-inner">
           <p>Customize your profile. Your photo appears beside messages.</p>
@@ -384,6 +392,15 @@
             <small>This controls the role label visitors see when they click your profile. It does not change your actual permissions.</small>
             <button type="button" id="saveRoleAppearance">Save username &amp; profile options</button>
             <p id="roleAppearanceFeedback" role="status" style="font-size:12px"></p>
+          </div>
+          <div class="notification-settings" data-setting-label="announcement red dot circle button notification roles alerts">
+            <strong>📢 Announcements &amp; Notifications</strong>
+            <label><input type="checkbox" id="showAnnouncementDot" checked> Announcement red circle</label>
+            <label><input type="checkbox" id="showAnnouncementButton" checked> Announcement button 📢</label>
+            <label><input type="checkbox" id="enableChatNotifications"> 🔔 Notifications for announcements &amp; new roles</label>
+            <small>Notifications appear inside Community Chat while it's open. You can also enable browser notifications where supported.</small>
+            <button type="button" id="enableBrowserNotifications">Allow browser notifications</button>
+            <p id="notificationFeedback" role="status" style="font-size:12px"></p>
           </div>
           <div class="bio-editor" data-setting-label="bio biography about me profile description">
             <label for="settingsBio">About me / Bio (up to 160 characters)</label>
@@ -814,8 +831,9 @@
     function startRoleListeners(){
       if(roleUnsub)roleUnsub();if(moderationUnsub)moderationUnsub();if(customRoleUnsub)customRoleUnsub();
       roleMap={};moderationState={};myRole="member";
-      if(!user)return;
+      if(!user){noticeRoleBaselineUid=null;noticeRoleBaseline=null;return;}
       const uid=user.uid;
+      if(noticeRoleBaselineUid!==uid){noticeRoleBaselineUid=null;noticeRoleBaseline=null;}
       customRoleUnsub=onValue(ref(db,"chatCustomRoles"),snap=>{
         customRoles=snap.val()||{};renderCustomRoles();refreshRoleNameEffects();
         if(profileTargetUid)renderRoleChoices(profileTargetUid);
@@ -823,6 +841,7 @@
       roleUnsub=onValue(ref(db,"chatRoles"),snap=>{
         if(user?.uid!==uid)return;
         roleMap=snap.val()||{};
+        handleRoleNotification(uid);
         isAdmin=baseAdminClaim||hasRole(uid,"admin");
         myRole=actualRole(uid);
         $("adminPanel").hidden=!isAdmin;
@@ -1161,6 +1180,12 @@
     // Announcements are a versioned changelog, not Firebase chat messages.
     // Add a new object to the TOP of this list for each future release.
     const CHAT_RELEASES = [
+      {version:"0.2",date:"18 October 2026",features:[
+        "🔔 NEW! Optional notifications for new announcements and newly assigned roles!",
+        "📢 Show or hide the Announcements button in User Settings!",
+        "🔴 Choose whether the unread red announcement circle appears!",
+        "🎛️ Personal notification preferences saved in your browser!"
+      ]},
       {version:"0.1",date:"18 October 2026",features:[
         "📢 NEW! Announcements tab — see every update in one place!",
         "🎨 Collapsible secondary colour settings and full-theme HEX controls!",
@@ -1176,6 +1201,78 @@
         "🏠 Chat rooms, 🔎 search, 📞 group call invites and ⛶ fullscreen!"
       ]}
     ];
+    // Preferences apply only to this browser; announcements remain in the HTML.
+    const NOTICE_PREF_KEY="communityChatAnnouncementPrefsV1";
+    const NOTICE_VERSION_KEY="communityChatNotifiedAnnouncementVersionV1";
+    let noticePrefs={showDot:true,showButton:true,notifications:false};
+    try{
+      const saved=JSON.parse(localStorage.getItem(NOTICE_PREF_KEY)||"null");
+      if(saved&&typeof saved==="object"){
+        noticePrefs={showDot:saved.showDot!==false,showButton:saved.showButton!==false,notifications:saved.notifications===true};
+      }
+    }catch{}
+    function showChatToast(title,message){
+      const node=document.createElement("div");node.className="chat-toast";
+      const strong=document.createElement("strong");strong.textContent=title;
+      const body=document.createElement("span");body.textContent=message;
+      node.append(strong,body);$("chatToastStack").append(node);
+      setTimeout(()=>node.remove(),7000);
+    }
+    function notifyChat(title,message){
+      if(!noticePrefs.notifications)return;
+      showChatToast(title,message);
+      if(document.hidden&&"Notification" in window&&Notification.permission==="granted"){
+        try{new Notification(title,{body:message,tag:"community-chat-"+title});}catch(err){console.warn("Browser notification unavailable",err);}
+      }
+    }
+    function updateAnnouncementPreferences(){
+      $("showAnnouncementDot").checked=noticePrefs.showDot;
+      $("showAnnouncementButton").checked=noticePrefs.showButton;
+      $("enableChatNotifications").checked=noticePrefs.notifications;
+      announcementsToggle.hidden=!noticePrefs.showButton;
+      announcementsToggle.classList.toggle("announcements-unread",noticePrefs.showDot&&localStorage.getItem(seenKey)!==latestVersion);
+    }
+    for(const [id,key] of [["showAnnouncementDot","showDot"],["showAnnouncementButton","showButton"],["enableChatNotifications","notifications"]]){
+      $(id).addEventListener("change",e=>{
+        noticePrefs[key]=e.target.checked;
+        try{localStorage.setItem(NOTICE_PREF_KEY,JSON.stringify(noticePrefs));}catch{}
+        updateAnnouncementPreferences();
+        if(key==="notifications"&&noticePrefs.notifications){
+          maybeNotifyAnnouncement();
+          $("notificationFeedback").textContent="Notifications enabled. You'll see alerts for future releases and role assignments.";
+        }
+      });
+    }
+    $("enableBrowserNotifications").addEventListener("click",async()=>{
+      if(!("Notification" in window)){$("notificationFeedback").textContent="Browser notifications aren't supported here. In-chat alerts still work.";return;}
+      try{
+        const permission=await Notification.requestPermission();
+        $("notificationFeedback").textContent=permission==="granted"?"Browser notifications allowed!":"Browser notifications not enabled ("+permission+"). In-chat alerts still work.";
+      }catch{$("notificationFeedback").textContent="Browser notifications may be blocked by Google Sites. In-chat alerts still work.";}
+    });
+    let noticeRoleBaselineUid=null,noticeRoleBaseline=null;
+    function handleRoleNotification(uid){
+      const current=new Set(userRoles(uid));
+      if(noticeRoleBaselineUid!==uid){noticeRoleBaselineUid=uid;noticeRoleBaseline=current;return;}
+      if(noticeRoleBaseline===null){noticeRoleBaseline=current;return;}
+      const added=[...current].filter(role=>!noticeRoleBaseline.has(role));
+      noticeRoleBaseline=current;
+      if(added.length){
+        const names=added.map(role=>({admin:"🌈 Admin",moderator:"🛡️ Moderator",plus:"✨ Plus"}[role]||customRoles[role]?.name||role));
+        notifyChat("🎉 New role assigned!","You received: "+names.join(", ")+"!");
+      }
+    }
+    function maybeNotifyAnnouncement(){
+      if(!noticePrefs.notifications)return;
+      try{
+        const previous=localStorage.getItem(NOTICE_VERSION_KEY);
+        if(previous===null){localStorage.setItem(NOTICE_VERSION_KEY,latestVersion);return;}
+        if(previous!==latestVersion){
+          localStorage.setItem(NOTICE_VERSION_KEY,latestVersion);
+          notifyChat("📢 Community Chat update!","Version "+latestVersion+" is available. Open Announcements to see what's new! 🚀");
+        }
+      }catch{}
+    }
     const announcementsOverlay=$("announcementsOverlay");
     const announcementsToggle=$("announcementsToggle");
     const latestVersion=CHAT_RELEASES[0].version;
@@ -1197,13 +1294,14 @@
       announcementPreviousFocus=document.activeElement;
       renderAnnouncements();announcementsOverlay.hidden=false;
       try{localStorage.setItem(seenKey,latestVersion);}catch{}
-      announcementsToggle.classList.remove("announcements-unread");
+      updateAnnouncementPreferences();
       $("announcementsClose").focus();
     });
     $("announcementsClose").addEventListener("click",closeAnnouncements);
     announcementsOverlay.addEventListener("click",e=>{if(e.target===announcementsOverlay)closeAnnouncements();});
     document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!announcementsOverlay.hidden)closeAnnouncements();});
-    try{if(localStorage.getItem(seenKey)!==latestVersion)announcementsToggle.classList.add("announcements-unread");}catch{}
+    updateAnnouncementPreferences();
+    maybeNotifyAnnouncement();
 
     // Fullscreen requires a user gesture and permission from the embedding page.
     const fullscreenBtn=$("fullscreenToggle");
