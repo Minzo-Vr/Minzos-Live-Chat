@@ -159,6 +159,11 @@
     .dm-line.mine{border-left:3px solid var(--accent,#5865f2)}
     .dm-form{display:flex;gap:7px}.dm-form input{flex:1;min-width:0}
     .friends-note{font-size:12px;color:var(--theme-secondary,#667085)}
+    .auth-buttons{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap}
+    .auth-buttons button{flex:1;min-width:175px}
+    #anonymousSignIn:disabled{opacity:.42;filter:grayscale(1);cursor:not-allowed!important;background:#9ca3af!important;color:#263238!important}
+    .anonymous-admin-setting{border:1px solid var(--theme-border,#ddd);border-radius:9px;padding:12px;margin:12px 0}
+    .anonymous-admin-setting input[type=checkbox]{width:auto;vertical-align:middle}
     .settings-btn{background:#ffffff24;color:white;padding:6px 10px;font-size:19px;border-radius:9px}
     .settings-overlay{position:fixed;inset:0;background:#101528aa;display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
     .settings-overlay[hidden]{display:none}
@@ -653,8 +658,12 @@
     </div>
     <section id="authGate" class="auth-gate">
       <h2>Sign in to Community Chat</h2>
-      <p>A Google account is required to view or send messages. Your public chat username can be different from your Google name.</p>
-      <button type="button" id="googleSignIn">Continue with Google</button>
+      <p>Sign in with Google or use a guest account when the Admin enables anonymous sign-in. Both have a Firebase UID.</p>
+      <div class="auth-buttons">
+        <button type="button" id="googleSignIn">Continue with Google</button>
+        <button type="button" id="anonymousSignIn" disabled title="Anonymous accounts are disabled by the Admin">🕵️ Continue anonymously</button>
+      </div>
+      <p id="anonymousSignInHint" class="hint">Checking guest sign-in availability…</p>
       <p id="authFeedback" role="status">Not signed in.</p>
       <p>Already an admin? Use the Admin login at the bottom.</p>
     </section>
@@ -791,6 +800,12 @@
       </section>
       <section id="adminPanel" class="admin-controls" hidden>
         <strong>Verified admin ✓</strong>
+        <div class="anonymous-admin-setting">
+          <label><input type="checkbox" id="anonymousEnabledAdmin"> 🕵️ Allow anonymous accounts</label>
+          <p class="hint">When disabled, the anonymous sign-in button is greyed out. Existing guest accounts also lose access until re-enabled.</p>
+          <button type="button" id="anonymousSaveAdmin">Save anonymous sign-in setting</button>
+          <p id="anonymousAdminFeedback" role="status" class="hint"></p>
+        </div>
         <details class="role-creator"><summary>🏷️ Create custom roles</summary>
           <label for="newRoleName">Role name</label><input id="newRoleName" maxlength="24" placeholder="e.g. VIP, Builder, Helper">
           <label for="newRoleColor">Username colour</label><input id="newRoleColor" type="color" value="#E8A838">
@@ -834,7 +849,7 @@
     */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
     import {
       getDatabase, ref, push, query, limitToLast, limitToFirst, orderByKey, get, update, onChildAdded, onChildRemoved, onValue, set, remove, serverTimestamp, runTransaction, onDisconnect
     } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
@@ -2761,6 +2776,14 @@
       typingEntries={};drawTyping();
       joined=false;username="";savedUsername="";lastMessageActivity=0;usernameInput.value="";usernameInput.disabled=false;joinBtn.disabled=false;
     }
+    let anonymousAccountsEnabled=false,anonymousFlagUnsub=null;
+    function renderAnonymousSignInAvailability(){
+      const button=$("anonymousSignIn");
+      button.disabled=!anonymousAccountsEnabled;
+      button.title=anonymousAccountsEnabled?"Sign in with a temporary anonymous Firebase account":"Anonymous accounts are disabled by the Admin";
+      $("anonymousSignInHint").textContent=anonymousAccountsEnabled?"🕵️ Guest accounts are available. You can choose a username after signing in.":"🔒 Anonymous accounts are currently disabled.";
+      $("anonymousEnabledAdmin").checked=anonymousAccountsEnabled;
+    }
     async function applyAuthAccount(account) {
       stopChatListeners();
       if(user?.uid!==account?.uid){clearMyTyping().catch(console.warn);if(typingUnsub){typingUnsub();typingUnsub=null;}typingEntries={};drawTyping();}
@@ -2782,14 +2805,15 @@
       for(const label of document.querySelectorAll(".meta [data-author-uid]")){
         label.classList.toggle("admin-rgb-name",isAdmin && label.dataset.authorUid===account.uid);
       }
-      if(!google && !isAdmin) {
+      if(!google && !isAdmin && !(account.isAnonymous && anonymousAccountsEnabled)) {
         await signOut(auth);return;
       }
       resetChatIdentity();setAuthDisplay(true);
+      if(account.isAnonymous)$("accountLabel").textContent="🕵️ Signed in anonymously — choose a chat username";
       startAnnouncementListeners();
       startEconomy();startFriends();startRoleListeners();
       $("adminPanel").hidden=!isAdmin;$("adminLogin").hidden=isAdmin;
-      status.textContent=isAdmin?"Admin online":"Online";
+      status.textContent=isAdmin?"Admin online":account.isAnonymous?"Guest online":"Online";
       listenMessages();subscribeSettings();startPresence();startRoomIndex();
       updateLockdownUI();
       await loadProfileName(account);
@@ -2799,6 +2823,17 @@
         const app=initializeApp(firebaseConfig);
         auth=getAuth(app);db=getDatabase(app);
         setAuthDisplay(false);status.textContent="Sign in required";
+        anonymousFlagUnsub=onValue(ref(db,"chatPublicConfig/anonymousEnabled"),snapshot=>{
+          anonymousAccountsEnabled=snapshot.val()===true;
+          renderAnonymousSignInAvailability();
+          if(auth.currentUser?.isAnonymous&&!anonymousAccountsEnabled){
+            $("authFeedback").textContent="Anonymous sign-in was disabled by the Admin.";
+            signOut(auth).catch(console.warn);
+          }
+        },err=>{
+          anonymousAccountsEnabled=false;renderAnonymousSignInAvailability();
+          console.warn("Could not read anonymous account setting",err);
+        });
         slowTimer=setInterval(updateSlowUI,500);
         onAuthStateChanged(auth,account=>{
           applyAuthAccount(account).catch(err=>{
@@ -2819,6 +2854,28 @@
         console.error("Google sign-in",err);
         $("authFeedback").textContent="Google sign-in failed: "+(err.code||err.message);
       } finally {btn.disabled=false;}
+    });
+    $("anonymousSignIn").addEventListener("click",async()=>{
+      if(!anonymousAccountsEnabled)return;
+      const button=$("anonymousSignIn");button.disabled=true;
+      $("authFeedback").textContent="Creating anonymous Firebase account…";
+      try{
+        await signInAnonymously(auth);
+        $("authFeedback").textContent="Guest account ready! Choose a chat username.";
+      }catch(err){
+        console.error("Anonymous sign-in",err);
+        $("authFeedback").textContent="Anonymous sign-in failed: "+(err.code||err.message)+". Enable Anonymous in Firebase Authentication → Sign-in method.";
+      }finally{renderAnonymousSignInAvailability();}
+    });
+    $("anonymousSaveAdmin").addEventListener("click",async()=>{
+      if(!isAdmin)return;
+      const button=$("anonymousSaveAdmin");button.disabled=true;
+      try{
+        await set(ref(db,"chatPublicConfig/anonymousEnabled"),$("anonymousEnabledAdmin").checked);
+        $("anonymousAdminFeedback").textContent="Anonymous sign-in setting saved.";
+      }catch(err){
+        $("anonymousAdminFeedback").textContent="Could not save: "+(err.code||err.message);
+      }finally{button.disabled=false;}
     });
     $("googleSignOut").addEventListener("click",async()=>{
       try {await stopMyPresence();await signOut(auth);}
