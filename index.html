@@ -418,7 +418,7 @@
           <textarea id="announcementDraftFixed" rows="3" placeholder="🎨 Google sign-in button contrast fixed!">🎨 Fixed invisible text on the white Google sign-in button!</textarea>
           <label for="announcementDraftRemoved">🗑️ REMOVED — Removed features (one per line)</label>
           <textarea id="announcementDraftRemoved" rows="3" placeholder="🧹 Removed an outdated option"></textarea>
-          <div class="draft-actions"><button type="button" id="announcementSaveDraft">💾 Save draft</button><button type="button" id="announcementPublishNow">📢 Publish to everyone</button><button type="button" id="announcementPrevDraft">⏮️ Previous update</button><button type="button" id="announcementNextDraft">⏭️ Next update / Reset</button></div>
+          <div class="draft-actions"><button type="button" id="announcementAutoLog">📝 Log recent changes</button><button type="button" id="announcementSaveDraft">💾 Save draft</button><button type="button" id="announcementPublishNow">📢 Publish to everyone</button><button type="button" id="announcementPrevDraft">⏮️ Previous update</button><button type="button" id="announcementNextDraft">⏭️ Next update / Reset</button></div>
           <p id="announcementDraftStatus" role="status">Only admins can view and publish this preview.</p>
           <div id="announcementDraftPreview" class="release-card" style="opacity:.7"></div>
         </section>
@@ -1444,30 +1444,56 @@
         "📝 Announcement drafts now accept emojis, symbols, Unicode and much longer entries without the old 30-entry / 180-character limit!",
         "⏮️ Previous update button restores earlier unpublished announcement drafts after using Next Update!",
         "🕵️ Incognito message profiles now hide public role labels, bios and personal avatars while retaining Firebase UID and moderator controls!",
-        "🐛 FIXED: Empty announcement drafts can now be saved without adding release notes first!"
+        "📝 Draft editor supports preparing the next release without requiring text!"
       ],
       fixed:[
         "🎨 Fixed invisible text on the white Google sign-in button!",
-        "📢 Fixed announcement editor reopening an old Version 0.3 draft after refreshing!"
+        "📢 Fixed announcement editor reopening an old Version 0.3 draft after refreshing!",
+        "🐛 Fixed saving empty announcement drafts without requiring release notes!"
       ],
       removed:[]
     };
-    function mergeCurrentChangelog(){
-      if(!isAdmin)return;
-      if($('announcementDraftVersion').value.trim()!=='0.3'||(editorVersionFromServer&&editorVersionFromServer!=="0.3")||publishedReleases.some(r=>r.version==='0.3'))return;
-      const featured=$('announcementDraftFeatured');
-      if(!featured.value.trim())featured.value=CURRENT_CHANGELOG.featured;
-      for(const [category,id] of [
-        ['added','announcementDraftFeatures'],
-        ['fixed','announcementDraftFixed'],
-        ['removed','announcementDraftRemoved']
-      ]){
-        const textarea=$(id);
-        const lines=textarea.value.split('\n').map(v=>v.trim()).filter(Boolean);
-        const additions=CURRENT_CHANGELOG[category].filter(line=>!lines.includes(line));
-        if(additions.length)textarea.value=[...lines,...additions].join('\n');
+    // Curated, version-specific change registry. This is a release-note logger,
+    // not a GitHub diff scanner. New changes are recorded here when HTML is updated.
+    const RELEASE_CHANGE_LOG={
+      "0.4":{
+        featured:"📝 Automatic release-note logging for Community Chat!",
+        added:[
+          "📝 Added automatic changelog suggestions for the active announcement version!",
+          "🔄 Added a Log recent changes button to refill missing release notes!",
+          "🕵️ Improved Incognito profiles: hide public role badges, bio and personal avatar while preserving Firebase identity!"
+        ],
+        fixed:[
+          "📢 Fixed announcement drafts resetting to an older version after refresh!",
+          "🔐 Corrected Firebase version validation for Next Update / Reset!",
+          "📝 Fixed saving empty announcement drafts without requiring an entry!",
+          "🐛 Fixed new update versions showing empty changelogs when known changes exist!"
+        ],removed:[]
       }
+    };
+    function logChangesForVersion(){
+      if(!isAdmin)return 0;
+      const version=$("announcementDraftVersion").value.trim();
+      if(publishedReleases.some(r=>r.version===version))return 0;
+      const notes=version==="0.3"?CURRENT_CHANGELOG:RELEASE_CHANGE_LOG[version];
+      if(!notes)return 0;
+      let count=0;
+      const featured=$("announcementDraftFeatured");
+      if(!featured.value.trim()&&notes.featured){featured.value=notes.featured;count++;}
+      for(const [category,id] of [["added","announcementDraftFeatures"],["fixed","announcementDraftFixed"],["removed","announcementDraftRemoved"]]){
+        const input=$(id);
+        const existing=input.value.split("\n").map(x=>x.trim()).filter(Boolean);
+        const missing=(notes[category]||[]).filter(x=>!existing.includes(x));
+        if(missing.length){input.value=[...existing,...missing].join("\n");count+=missing.length;}
+      }
+      renderDraftPreview();
+      return count;
     }
+    $("announcementAutoLog").addEventListener("click",()=>{
+      const count=logChangesForVersion();
+      $("announcementDraftStatus").textContent=count?`📝 Logged ${count} change(s). Click Save draft to keep them in Firebase. Nothing published.`:"📝 No additional logged changes for this version. You can still add your own entries.";
+    });
+    function mergeCurrentChangelog(){return logChangesForVersion();}
     // A reset only clears the unpublished draft; it never changes published releases.
     const NEXT_DRAFT_KEY="communityChatNextAnnouncementVersionV1";
     // Firebase is the source of truth for the editor's current version,
@@ -1479,10 +1505,14 @@
     function refreshEditorVersion(){
       if(activeDraftFromServer?.version)return;
       const chosen=editorVersionFromServer||localStorage.getItem(NEXT_DRAFT_KEY)||"0.3";
-      if(/^\\d+\\.\\d+(?:\\.\\d+)?$/.test(chosen)){
+      if(/^\d+\.\d+(?:\.\d+)?$/.test(chosen)){
         $("announcementDraftVersion").value=chosen;
         // A clean version should not inherit an older version's release notes.
-        if(chosen!=="0.3")for(const id of ["announcementDraftFeatured","announcementDraftFeatures","announcementDraftFixed","announcementDraftRemoved"])$(id).value="";
+        if(chosen!=="0.3" && $("announcementDraftVersion").dataset.lastLoadedVersion!==chosen){
+          for(const id of ["announcementDraftFeatured","announcementDraftFeatures","announcementDraftFixed","announcementDraftRemoved"])$(id).value="";
+          $("announcementDraftVersion").dataset.lastLoadedVersion=chosen;
+        }
+        logChangesForVersion();
         renderDraftPreview();
       }
     }
@@ -1563,7 +1593,8 @@
         rememberDraftBeforeNext();
         localStorage.setItem(NEXT_DRAFT_KEY,next);
         blankAnnouncementDraft(next);
-        $("announcementDraftStatus").textContent=`📝 Version ${next} is ready! Add your changes and click Save draft. Nothing has been published.`;
+        const logged=logChangesForVersion();
+        $("announcementDraftStatus").textContent=`📝 Version ${next} is ready! ${logged?`${logged} change(s) auto-filled. `:""}Review and click Save draft. Nothing published.`;
       }catch(err){$("announcementDraftStatus").textContent="Could not reset draft: "+(err.code||err.message);}
       finally{button.disabled=false;}
     });
@@ -1630,6 +1661,7 @@
         await set(ref(db,EDITOR_VERSION_PATH),next);
         localStorage.setItem(NEXT_DRAFT_KEY,next);
         blankAnnouncementDraft(next);
+        logChangesForVersion();
         await remove(ref(db,"chatAnnouncementDraft"));
         $("announcementDraftStatus").textContent=`📢 Version ${draft.version} published! Version ${next} is ready for your next changes.`;
       }catch(err){$("announcementDraftStatus").textContent="Publish failed: "+(err.code||err.message);}
@@ -1651,7 +1683,7 @@
       if(isAdmin){
         editorVersionUnsub=onValue(ref(db,EDITOR_VERSION_PATH),snap=>{
           const value=snap.val();
-          editorVersionFromServer=typeof value==="string"&&/^\\d+\\.\\d+(?:\\.\\d+)?$/.test(value)?value:null;
+          editorVersionFromServer=typeof value==="string"&&/^\d+\.\d+(?:\.\d+)?$/.test(value)?value:null;
           refreshEditorVersion();
         },err=>console.warn("Announcement editor version unavailable",err));
         draftUnsub=onValue(ref(db,"chatAnnouncementDraft"),snap=>{
