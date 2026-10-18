@@ -403,15 +403,19 @@
           <label for="announcementDraftVersion">Version</label>
           <input id="announcementDraftVersion" type="text" maxlength="20" value="0.3" placeholder="0.3">
           <label for="announcementDraftFeatured">🌟 Featured (bold, appears directly below the version)</label>
-          <input id="announcementDraftFeatured" type="text" maxlength="180" placeholder="🌟 Our biggest update yet!">
+          <input id="announcementDraftFeatured" type="text" maxlength="180" value="⌨️ Windows-style Command Console and improved release notes!" placeholder="🌟 Our biggest update yet!">
           <p class="draft-helper">Write each change under its own section. You can leave a section empty.</p>
           <label for="announcementDraftFeatures">✨ ADDED — New features (one per line)</label>
-          <textarea id="announcementDraftFeatures" rows="5" maxlength="4000" placeholder="✨ Feature one!&#10;🚀 Feature two!&#10;🎨 Feature three!">📢 Admin-controlled announcement drafts and publishing!
-🔒 Chat+ features now require Plus or Admin access!
-🎛️ Chat+ settings are off by default for new users!
-⌨️ NEW! Windows-style command console with safe commands and command history!</textarea>
+          <textarea id="announcementDraftFeatures" rows="5" maxlength="4000" placeholder="✨ Feature one!&#10;🚀 Feature two!&#10;🎨 Feature three!">📢 Admin-only announcement drafts, previews and manual publishing!
+🔒 Chat+ feature restrictions for Plus and Admin roles!
+🎛️ Chat+ settings disabled by default for new users!
+⌨️ Windows-style command console with a Help command!
+🧰 Console commands: clear, whoami, role, version, status, announcements, settings, shop, fullscreen, echo, date and exit!
+⬆️⬇️ Console command history using the arrow keys!
+🌟 Featured, ✨ Added, 🐛 Fixed and 🗑️ Removed announcement sections!
+📝 Release notes now track new features, fixes and removals in the draft!</textarea>
           <label for="announcementDraftFixed">🐛 FIXED — Bug fixes (one per line)</label>
-          <textarea id="announcementDraftFixed" rows="3" maxlength="4000" placeholder="🎨 Google sign-in button contrast fixed!"></textarea>
+          <textarea id="announcementDraftFixed" rows="3" maxlength="4000" placeholder="🎨 Google sign-in button contrast fixed!">🎨 Fixed invisible text on the white Google sign-in button!</textarea>
           <label for="announcementDraftRemoved">🗑️ REMOVED — Removed features (one per line)</label>
           <textarea id="announcementDraftRemoved" rows="3" maxlength="4000" placeholder="🧹 Removed an outdated option"></textarea>
           <div class="draft-actions"><button type="button" id="announcementSaveDraft">💾 Save draft</button><button type="button" id="announcementPublishNow">📢 Publish to everyone</button></div>
@@ -1415,14 +1419,41 @@
         list.append(releaseCard(release));
       }
     }
-    const CURRENT_BUG_FIXES=[
-      "Google sign-in button text is now visible on its white background! 🎨"
-    ];
-    function includeCurrentBugFixes(){
-      const textarea=$("announcementDraftFixed");
-      const current=textarea.value.split("\n").map(line=>line.trim());
-      const additions=CURRENT_BUG_FIXES.filter(line=>!current.includes(line));
-      if(additions.length)textarea.value=[textarea.value.trimEnd(),...additions].filter(Boolean).join("\n");
+    // Maintained release notes for the current unpublished update. When a
+    // previously saved draft is loaded, merge missing entries without erasing
+    // any text the admin already wrote. Saving/publishing remains admin-only.
+    const CURRENT_CHANGELOG={
+      featured:"⌨️ Windows-style Command Console and improved release notes!",
+      added:[
+        "📢 Admin-only announcement drafts, previews and manual publishing!",
+        "🔒 Chat+ feature restrictions for Plus and Admin roles!",
+        "🎛️ Chat+ settings disabled by default for new users!",
+        "⌨️ Windows-style command console with a Help command!",
+        "🧰 Console commands: clear, whoami, role, version, status, announcements, settings, shop, fullscreen, echo, date and exit!",
+        "⬆️⬇️ Console command history using the arrow keys!",
+        "🌟 Featured, ✨ Added, 🐛 Fixed and 🗑️ Removed announcement sections!",
+        "📝 Release notes now track new features, fixes and removals in the draft!"
+      ],
+      fixed:[
+        "🎨 Fixed invisible text on the white Google sign-in button!"
+      ],
+      removed:[]
+    };
+    function mergeCurrentChangelog(){
+      if(!isAdmin)return;
+      if($('announcementDraftVersion').value.trim()!=='0.3')return;
+      const featured=$('announcementDraftFeatured');
+      if(!featured.value.trim())featured.value=CURRENT_CHANGELOG.featured;
+      for(const [category,id] of [
+        ['added','announcementDraftFeatures'],
+        ['fixed','announcementDraftFixed'],
+        ['removed','announcementDraftRemoved']
+      ]){
+        const textarea=$(id);
+        const lines=textarea.value.split('\n').map(v=>v.trim()).filter(Boolean);
+        const additions=CURRENT_CHANGELOG[category].filter(line=>!lines.includes(line));
+        if(additions.length)textarea.value=[...lines,...additions].join('\n');
+      }
     }
     function draftLines(id){
       return $(id).value.split("\n").map(line=>line.trim()).filter(Boolean);
@@ -1501,12 +1532,12 @@
           const draft=snap.val();
           if(draft)loadDraftFields(draft);
           else if(!$("announcementDraftVersion").value)$("announcementDraftVersion").value="0.3";
-          includeCurrentBugFixes();
+          mergeCurrentChangelog();
           renderDraftPreview();
         },err=>{$("announcementDraftStatus").textContent="Draft unavailable: "+(err.code||err.message);});
       }
     }
-    includeCurrentBugFixes();
+    // Default draft content is already in the editor; Firebase drafts merge on load.
     renderDraftPreview();
     function closeAnnouncements(){announcementsOverlay.hidden=true;announcementPreviousFocus?.focus();}
     announcementsToggle.addEventListener("click",()=>{
