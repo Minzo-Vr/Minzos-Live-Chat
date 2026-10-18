@@ -418,7 +418,7 @@
           <textarea id="announcementDraftFixed" rows="3" placeholder="🎨 Google sign-in button contrast fixed!">🎨 Fixed invisible text on the white Google sign-in button!</textarea>
           <label for="announcementDraftRemoved">🗑️ REMOVED — Removed features (one per line)</label>
           <textarea id="announcementDraftRemoved" rows="3" placeholder="🧹 Removed an outdated option"></textarea>
-          <div class="draft-actions"><button type="button" id="announcementSaveDraft">💾 Save draft</button><button type="button" id="announcementPublishNow">📢 Publish to everyone</button><button type="button" id="announcementNextDraft">⏭️ Next update / Reset</button></div>
+          <div class="draft-actions"><button type="button" id="announcementSaveDraft">💾 Save draft</button><button type="button" id="announcementPublishNow">📢 Publish to everyone</button><button type="button" id="announcementPrevDraft">⏮️ Previous update</button><button type="button" id="announcementNextDraft">⏭️ Next update / Reset</button></div>
           <p id="announcementDraftStatus" role="status">Only admins can view and publish this preview.</p>
           <div id="announcementDraftPreview" class="release-card" style="opacity:.7"></div>
         </section>
@@ -563,6 +563,7 @@
         <img id="profileCardAvatar" alt="Profile picture">
         <h2 id="profileTitle">User profile</h2>
         <p id="profileCardBio" style="color:#475569"></p>
+        <p id="profileIncognitoNotice" style="font-size:12px;color:#64748b" hidden>🕵️ Anonymous display profile · Identity retained for moderation</p>
         <p id="profileRoleLabel" class="profile-role-visibility" style="font-size:12px;color:#64748b">Member</p>
         <div id="profileRoleActions" hidden style="text-align:left;border-top:1px solid #ddd;padding-top:12px;margin:12px 0">
           <strong>Manage member</strong>
@@ -1069,18 +1070,23 @@
       try{await set(ref(db,bioPath(user.uid)),bio||null);feedback.textContent="Bio saved!";}
       catch(err){feedback.textContent="Could not save bio: "+(err.code||err.message);}
     });
-    async function openUserProfile(uid,name){
+    async function openUserProfile(uid,name,anonymousDisplay=false){
       profileTargetUid=uid||"";
-      $("profileTitle").textContent=name||"Chat member";
+      // Anonymous display never changes the underlying Firebase identity.
+      // Moderators/admins can still use their authorised moderation controls.
+      const anonymous=anonymousDisplay||(uid===user?.uid&&incognito.enabled);
+      $("profileTitle").textContent=anonymous?(name?.startsWith(INCOGNITO_PREFIX)?name:INCOGNITO_PREFIX+(incognito.alias||"Anonymous")):(name||"Chat member");
       $("profileRoleLabel").textContent=userRoles(uid).map(k=>customRoles[k]?.name||k.toUpperCase()).join(" · ")||"MEMBER";
-      $("profileRoleLabel").hidden=appearanceByUid[uid]?.showRole===false;
+      $("profileRoleLabel").hidden=anonymous||appearanceByUid[uid]?.showRole===false;
+      $("profileIncognitoNotice").hidden=!anonymous;
       $("profileRoleActions").hidden=!isModerator()||!uid;
       $("profileAssignRole").hidden=!isAdmin;
       renderRoleChoices(uid);
       $("profileActionFeedback").textContent="";
-      $("profileCardAvatar").src=avatarUrls.get(uid)||avatarFallback;
-      $("profileCardBio").textContent="Loading bio…";
+      $("profileCardAvatar").src=anonymous?INCOGNITO_AVATAR:(avatarUrls.get(uid)||avatarFallback);
+      $("profileCardBio").textContent=anonymous?"Private while Incognito Mode is active.":"Loading bio…";
       $("profileOverlay").hidden=false;
+      if(anonymous)return;
       try{
         if(!uid){$("profileCardBio").textContent="No profile available.";return;}
         const snap=await get(ref(db,bioPath(uid)));
@@ -1435,16 +1441,19 @@
         "📝 Release notes now track new features, fixes and removals in the draft!",
         "🕵️ NEW! Incognito terminal command with custom display aliases and anonymous-style avatars for new messages!",
         "🔐 Incognito retains Firebase account identity, roles and moderation controls!",
-        "📝 Announcement drafts now accept emojis, symbols, Unicode and much longer entries without the old 30-entry / 180-character limit!"
+        "📝 Announcement drafts now accept emojis, symbols, Unicode and much longer entries without the old 30-entry / 180-character limit!",
+        "⏮️ Previous update button restores earlier unpublished announcement drafts after using Next Update!",
+        "🕵️ Incognito message profiles now hide public role labels, bios and personal avatars while retaining Firebase UID and moderator controls!"
       ],
       fixed:[
-        "🎨 Fixed invisible text on the white Google sign-in button!"
+        "🎨 Fixed invisible text on the white Google sign-in button!",
+        "📢 Fixed announcement editor reopening an old Version 0.3 draft after refreshing!"
       ],
       removed:[]
     };
     function mergeCurrentChangelog(){
       if(!isAdmin)return;
-      if($('announcementDraftVersion').value.trim()!=='0.3'||publishedReleases.some(r=>r.version==='0.3'))return;
+      if($('announcementDraftVersion').value.trim()!=='0.3'||(editorVersionFromServer&&editorVersionFromServer!=="0.3")||publishedReleases.some(r=>r.version==='0.3'))return;
       const featured=$('announcementDraftFeatured');
       if(!featured.value.trim())featured.value=CURRENT_CHANGELOG.featured;
       for(const [category,id] of [
@@ -1460,6 +1469,22 @@
     }
     // A reset only clears the unpublished draft; it never changes published releases.
     const NEXT_DRAFT_KEY="communityChatNextAnnouncementVersionV1";
+    // Firebase is the source of truth for the editor's current version,
+    // including versions with no draft entries yet.
+    const EDITOR_VERSION_PATH="chatAnnouncementEditorState/version";
+    let editorVersionUnsub=null;
+    let editorVersionFromServer=null;
+    let activeDraftFromServer=null;
+    function refreshEditorVersion(){
+      if(activeDraftFromServer?.version)return;
+      const chosen=editorVersionFromServer||localStorage.getItem(NEXT_DRAFT_KEY)||"0.3";
+      if(/^\\d+\\.\\d+(?:\\.\\d+)?$/.test(chosen)){
+        $("announcementDraftVersion").value=chosen;
+        // A clean version should not inherit an older version's release notes.
+        if(chosen!=="0.3")for(const id of ["announcementDraftFeatured","announcementDraftFeatures","announcementDraftFixed","announcementDraftRemoved"])$(id).value="";
+        renderDraftPreview();
+      }
+    }
     function nextAnnouncementVersion(version){
       const match=String(version||"0.3").match(/^(\d+)\.(\d+)$/);
       if(!match)return "0.4";
@@ -1470,6 +1495,60 @@
       for(const id of ["announcementDraftFeatured","announcementDraftFeatures","announcementDraftFixed","announcementDraftRemoved"])$(id).value="";
       renderDraftPreview();
     }
+    // Store unpublished draft snapshots locally before advancing versions.
+    // This lets admins restore a previous draft without modifying published releases.
+    const PREVIOUS_DRAFT_KEY="communityChatAnnouncementDraftHistoryV1";
+    function getPreviousDrafts(){
+      try{
+        const value=JSON.parse(localStorage.getItem(PREVIOUS_DRAFT_KEY)||"[]");
+        return Array.isArray(value)?value.filter(v=>v&&typeof v.version==="string"&&v.fields&&typeof v.fields==="object").slice(-15):[];
+      }catch{return [];}
+    }
+    function updatePreviousDraftButton(){
+      const button=$("announcementPrevDraft");
+      button.disabled=!isAdmin||getPreviousDrafts().length===0;
+      button.title=button.disabled?"No earlier draft saved in this browser":"Restore an earlier unpublished draft";
+    }
+    function currentDraftSnapshot(){
+      return {version:$("announcementDraftVersion").value.trim()||"0.3",fields:Object.fromEntries(
+        ["announcementDraftFeatured","announcementDraftFeatures","announcementDraftFixed","announcementDraftRemoved"].map(id=>[id,$(id).value])
+      )};
+    }
+    function rememberDraftBeforeNext(){
+      const drafts=getPreviousDrafts();
+      drafts.push(currentDraftSnapshot());
+      try{localStorage.setItem(PREVIOUS_DRAFT_KEY,JSON.stringify(drafts.slice(-15)));}catch{}
+      updatePreviousDraftButton();
+    }
+    $("announcementPrevDraft").addEventListener("click",async()=>{
+      if(!isAdmin||!user||!db)return;
+      const drafts=getPreviousDrafts();
+      if(!drafts.length)return;
+      const previous=drafts[drafts.length-1];
+      if(!confirm(`Restore your earlier Version ${previous.version} draft? This will replace the CURRENT unpublished draft in Firebase. Published announcements are not changed.`))return;
+      const button=$("announcementPrevDraft");button.disabled=true;
+      try{
+        const features=[];
+        const featured=String(previous.fields.announcementDraftFeatured||"").trim();
+        if(featured)features.push(RELEASE_MARKERS.featured+featured);
+        for(const [id,marker] of [["announcementDraftFeatures",RELEASE_MARKERS.added],["announcementDraftFixed",RELEASE_MARKERS.fixed],["announcementDraftRemoved",RELEASE_MARKERS.removed]]){
+          for(const line of String(previous.fields[id]||"").split("\n").map(x=>x.trim()).filter(Boolean))features.push(marker+line);
+        }
+        if(features.length){
+          await set(ref(db,"chatAnnouncementDraft"),{version:previous.version,features});
+        }else{
+          await remove(ref(db,"chatAnnouncementDraft"));
+        }
+        for(const [id,value] of Object.entries(previous.fields))if($(id))$(id).value=value;
+        $("announcementDraftVersion").value=previous.version;
+        await set(ref(db,EDITOR_VERSION_PATH),previous.version);
+        localStorage.setItem(NEXT_DRAFT_KEY,previous.version);
+        localStorage.setItem(PREVIOUS_DRAFT_KEY,JSON.stringify(drafts.slice(0,-1)));
+        renderDraftPreview();
+        $("announcementDraftStatus").textContent=`⏮️ Version ${previous.version} restored! Review it before publishing.`;
+      }catch(err){$("announcementDraftStatus").textContent="Could not restore previous draft: "+(err.code||err.message);}
+      finally{updatePreviousDraftButton();}
+    });
     $("announcementNextDraft").addEventListener("click",async()=>{
       if(!isAdmin||!user||!db)return;
       const oldVersion=$("announcementDraftVersion").value.trim()||"0.3";
@@ -1477,7 +1556,10 @@
       if(!confirm(`Start Version ${next}? This will DISCARD the current unpublished draft (Version ${oldVersion}), including unsaved edits. Published announcements will stay available.`))return;
       const button=$("announcementNextDraft");button.disabled=true;
       try{
+        // Persist the next empty version for all admins and across refreshes.
+        await set(ref(db,EDITOR_VERSION_PATH),next);
         await remove(ref(db,"chatAnnouncementDraft"));
+        rememberDraftBeforeNext();
         localStorage.setItem(NEXT_DRAFT_KEY,next);
         blankAnnouncementDraft(next);
         $("announcementDraftStatus").textContent=`📝 Version ${next} is ready! Add your changes and click Save draft. Nothing has been published.`;
@@ -1542,6 +1624,8 @@
         await set(ref(db,"chatAnnouncementPublished/"+key),{...draft,date:new Date().toLocaleDateString("en-AU",{day:"numeric",month:"long",year:"numeric"}),publishedAt:Date.now()});
         $("announcementDraftStatus").textContent=`📢 Version ${draft.version} published to everyone!`;
         const next=nextAnnouncementVersion(draft.version);
+        // Do not add published drafts to the restore stack: published releases are immutable.
+        await set(ref(db,EDITOR_VERSION_PATH),next);
         localStorage.setItem(NEXT_DRAFT_KEY,next);
         blankAnnouncementDraft(next);
         await remove(ref(db,"chatAnnouncementDraft"));
@@ -1552,6 +1636,7 @@
     function startAnnouncementListeners(){
       if(announcementsUnsub){announcementsUnsub();announcementsUnsub=null;}
       if(draftUnsub){draftUnsub();draftUnsub=null;}
+      if(editorVersionUnsub){editorVersionUnsub();editorVersionUnsub=null;}
       publishedReleases=[];
       $("announcementAdminDraft").hidden=!isAdmin;
       renderAnnouncements();updateAnnouncementPreferences();
@@ -1562,14 +1647,19 @@
         renderAnnouncements();updateAnnouncementPreferences();maybeNotifyAnnouncement();
       },err=>console.warn("Published announcements unavailable",err));
       if(isAdmin){
+        editorVersionUnsub=onValue(ref(db,EDITOR_VERSION_PATH),snap=>{
+          const value=snap.val();
+          editorVersionFromServer=typeof value==="string"&&/^\\d+\\.\\d+(?:\\.\\d+)?$/.test(value)?value:null;
+          refreshEditorVersion();
+        },err=>console.warn("Announcement editor version unavailable",err));
         draftUnsub=onValue(ref(db,"chatAnnouncementDraft"),snap=>{
           const draft=snap.val();
+          activeDraftFromServer=draft;
           if(draft){
             loadDraftFields(draft);
             try{localStorage.setItem(NEXT_DRAFT_KEY,draft.version);}catch{}
           }else{
-            const preferred=localStorage.getItem(NEXT_DRAFT_KEY);
-            if(preferred&&/^\d+\.\d+$/.test(preferred))$("announcementDraftVersion").value=preferred;
+            refreshEditorVersion();
           }
           mergeCurrentChangelog();
           renderDraftPreview();
@@ -1578,6 +1668,7 @@
     }
     // Default draft content is already in the editor; Firebase drafts merge on load.
     renderDraftPreview();
+    updatePreviousDraftButton();
     function closeAnnouncements(){announcementsOverlay.hidden=true;announcementPreviousFocus?.focus();}
     announcementsToggle.addEventListener("click",()=>{
       announcementPreviousFocus=document.activeElement;
@@ -1659,7 +1750,7 @@
       }else{
         consolePrint("Set your custom alias first: incognito NightOwl\nThen use incognito to toggle, or incognito off to disable.","muted");
       }
-      consolePrint("Your Firebase UID and moderation permissions are unchanged. Older messages keep their original appearance.","muted");
+      consolePrint("Your Firebase UID and moderation permissions are unchanged. Anonymous message profiles hide public role labels and bios. Older messages remain identifiable.","muted");
     }
     function consoleExecute(raw){
       const line=raw.trim();
@@ -2184,8 +2275,8 @@
       avatar.referrerPolicy="no-referrer";avatar.loading="lazy";
       avatar.classList.add("profile-click");avatar.tabIndex=0;avatar.setAttribute("role","button");
       avatar.setAttribute("aria-label","View "+data.name+"'s profile");
-      avatar.addEventListener("click",()=>openUserProfile(data.uid,data.name));
-      avatar.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openUserProfile(data.uid,data.name);}});
+      avatar.addEventListener("click",()=>openUserProfile(data.uid,data.name,incognitoMessage));
+      avatar.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openUserProfile(data.uid,data.name,incognitoMessage);}});
       if(typeof data.uid==="string"&&!incognitoMessage)ensureAvatarSubscription(data.uid);
       const messageMain=document.createElement("div");messageMain.className="message-main";
       const meta = document.createElement("div");
@@ -2203,8 +2294,8 @@
       meta.append(nameSpan,timeSpan);
       meta.classList.add("profile-click");meta.tabIndex=0;meta.setAttribute("role","button");
       meta.setAttribute("aria-label","View "+data.name+"'s profile");
-      meta.addEventListener("click",()=>openUserProfile(data.uid,data.name));
-      meta.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openUserProfile(data.uid,data.name);}});
+      meta.addEventListener("click",()=>openUserProfile(data.uid,data.name,incognitoMessage));
+      meta.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openUserProfile(data.uid,data.name,incognitoMessage);}});
       const bubble = document.createElement("div");
       bubble.className = "bubble";
       const imageUrl = imageFromMessage(data.text);
