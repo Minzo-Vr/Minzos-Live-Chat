@@ -102,6 +102,16 @@
     .theme-actions button{padding:8px 10px;font-size:12px}
     .theme-actions .theme-reset{background:#64748b;color:#fff}
     #themeFeedback{font-size:12px;color:var(--theme-secondary);margin-top:8px}
+    .announcement-draft{border:1px dashed #9c86c5;background:rgba(123,95,190,.07);border-radius:12px;padding:14px;margin-bottom:16px}
+    .announcement-draft[hidden]{display:none}
+    .draft-topline{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;font-size:13px}
+    .draft-pill{font-size:10px;background:#f5e9ff;color:#6939a4;border-radius:99px;padding:4px 7px}
+    .announcement-draft label{display:block;font-size:12px;margin:8px 0 4px}
+    .announcement-draft input,.announcement-draft textarea{display:block;width:100%;box-sizing:border-box;padding:8px;border:1px solid #c9bfdc;border-radius:8px;background:var(--theme-input,#fff);color:var(--theme-text,#222)}
+    .draft-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .draft-actions button{padding:9px 11px}
+    #announcementPublishNow{background:#5865f2;color:white}
+    #announcementDraftStatus{font-size:12px;color:var(--theme-secondary,#64748b)}
     .announcements-dialog{width:min(510px,100%)}
     .announcements-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:1px solid var(--theme-border,#dce1ec);padding-bottom:12px;margin-bottom:12px}
     .announcements-heading h2{margin:0 0 5px;font-size:23px}
@@ -315,6 +325,24 @@
       .join, .compose { padding:9px; gap:6px; }
       button { padding:10px 11px; }
     }
+    /* Fix unreadable text on light/white buttons, including signed-out Google login. */
+    .auth-gate button,
+    .rooms-grid button:not(.selected),
+    .attach-menu button,
+    .music-dock button,
+    .shop-item button,
+    .theme-actions .theme-reset {
+      color: #202437;
+    }
+    /* Auth button must remain readable regardless of the custom button-text theme. */
+    #googleSignIn {
+      background: #ffffff;
+      color: #202437 !important;
+      border: 1px solid #bfc7d6;
+      font-weight: 650;
+    }
+    #googleSignIn:hover { background: #f1f4fa; }
+    #googleSignIn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   </style>
 </head>
 <body>
@@ -352,6 +380,18 @@
           <div><h2 id="announcementsTitle">📢 What's New?</h2><p>Community Chat updates and new features! 🎉</p></div>
           <button type="button" id="announcementsClose" aria-label="Close announcements">✕</button>
         </div>
+        <section id="announcementAdminDraft" class="announcement-draft" hidden>
+          <div class="draft-topline">🔒 <strong>Admin-only unpublished announcement</strong> <span class="draft-pill">DRAFT · NOT PUBLIC</span></div>
+          <label for="announcementDraftVersion">Version</label>
+          <input id="announcementDraftVersion" type="text" maxlength="20" value="0.3" placeholder="0.3">
+          <label for="announcementDraftFeatures">Features (one feature per line, emojis welcome 🎉)</label>
+          <textarea id="announcementDraftFeatures" rows="5" maxlength="4000" placeholder="✨ Feature one!&#10;🚀 Feature two!&#10;🎨 Feature three!">📢 Admin-controlled announcement drafts and publishing!
+🔒 Chat+ features now require Plus or Admin access!
+🎛️ Chat+ settings are off by default for new users!</textarea>
+          <div class="draft-actions"><button type="button" id="announcementSaveDraft">💾 Save draft</button><button type="button" id="announcementPublishNow">📢 Publish to everyone</button></div>
+          <p id="announcementDraftStatus" role="status">Only admins can view and publish this preview.</p>
+          <div id="announcementDraftPreview" class="release-card" style="opacity:.7"></div>
+        </section>
         <div id="announcementsList"></div>
       </div>
     </div>
@@ -819,6 +859,10 @@
       else showExperimentalFeatures();
       // Existing per-browser preferences remain stored, but Plus-only features are unavailable without a role.
       if(typeof applyChatPreferences==="function")applyChatPreferences();
+      if(typeof themeApplyPalette==="function" && typeof defaultPalette==="function"){
+        if(!allowed)themeApplyPalette(defaultPalette());
+        else if(typeof themePalette!=="undefined")themeApplyPalette(themePalette);
+      }
     }
     const blockedFromChat=()=>!isAdmin && (moderationState.banned===true || (Number(moderationState.until)||0)>Date.now());
     function updateRoleUI(){
@@ -827,6 +871,8 @@
       updateRoleAppearanceOptions();
       updateLockdownUI();
       updateExperimentalAccess();
+      if(!hasExperimentalAccess()&&activeRoom!==0)switchRoom(0).catch(console.warn);
+      startAnnouncementListeners();
     }
     function startRoleListeners(){
       if(roleUnsub)roleUnsub();if(moderationUnsub)moderationUnsub();if(customRoleUnsub)customRoleUnsub();
@@ -1067,8 +1113,8 @@
     const roomKey = n => `room${n}`;
     const roomMessagePath = () => activeRoom ? `roomMessages/${roomKey(activeRoom)}` : "chatMessages";
     const roomIsMember = () => !!(user && roomMembers[user.uid]);
-    const roomCanView = () => !activeRoom || ((!roomMeta.locked && !allRoomsLocked) || roomIsMember() || isAdmin);
-    const roomCanPost = () => !activeRoom || (roomIsMember() && !allRoomsLocked);
+    const roomCanView = () => !activeRoom || (hasExperimentalAccess() && ((!roomMeta.locked && !allRoomsLocked) || roomIsMember() || isAdmin));
+    const roomCanPost = () => !activeRoom || (hasExperimentalAccess() && roomIsMember() && !allRoomsLocked);
     function renderRooms() {
       const grid = $("roomsGrid"); grid.replaceChildren();
       for (let n=0;n<=5;n++) {
@@ -1080,7 +1126,7 @@
       }
       $("allRoomsStatus").textContent=allRoomsLocked?"All rooms closed to new joins":"New joins allowed";
       $("allRoomsLockBtn").textContent=allRoomsLocked?"🔓 Unlock all chat rooms":"🔒 Lock all chat rooms";
-      $("roomTools").hidden=activeRoom===0 || (typeof chatPrefs!=="undefined" && !chatPrefs.enableRooms);
+      $("roomTools").hidden=activeRoom===0 || !hasExperimentalAccess() || (typeof chatPrefs!=="undefined" && !chatPrefs.enableRooms);
       if (!activeRoom) return;
       const owner=roomMeta.owner===user?.uid;
       const member=roomIsMember();
@@ -1110,6 +1156,9 @@
       },err=>console.error("Room lock setting",err)));
     }
     async function switchRoom(n){
+      if(n!==0&&(!hasExperimentalAccess()||!chatPrefs.enableRooms)){
+        showError("Chat rooms require an active Chat+ or Admin role.");return;
+      }
       if(n===activeRoom)return;
       await clearMyTyping();
       if(activeRoom && roomIsMember()) await leaveRoom();
@@ -1230,7 +1279,7 @@
       $("showAnnouncementButton").checked=noticePrefs.showButton;
       $("enableChatNotifications").checked=noticePrefs.notifications;
       announcementsToggle.hidden=!noticePrefs.showButton;
-      announcementsToggle.classList.toggle("announcements-unread",noticePrefs.showDot&&localStorage.getItem(seenKey)!==latestVersion);
+      announcementsToggle.classList.toggle("announcements-unread",noticePrefs.showDot&&localStorage.getItem(seenKey)!==latestPublishedVersion());
     }
     for(const [id,key] of [["showAnnouncementDot","showDot"],["showAnnouncementButton","showButton"],["enableChatNotifications","notifications"]]){
       $(id).addEventListener("change",e=>{
@@ -1266,34 +1315,104 @@
       if(!noticePrefs.notifications)return;
       try{
         const previous=localStorage.getItem(NOTICE_VERSION_KEY);
-        if(previous===null){localStorage.setItem(NOTICE_VERSION_KEY,latestVersion);return;}
-        if(previous!==latestVersion){
-          localStorage.setItem(NOTICE_VERSION_KEY,latestVersion);
-          notifyChat("📢 Community Chat update!","Version "+latestVersion+" is available. Open Announcements to see what's new! 🚀");
+        if(previous===null){localStorage.setItem(NOTICE_VERSION_KEY,latestPublishedVersion());return;}
+        if(previous!==latestPublishedVersion()){
+          localStorage.setItem(NOTICE_VERSION_KEY,latestPublishedVersion());
+          notifyChat("📢 Community Chat update!","Version "+latestPublishedVersion()+" is available. Open Announcements to see what's new! 🚀");
         }
       }catch{}
     }
     const announcementsOverlay=$("announcementsOverlay");
     const announcementsToggle=$("announcementsToggle");
-    const latestVersion=CHAT_RELEASES[0].version;
+    // Built-in historical releases are always published. New releases only appear
+    // after an admin explicitly publishes them to Firebase.
+    let publishedReleases=[],announcementsUnsub=null,draftUnsub=null;
+    const latestPublishedVersion=()=>publishedReleases[0]?.version||CHAT_RELEASES[0].version;
     const seenKey="communityChatSeenAnnouncementVersion";
     let announcementPreviousFocus=null;
     function renderAnnouncements(){
       const list=$("announcementsList");list.replaceChildren();
-      for(const release of CHAT_RELEASES){
+      const versions=new Set();
+      for(const release of [...publishedReleases,...CHAT_RELEASES]){
+        if(versions.has(release.version))continue;
+        versions.add(release.version);
         const card=document.createElement("section");card.className="release-card";
         const heading=document.createElement("h3");heading.textContent=`🚀 Version ${release.version}`;
-        const date=document.createElement("time");date.textContent=release.date;
+        const date=document.createElement("time");date.textContent=release.date||"Recently published";
         const ul=document.createElement("ul");
         for(const feature of release.features){const li=document.createElement("li");li.textContent=feature;ul.append(li);}
         card.append(heading,date,ul);list.append(card);
       }
     }
+    function renderDraftPreview(){
+      const box=$("announcementDraftPreview");box.replaceChildren();
+      const version=$("announcementDraftVersion").value.trim()||"0.3";
+      const title=document.createElement("h3");title.textContent=`🚀 Version ${version} · Unpublished preview`;
+      const list=document.createElement("ul");
+      for(const line of $("announcementDraftFeatures").value.split("\n").map(x=>x.trim()).filter(Boolean)){
+        const item=document.createElement("li");item.textContent=line;list.append(item);
+      }
+      box.append(title,list);
+    }
+    for(const id of ["announcementDraftVersion","announcementDraftFeatures"]){$(id).addEventListener("input",renderDraftPreview);}
+    function readAnnouncementDraft(){
+      const version=$("announcementDraftVersion").value.trim();
+      const features=$("announcementDraftFeatures").value.split("\n").map(x=>x.trim()).filter(Boolean);
+      if(!/^[0-9]+\.[0-9]+(?:\.[0-9]+)?$/.test(version)||version.length>20)throw Error("Use a version like 0.3 or 0.3.1.");
+      if(!features.length||features.length>30||features.some(f=>f.length>180))throw Error("Enter 1–30 features, each up to 180 characters.");
+      if(CHAT_RELEASES.some(r=>r.version===version)||publishedReleases.some(r=>r.version===version))throw Error("This version is already published. Choose a new version.");
+      return {version,features};
+    }
+    $("announcementSaveDraft").addEventListener("click",async()=>{
+      if(!isAdmin||!user||!db)return;
+      try{
+        const draft=readAnnouncementDraft();
+        await set(ref(db,"chatAnnouncementDraft"),draft);
+        $("announcementDraftStatus").textContent="💾 Draft saved. Only admins can see it.";
+      }catch(err){$("announcementDraftStatus").textContent="Could not save: "+(err.code||err.message);}
+    });
+    $("announcementPublishNow").addEventListener("click",async()=>{
+      if(!isAdmin||!user||!db)return;
+      try{
+        const draft=readAnnouncementDraft();
+        if(!confirm(`Publish Version ${draft.version} to EVERYONE now?`))return;
+        const key="v"+draft.version.replace(/\./g,"_");
+        $("announcementPublishNow").disabled=true;
+        await set(ref(db,"chatAnnouncementPublished/"+key),{...draft,date:new Date().toLocaleDateString("en-AU",{day:"numeric",month:"long",year:"numeric"}),publishedAt:Date.now()});
+        $("announcementDraftStatus").textContent=`📢 Version ${draft.version} published to everyone!`;
+        $("announcementDraftVersion").value="";
+        $("announcementDraftFeatures").value="";
+        await remove(ref(db,"chatAnnouncementDraft"));
+      }catch(err){$("announcementDraftStatus").textContent="Publish failed: "+(err.code||err.message);}
+      finally{$("announcementPublishNow").disabled=false;}
+    });
+    function startAnnouncementListeners(){
+      if(announcementsUnsub){announcementsUnsub();announcementsUnsub=null;}
+      if(draftUnsub){draftUnsub();draftUnsub=null;}
+      publishedReleases=[];
+      $("announcementAdminDraft").hidden=!isAdmin;
+      renderAnnouncements();updateAnnouncementPreferences();
+      if(!db||!user)return;
+      announcementsUnsub=onValue(ref(db,"chatAnnouncementPublished"),snap=>{
+        const entries=Object.values(snap.val()||{}).filter(r=>r&&typeof r.version==="string"&&Array.isArray(r.features));
+        publishedReleases=entries.sort((a,b)=>(Number(b.publishedAt)||0)-(Number(a.publishedAt)||0));
+        renderAnnouncements();updateAnnouncementPreferences();maybeNotifyAnnouncement();
+      },err=>console.warn("Published announcements unavailable",err));
+      if(isAdmin){
+        draftUnsub=onValue(ref(db,"chatAnnouncementDraft"),snap=>{
+          const draft=snap.val();
+          if(draft){$("announcementDraftVersion").value=draft.version||"0.3";$("announcementDraftFeatures").value=(draft.features||[]).join("\n");}
+          else if(!$("announcementDraftVersion").value)$("announcementDraftVersion").value="0.3";
+          renderDraftPreview();
+        },err=>{$("announcementDraftStatus").textContent="Draft unavailable: "+(err.code||err.message);});
+      }
+    }
+    renderDraftPreview();
     function closeAnnouncements(){announcementsOverlay.hidden=true;announcementPreviousFocus?.focus();}
     announcementsToggle.addEventListener("click",()=>{
       announcementPreviousFocus=document.activeElement;
       renderAnnouncements();announcementsOverlay.hidden=false;
-      try{localStorage.setItem(seenKey,latestVersion);}catch{}
+      try{localStorage.setItem(seenKey,latestPublishedVersion());}catch{}
       updateAnnouncementPreferences();
       $("announcementsClose").focus();
     });
@@ -1323,7 +1442,7 @@
     document.addEventListener("fullscreenchange",syncFullscreenButton);
     // Local, per-browser display preferences. Hiding avatars does not delete them.
     const CHAT_PREF_KEY = "communityChatAdvancedV1";
-    let chatPrefs={disableMusic:false,disablePfp:false,showPlusPreviews:false,enableRooms:true,enableSearch:false,enableXp:true};
+    let chatPrefs={disableMusic:false,disablePfp:false,showPlusPreviews:false,enableRooms:false,enableSearch:false,enableXp:false};
     try {chatPrefs={...chatPrefs,...JSON.parse(localStorage.getItem(CHAT_PREF_KEY)||"{}")} } catch {}
     function applyChatPreferences(){
       const experimentalAllowed=hasExperimentalAccess();
@@ -1331,9 +1450,9 @@
       $("disablePfp").checked=!!chatPrefs.disablePfp;
       $("showPlusPreviews").checked=!!chatPrefs.showPlusPreviews;
       $("plusFeaturePreview").hidden=!chatPrefs.showPlusPreviews;
-      $("enableRooms").checked=!!chatPrefs.enableRooms;
-      $("enableSearch").checked=!!chatPrefs.enableSearch;
-      $("enableXp").checked=!!chatPrefs.enableXp;
+      $("enableRooms").checked=experimentalAllowed&&!!chatPrefs.enableRooms;
+      $("enableSearch").checked=experimentalAllowed&&!!chatPrefs.enableSearch;
+      $("enableXp").checked=experimentalAllowed&&!!chatPrefs.enableXp;
       $("xpStatus").hidden=!user || !experimentalAllowed || !chatPrefs.enableXp;
       if(!experimentalAllowed||!chatPrefs.enableXp)$("shopOverlay").hidden=true;
       $("chatSearchBar").hidden=!experimentalAllowed||!chatPrefs.enableSearch;
@@ -1370,6 +1489,7 @@
     try{const stored=localStorage.getItem(CHAT_COLOR_KEY);if(validChatHex(stored))savedChatColor=stored;}catch{}
     setChatColor(savedChatColor);
     $("chatColorApply").addEventListener("click",()=>{
+      if(!hasExperimentalAccess())return;
       const entered=$("chatHexInput").value.trim();
       if(!validChatHex(entered)){
         $("chatHexHelp").textContent="Please enter a six-digit HEX colour, e.g. #A855F7.";
@@ -1395,6 +1515,7 @@
       catch{$("chatHexInput").focus();$("chatHexHelp").textContent="Use Ctrl+V to paste a #RRGGBB colour, then Apply.";}
     });
     $("chatColorReset").addEventListener("click",()=>{
+      if(!hasExperimentalAccess())return;
       setChatColor(DEFAULT_CHAT_COLOR);
       try{localStorage.removeItem(CHAT_COLOR_KEY);}catch{}
       $("chatHexHelp").textContent="Default purple restored: "+DEFAULT_CHAT_COLOR;
@@ -1455,7 +1576,7 @@
         for(const [key] of THEME_FIELDS)if(validChatHex(stored[key]))themePalette[key]=stored[key];
       }else{themePalette.accent=savedChatColor;}
     }catch{themePalette.accent=savedChatColor;}
-    themeShowInputs(themePalette);themeApplyPalette(themePalette);
+    themeShowInputs(themePalette);themeApplyPalette(hasExperimentalAccess()?themePalette:defaultPalette());
     $("themeApply").addEventListener("click",()=>{
       if(!hasExperimentalAccess())return;
       try{
@@ -2023,7 +2144,7 @@
       $("xpStatus").hidden=!account || !hasExperimentalAccess() || !chatPrefs.enableXp;
       if(roleUnsub){roleUnsub();roleUnsub=null;}if(moderationUnsub){moderationUnsub();moderationUnsub=null;}
       if(!account) {
-        isAdmin=false;resetChatIdentity();setAuthDisplay(false);
+        isAdmin=false;startAnnouncementListeners();resetChatIdentity();setAuthDisplay(false);
         $("adminPanel").hidden=true;$("adminLogin").hidden=false;
         status.textContent="Sign in required";
         return;
@@ -2040,6 +2161,7 @@
         await signOut(auth);return;
       }
       resetChatIdentity();setAuthDisplay(true);
+      startAnnouncementListeners();
       startEconomy();startRoleListeners();
       $("adminPanel").hidden=!isAdmin;$("adminLogin").hidden=isAdmin;
       status.textContent=isAdmin?"Admin online":"Online";
