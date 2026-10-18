@@ -409,6 +409,43 @@
     #dmSidebar .friends-toolbar button{font-size:11px}
     body.dm-sidebar-open{padding-left:270px}
     @media(max-width:700px){body.dm-sidebar-open{padding-left:0}#dmSidebar{width:min(300px,90vw);box-shadow:0 0 0 100vw #0006,4px 0 20px #0007}}
+
+    /* Consistent Settings section backgrounds and heading colours.
+       Keep this after the original styles so custom HEX themes work. */
+    #settingsOverlay .user-options,
+    #settingsOverlay .advanced-options,
+    #settingsOverlay .experimental-panel {
+      background:var(--theme-panel,#f8faff);
+      color:var(--theme-text,#202437);
+      border:1px solid var(--theme-border,#dce1ec);
+    }
+    #settingsOverlay .user-options > summary,
+    #settingsOverlay .advanced-options > summary,
+    #settingsOverlay .experimental-unlock {
+      color:var(--theme-text,#202437);
+      font-weight:600;
+    }
+    #settingsOverlay .experimental-unlock:hover,
+    #settingsOverlay .user-options > summary:hover,
+    #settingsOverlay .advanced-options > summary:hover {
+      color:var(--accent,#5865f2);
+    }
+    #settingsOverlay .experimental-hint,
+    #settingsOverlay .user-options-inner > p,
+    #settingsOverlay .advanced-options-inner > p {
+      color:var(--theme-secondary,#697087);
+    }
+    #settingsOverlay #experimentalFeatures strong,
+    #settingsOverlay .advanced-options strong,
+    #settingsOverlay .experimental-panel label,
+    #settingsOverlay .user-options label {
+      color:var(--theme-text,#202437);
+    }
+    #settingsOverlay .email-link-settings {
+      background:var(--theme-surface,#fff);
+      color:var(--theme-text,#202437);
+      border-color:var(--theme-border,#dce1ec);
+    }
   </style>
 </head>
 <body>
@@ -1589,6 +1626,7 @@
           "🎁 NEW! XP gifting with a 25% transfer deduction, protected by a server function (requires deployment)!"
         ],
         fixed:[
+          "🎨 Fixed mismatched User Settings background and Experimental heading text colours!",
           "📢 Fixed announcement drafts resetting to an older version after refresh!",
           "🔐 Corrected Firebase version validation for Next Update / Reset!",
           "📝 Fixed saving empty announcement drafts without requiring an entry!",
