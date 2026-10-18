@@ -159,6 +159,11 @@
     .dm-line.mine{border-left:3px solid var(--accent,#5865f2)}
     .dm-form{display:flex;gap:7px}.dm-form input{flex:1;min-width:0}
     .friends-note{font-size:12px;color:var(--theme-secondary,#667085)}
+    .email-auth-details,.email-link-settings{margin:12px 0;padding:12px;border:1px solid var(--theme-border,#dce1ec);border-radius:10px;background:var(--theme-surface,#fff);color:var(--theme-text,#202437)}
+    .email-auth-details summary{cursor:pointer;font-weight:650}
+    .email-auth-details form,.email-link-settings form{display:grid;gap:8px;margin-top:10px;text-align:left}
+    .email-auth-details input,.email-link-settings input{width:100%;box-sizing:border-box}
+    .email-auth-details button,.email-link-settings button{color:#202437!important;background:#fff!important;border:1px solid #cbd5e1!important}
     .auth-buttons{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap}
     .auth-buttons button{flex:1;min-width:175px}
     #anonymousSignIn:disabled{opacity:.42;filter:grayscale(1);cursor:not-allowed!important;background:#9ca3af!important;color:#263238!important}
@@ -501,6 +506,18 @@
           <p id="settingsFeedback" role="status"></p>
           <div class="settings-actions"><button type="button" id="settingsCancel">Cancel</button><button type="submit" id="settingsSave">Save name</button></div>
         </form>
+          <div class="email-link-settings" data-setting-label="link google account email password direct sign in school account">
+            <strong>🔗 Direct sign-in for your Google account</strong>
+            <p class="hint">While signed in with Google, add an email and password to this same Firebase account. Your UID, messages, friends and roles stay the same. Next time, use email sign-in without a Google popup.</p>
+            <form id="linkEmailForm">
+              <label for="linkEmailAddress">Email for direct sign-in</label>
+              <input id="linkEmailAddress" type="email" autocomplete="email" placeholder="you@example.com" required>
+              <label for="linkEmailPassword">New password (minimum 6 characters)</label>
+              <input id="linkEmailPassword" type="password" minlength="6" autocomplete="new-password" required>
+              <button type="submit" id="linkEmailButton">🔗 Link email &amp; password</button>
+              <p id="linkEmailFeedback" role="status" class="hint"></p>
+            </form>
+          </div>
           <div class="role-effects-box" data-setting-label="username effects role rainbow moderator blue plus gold member">
             <strong>✨ Username effects</strong>
             <small>Role colours unlock only when an Admin assigns you that role. You can turn your effect off without losing your role.</small>
@@ -663,6 +680,20 @@
         <button type="button" id="googleSignIn">Continue with Google</button>
         <button type="button" id="anonymousSignIn" disabled title="Anonymous accounts are disabled by the Admin">🕵️ Continue anonymously</button>
       </div>
+      <details class="email-auth-details">
+        <summary>✉️ Sign in or sign up with email &amp; password (no Google popup)</summary>
+        <form id="emailAuthForm" autocomplete="on">
+          <label for="emailAuthEmail">Email address</label>
+          <input id="emailAuthEmail" type="email" autocomplete="email" required placeholder="you@example.com">
+          <label for="emailAuthPassword">Password (minimum 6 characters)</label>
+          <input id="emailAuthPassword" type="password" minlength="6" autocomplete="current-password" required placeholder="Password">
+          <div class="auth-buttons">
+            <button type="submit" id="emailSignIn">Sign in</button>
+            <button type="button" id="emailSignUp">Create account</button>
+          </div>
+          <p id="emailAuthFeedback" role="status" class="hint"></p>
+        </form>
+      </details>
       <p id="anonymousSignInHint" class="hint">Checking guest sign-in availability…</p>
       <p id="authFeedback" role="status">Not signed in.</p>
       <p>Already an admin? Use the Admin login at the bottom.</p>
@@ -849,7 +880,7 @@
     */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, EmailAuthProvider, linkWithCredential, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
     import {
       getDatabase, ref, push, query, limitToLast, limitToFirst, orderByKey, get, update, onChildAdded, onChildRemoved, onValue, set, remove, serverTimestamp, runTransaction, onDisconnect
     } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
@@ -1549,6 +1580,9 @@
           "📝 Added automatic changelog suggestions for the active announcement version!",
           "🔄 Added a Log recent changes button to refill missing release notes!",
           "🕵️ Improved Incognito profiles: hide public role badges, bio and personal avatar while preserving Firebase identity!",
+          "✉️ NEW! Email/password sign-in and sign-up without Google popup!",
+          "🔗 NEW! Link email/password to an existing Google account in User Settings without changing Firebase UID!",
+          "🔒 Firebase rules now permit authenticated email/password members while keeping existing moderation permissions!",
           "💬 NEW! Collapsible Discord-style DM sidebar on the left, with friend conversations and XP gifting!",
           "👥 NEW! Friends list, send/accept/decline friend requests from member profiles!",
           "💬 NEW! Private direct messages between accepted friends!",
@@ -2805,11 +2839,13 @@
       for(const label of document.querySelectorAll(".meta [data-author-uid]")){
         label.classList.toggle("admin-rgb-name",isAdmin && label.dataset.authorUid===account.uid);
       }
-      if(!google && !isAdmin && !(account.isAnonymous && anonymousAccountsEnabled)) {
+      const emailPassword=account.providerData.some(p=>p.providerId==="password") || token.signInProvider==="password";
+      if(!google && !emailPassword && !isAdmin && !(account.isAnonymous && anonymousAccountsEnabled)) {
         await signOut(auth);return;
       }
       resetChatIdentity();setAuthDisplay(true);
       if(account.isAnonymous)$("accountLabel").textContent="🕵️ Signed in anonymously — choose a chat username";
+      else if(emailPassword&&!google&&!isAdmin)$("accountLabel").textContent="✉️ Signed in with email — choose a chat username";
       startAnnouncementListeners();
       startEconomy();startFriends();startRoleListeners();
       $("adminPanel").hidden=!isAdmin;$("adminLogin").hidden=isAdmin;
@@ -2854,6 +2890,56 @@
         console.error("Google sign-in",err);
         $("authFeedback").textContent="Google sign-in failed: "+(err.code||err.message);
       } finally {btn.disabled=false;}
+    });
+    // Email sign-in and sign-up use Firebase Auth, not a custom password store.
+    // Linking an email credential to a Google user preserves their Firebase UID.
+    function emailAuthError(err){
+      const messages={
+        "auth/email-already-in-use":"This email is already registered. Sign in instead, or use a different address.",
+        "auth/credential-already-in-use":"This email is linked to another Firebase account. Sign in to that account; it cannot be merged here automatically.",
+        "auth/invalid-credential":"Email or password is incorrect.",
+        "auth/wrong-password":"Email or password is incorrect.",
+        "auth/weak-password":"Choose a stronger password.",
+        "auth/operation-not-allowed":"Enable Email/Password in Firebase Authentication → Sign-in method.",
+        "auth/requires-recent-login":"For security, sign out and sign in with Google again, then link your email and password.",
+        "auth/too-many-requests":"Too many attempts. Please wait and try again."
+      };
+      return messages[err?.code]||("Firebase sign-in error: "+(err?.code||err?.message||"unknown"));
+    }
+    async function submitEmailAuth(create){
+      const email=$("emailAuthEmail").value.trim(),password=$("emailAuthPassword").value;
+      const feedback=$("emailAuthFeedback");
+      $("emailSignIn").disabled=true;$("emailSignUp").disabled=true;
+      feedback.textContent=create?"Creating your account…":"Signing in…";
+      try{
+        if(create)await createUserWithEmailAndPassword(auth,email,password);
+        else await signInWithEmailAndPassword(auth,email,password);
+        feedback.textContent=create?"Account created! Choose your chat username.":"Signed in!";
+        $("emailAuthPassword").value="";
+      }catch(err){console.error("Email authentication",err);feedback.textContent=emailAuthError(err);}
+      finally{$("emailSignIn").disabled=false;$("emailSignUp").disabled=false;}
+    }
+    $("emailAuthForm").addEventListener("submit",e=>{e.preventDefault();submitEmailAuth(false);});
+    $("emailSignUp").addEventListener("click",()=>submitEmailAuth(true));
+    $("linkEmailForm").addEventListener("submit",async e=>{
+      e.preventDefault();
+      const feedback=$("linkEmailFeedback"),account=auth?.currentUser;
+      if(!account||account.isAnonymous){feedback.textContent="Sign in with Google first to link your existing account.";return;}
+      if(account.providerData.some(p=>p.providerId==="password")){
+        feedback.textContent="This account already has email/password sign-in.";return;
+      }
+      if(!account.providerData.some(p=>p.providerId==="google.com")){
+        feedback.textContent="Sign in with Google first to link the same Google account.";return;
+      }
+      const button=$("linkEmailButton");button.disabled=true;
+      feedback.textContent="Linking email/password to your existing account…";
+      try{
+        const credential=EmailAuthProvider.credential($("linkEmailAddress").value.trim(),$("linkEmailPassword").value);
+        await linkWithCredential(account,credential);
+        $("linkEmailPassword").value="";
+        feedback.textContent="Linked successfully! You can now sign in with email/password without a Google popup. Your UID is unchanged.";
+      }catch(err){console.error("Link email/password",err);feedback.textContent=emailAuthError(err);}
+      finally{button.disabled=false;}
     });
     $("anonymousSignIn").addEventListener("click",async()=>{
       if(!anonymousAccountsEnabled)return;
