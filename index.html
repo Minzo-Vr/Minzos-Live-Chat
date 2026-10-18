@@ -106,6 +106,11 @@
     .announcement-draft[hidden]{display:none}
     .draft-topline{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;font-size:13px}
     .draft-pill{font-size:10px;background:#f5e9ff;color:#6939a4;border-radius:99px;padding:4px 7px}
+    .announcement-draft .draft-helper{font-size:11px;color:var(--theme-secondary,#64748b)}
+    .release-featured{font-weight:800;font-size:15px;margin:9px 0 11px;color:var(--theme-text,#222)}
+    .release-section{margin-top:12px}
+    .release-section h4{font-size:13px;margin:0 0 5px;font-weight:800}
+    .release-section ul{margin:4px 0 0;padding-left:20px}
     .announcement-draft label{display:block;font-size:12px;margin:8px 0 4px}
     .announcement-draft input,.announcement-draft textarea{display:block;width:100%;box-sizing:border-box;padding:8px;border:1px solid #c9bfdc;border-radius:8px;background:var(--theme-input,#fff);color:var(--theme-text,#222)}
     .draft-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
@@ -384,11 +389,17 @@
           <div class="draft-topline">🔒 <strong>Admin-only unpublished announcement</strong> <span class="draft-pill">DRAFT · NOT PUBLIC</span></div>
           <label for="announcementDraftVersion">Version</label>
           <input id="announcementDraftVersion" type="text" maxlength="20" value="0.3" placeholder="0.3">
-          <label for="announcementDraftFeatures">Features &amp; bug fixes (one item per line, emojis welcome 🎉)</label>
+          <label for="announcementDraftFeatured">🌟 Featured (bold, appears directly below the version)</label>
+          <input id="announcementDraftFeatured" type="text" maxlength="180" placeholder="🌟 Our biggest update yet!">
+          <p class="draft-helper">Write each change under its own section. You can leave a section empty.</p>
+          <label for="announcementDraftFeatures">✨ ADDED — New features (one per line)</label>
           <textarea id="announcementDraftFeatures" rows="5" maxlength="4000" placeholder="✨ Feature one!&#10;🚀 Feature two!&#10;🎨 Feature three!">📢 Admin-controlled announcement drafts and publishing!
 🔒 Chat+ features now require Plus or Admin access!
-🎛️ Chat+ settings are off by default for new users!
-🐛 FIXED: Google sign-in button text is now visible on its white background! 🎨</textarea>
+🎛️ Chat+ settings are off by default for new users!</textarea>
+          <label for="announcementDraftFixed">🐛 FIXED — Bug fixes (one per line)</label>
+          <textarea id="announcementDraftFixed" rows="3" maxlength="4000" placeholder="🎨 Google sign-in button contrast fixed!"></textarea>
+          <label for="announcementDraftRemoved">🗑️ REMOVED — Removed features (one per line)</label>
+          <textarea id="announcementDraftRemoved" rows="3" maxlength="4000" placeholder="🧹 Removed an outdated option"></textarea>
           <div class="draft-actions"><button type="button" id="announcementSaveDraft">💾 Save draft</button><button type="button" id="announcementPublishNow">📢 Publish to everyone</button></div>
           <p id="announcementDraftStatus" role="status">Only admins can view and publish this preview.</p>
           <div id="announcementDraftPreview" class="release-card" style="opacity:.7"></div>
@@ -1331,47 +1342,97 @@
     const latestPublishedVersion=()=>publishedReleases[0]?.version||CHAT_RELEASES[0].version;
     const seenKey="communityChatSeenAnnouncementVersion";
     let announcementPreviousFocus=null;
+    // Preserve the existing Firebase schema (version + features[]), so the
+    // existing database rules and already-published releases remain compatible.
+    // Category markers are stored as ordinary feature strings.
+    const RELEASE_MARKERS={featured:"🌟 FEATURED: ",added:"✨ ADDED: ",fixed:"🐛 FIXED: ",removed:"🗑️ REMOVED: "};
+    function releaseParts(release){
+      const parts={featured:"",added:[],fixed:[],removed:[]};
+      for(const item of Array.isArray(release.features)?release.features:[]){
+        if(typeof item!=="string")continue;
+        const value=item.trim();
+        if(value.startsWith(RELEASE_MARKERS.featured)){parts.featured=value.slice(RELEASE_MARKERS.featured.length);continue;}
+        if(value.startsWith(RELEASE_MARKERS.added)){parts.added.push(value.slice(RELEASE_MARKERS.added.length));continue;}
+        if(value.startsWith(RELEASE_MARKERS.fixed)){parts.fixed.push(value.slice(RELEASE_MARKERS.fixed.length));continue;}
+        if(value.startsWith(RELEASE_MARKERS.removed)){parts.removed.push(value.slice(RELEASE_MARKERS.removed.length));continue;}
+        if(/^(?:🐛\s*)?(?:FIXED|FIX):\s*/i.test(value)){parts.fixed.push(value.replace(/^(?:🐛\s*)?(?:FIXED|FIX):\s*/i,""));continue;}
+        if(/^(?:🗑️\s*)?(?:REMOVED|REMOVE):\s*/i.test(value)){parts.removed.push(value.replace(/^(?:🗑️\s*)?(?:REMOVED|REMOVE):\s*/i,""));continue;}
+        parts.added.push(value);
+      }
+      return parts;
+    }
+    function releaseCard(release,preview=false){
+      const card=document.createElement("section");card.className="release-card";
+      const heading=document.createElement("h3");heading.textContent=`🚀 Version ${release.version}${preview?" · Unpublished preview":""}`;
+      card.append(heading);
+      if(!preview){const date=document.createElement("time");date.textContent=release.date||"Recently published";card.append(date);}
+      const parts=releaseParts(release);
+      if(parts.featured){
+        const featured=document.createElement("p");featured.className="release-featured";
+        featured.textContent="🌟 FEATURED — "+parts.featured;card.append(featured);
+      }
+      for(const [kind,label] of [["added","✨ ADDED"],["fixed","🐛 FIXED"],["removed","🗑️ REMOVED"]]){
+        if(!parts[kind].length)continue;
+        const section=document.createElement("div");section.className="release-section";
+        const title=document.createElement("h4");title.textContent=label;
+        const ul=document.createElement("ul");
+        for(const line of parts[kind]){const li=document.createElement("li");li.textContent=line;ul.append(li);}
+        section.append(title,ul);card.append(section);
+      }
+      return card;
+    }
     function renderAnnouncements(){
       const list=$("announcementsList");list.replaceChildren();
       const versions=new Set();
       for(const release of [...publishedReleases,...CHAT_RELEASES]){
         if(versions.has(release.version))continue;
         versions.add(release.version);
-        const card=document.createElement("section");card.className="release-card";
-        const heading=document.createElement("h3");heading.textContent=`🚀 Version ${release.version}`;
-        const date=document.createElement("time");date.textContent=release.date||"Recently published";
-        const ul=document.createElement("ul");
-        for(const feature of release.features){const li=document.createElement("li");li.textContent=feature;ul.append(li);}
-        card.append(heading,date,ul);list.append(card);
+        list.append(releaseCard(release));
       }
     }
-    // Release notes include fixes alongside features. Keep this entry in the
-    // admin-only draft until an admin chooses to publish it.
     const CURRENT_BUG_FIXES=[
-      "🐛 FIXED: Google sign-in button text is now visible on its white background! 🎨"
+      "Google sign-in button text is now visible on its white background! 🎨"
     ];
     function includeCurrentBugFixes(){
-      const textarea=$("announcementDraftFeatures");
+      const textarea=$("announcementDraftFixed");
       const current=textarea.value.split("\n").map(line=>line.trim());
       const additions=CURRENT_BUG_FIXES.filter(line=>!current.includes(line));
-      if(additions.length){textarea.value=textarea.value.trimEnd()+"\n"+additions.join("\n");}
+      if(additions.length)textarea.value=[textarea.value.trimEnd(),...additions].filter(Boolean).join("\n");
+    }
+    function draftLines(id){
+      return $(id).value.split("\n").map(line=>line.trim()).filter(Boolean);
+    }
+    function collectDraftFeatures(){
+      const features=[],featured=$("announcementDraftFeatured").value.trim();
+      if(featured)features.push(RELEASE_MARKERS.featured+featured);
+      for(const [id,marker] of [
+        ["announcementDraftFeatures",RELEASE_MARKERS.added],
+        ["announcementDraftFixed",RELEASE_MARKERS.fixed],
+        ["announcementDraftRemoved",RELEASE_MARKERS.removed]
+      ])for(const line of draftLines(id))features.push(marker+line);
+      return features;
     }
     function renderDraftPreview(){
       const box=$("announcementDraftPreview");box.replaceChildren();
       const version=$("announcementDraftVersion").value.trim()||"0.3";
-      const title=document.createElement("h3");title.textContent=`🚀 Version ${version} · Unpublished preview`;
-      const list=document.createElement("ul");
-      for(const line of $("announcementDraftFeatures").value.split("\n").map(x=>x.trim()).filter(Boolean)){
-        const item=document.createElement("li");item.textContent=line;list.append(item);
-      }
-      box.append(title,list);
+      box.append(...Array.from(releaseCard({version,features:collectDraftFeatures()},true).childNodes));
     }
-    for(const id of ["announcementDraftVersion","announcementDraftFeatures"]){$(id).addEventListener("input",renderDraftPreview);}
+    for(const id of ["announcementDraftVersion","announcementDraftFeatured","announcementDraftFeatures","announcementDraftFixed","announcementDraftRemoved"]){
+      $(id).addEventListener("input",renderDraftPreview);
+    }
+    function loadDraftFields(draft){
+      const parts=releaseParts(draft);
+      $("announcementDraftVersion").value=draft.version||"0.3";
+      $("announcementDraftFeatured").value=parts.featured;
+      $("announcementDraftFeatures").value=parts.added.join("\n");
+      $("announcementDraftFixed").value=parts.fixed.join("\n");
+      $("announcementDraftRemoved").value=parts.removed.join("\n");
+    }
     function readAnnouncementDraft(){
       const version=$("announcementDraftVersion").value.trim();
-      const features=$("announcementDraftFeatures").value.split("\n").map(x=>x.trim()).filter(Boolean);
+      const features=collectDraftFeatures();
       if(!/^[0-9]+\.[0-9]+(?:\.[0-9]+)?$/.test(version)||version.length>20)throw Error("Use a version like 0.3 or 0.3.1.");
-      if(!features.length||features.length>30||features.some(f=>f.length>180))throw Error("Enter 1–30 features, each up to 180 characters.");
+      if(!features.length||features.length>30||features.some(f=>f.length>180))throw Error("Enter 1–30 total entries, each up to 180 characters.");
       if(CHAT_RELEASES.some(r=>r.version===version)||publishedReleases.some(r=>r.version===version))throw Error("This version is already published. Choose a new version.");
       return {version,features};
     }
@@ -1393,7 +1454,7 @@
         await set(ref(db,"chatAnnouncementPublished/"+key),{...draft,date:new Date().toLocaleDateString("en-AU",{day:"numeric",month:"long",year:"numeric"}),publishedAt:Date.now()});
         $("announcementDraftStatus").textContent=`📢 Version ${draft.version} published to everyone!`;
         $("announcementDraftVersion").value="";
-        $("announcementDraftFeatures").value="";
+        for(const id of ["announcementDraftFeatured","announcementDraftFeatures","announcementDraftFixed","announcementDraftRemoved"])$(id).value="";
         await remove(ref(db,"chatAnnouncementDraft"));
       }catch(err){$("announcementDraftStatus").textContent="Publish failed: "+(err.code||err.message);}
       finally{$("announcementPublishNow").disabled=false;}
@@ -1413,7 +1474,7 @@
       if(isAdmin){
         draftUnsub=onValue(ref(db,"chatAnnouncementDraft"),snap=>{
           const draft=snap.val();
-          if(draft){$("announcementDraftVersion").value=draft.version||"0.3";$("announcementDraftFeatures").value=(draft.features||[]).join("\n");}
+          if(draft)loadDraftFields(draft);
           else if(!$("announcementDraftVersion").value)$("announcementDraftVersion").value="0.3";
           includeCurrentBugFixes();
           renderDraftPreview();
