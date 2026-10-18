@@ -977,7 +977,7 @@
       avatarUnsubscribers.set(uid,onValue(ref(db,avatarPath(uid)),snapshot=>{
         const value=safeCloudinaryImageUrl(snapshot.val());
         avatarUrls.set(uid,value||avatarFallback);
-        document.querySelectorAll('img.message-avatar').forEach(img=>{if(img.dataset.uid===uid)img.src=value||avatarFallback;});
+        document.querySelectorAll('img.message-avatar').forEach(img=>{if(img.dataset.uid===uid&&!img.dataset.incognito)img.src=value||avatarFallback;});
         if(user?.uid===uid) $("settingsAvatarPreview").src=value||avatarFallback;
       },error=>console.warn("Avatar unavailable",error)));
     }
@@ -1432,7 +1432,9 @@
         "🧰 Console commands: clear, whoami, role, version, status, announcements, settings, shop, fullscreen, echo, date and exit!",
         "⬆️⬇️ Console command history using the arrow keys!",
         "🌟 Featured, ✨ Added, 🐛 Fixed and 🗑️ Removed announcement sections!",
-        "📝 Release notes now track new features, fixes and removals in the draft!"
+        "📝 Release notes now track new features, fixes and removals in the draft!",
+        "🕵️ NEW! Incognito terminal command with custom display aliases and anonymous-style avatars for new messages!",
+        "🔐 Incognito retains Firebase account identity, roles and moderation controls!"
       ],
       fixed:[
         "🎨 Fixed invisible text on the white Google sign-in button!"
@@ -1616,6 +1618,45 @@
     $("consoleClose").addEventListener("click",consoleClose);
     consoleOverlay.addEventListener("click",e=>{if(e.target===consoleOverlay)consoleClose();});
     document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!consoleOverlay.hidden)consoleClose();});
+    // Incognito changes only the public display on newly sent messages.
+    // Firebase UID, login, role checks and moderation are unchanged.
+    const INCOGNITO_KEY="communityChatIncognitoV1";
+    const INCOGNITO_PREFIX="🕵 ";
+    const INCOGNITO_AVATAR="data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect width="80" height="80" rx="40" fill="#252b3b"/><circle cx="40" cy="32" r="15" fill="#a4abc0"/><path d="M12 76c2-20 16-28 28-28s26 8 28 28" fill="#a4abc0"/><path d="M17 26h46l-7-8H24z" fill="#111827"/></svg>');
+    let incognito={enabled:false,alias:""};
+    try{
+      const saved=JSON.parse(localStorage.getItem(INCOGNITO_KEY)||"null");
+      if(saved&&typeof saved.alias==="string"&&/^[a-zA-Z0-9 _-]{2,16}$/.test(saved.alias))
+        incognito={enabled:saved.enabled===true,alias:saved.alias};
+    }catch{}
+    const incognitoDisplayName=()=>incognito.enabled&&incognito.alias?INCOGNITO_PREFIX+incognito.alias:username;
+    function incognitoSave(){
+      try{localStorage.setItem(INCOGNITO_KEY,JSON.stringify(incognito));}catch{}
+    }
+    function incognitoCommand(args){
+      if(!user||!joined){consolePrint("Sign in and join the chat before using incognito.","error");return;}
+      const argument=args.join(" ").trim();
+      if(argument.toLowerCase()==="off"){
+        incognito.enabled=false;incognitoSave();
+        consolePrint("Incognito OFF. New messages use your normal username.","ok");return;
+      }
+      if(argument.toLowerCase()==="status"){
+        consolePrint(incognito.enabled?`Incognito ON as ${incognito.alias}`:"Incognito OFF");return;
+      }
+      if(argument){
+        if(!/^[a-zA-Z0-9 _-]{2,16}$/.test(argument)){
+          consolePrint("Choose a 2–16 character alias using letters, numbers, spaces, _ or -. Example: incognito NightOwl","error");return;
+        }
+        incognito.alias=argument;incognito.enabled=true;incognitoSave();
+        consolePrint(`Incognito ON. New messages display as ${INCOGNITO_PREFIX}${argument} with a generic avatar.`,"ok");
+      }else if(incognito.alias){
+        incognito.enabled=!incognito.enabled;incognitoSave();
+        consolePrint(`Incognito ${incognito.enabled?"ON":"OFF"}. ${incognito.enabled?"Alias: "+incognito.alias:"Normal name restored for new messages."}`,"ok");
+      }else{
+        consolePrint("Set your custom alias first: incognito NightOwl\nThen use incognito to toggle, or incognito off to disable.","muted");
+      }
+      consolePrint("Your Firebase UID and moderation permissions are unchanged. Older messages keep their original appearance.","muted");
+    }
     function consoleExecute(raw){
       const line=raw.trim();
       if(!line)return;
@@ -1623,7 +1664,7 @@
       const [cmd,...args]=line.split(/\s+/);
       switch(cmd.toLowerCase()){
         case "help":
-          consolePrint("COMMANDS\n  help              Show commands\n  clear / cls       Clear the console\n  whoami            Show signed-in account\n  role              Show your roles\n  version           Current release\n  status            Connection status\n  announcements     Open What's New\n  settings          Open Settings\n  shop              Open XP shop (if enabled)\n  fullscreen        Toggle full screen\n  echo <text>       Print text\n  date              Show local date and time\n  exit              Close console\n\nUse ↑ and ↓ to browse command history.");
+          consolePrint("COMMANDS\n  help              Show commands\n  clear / cls       Clear the console\n  whoami            Show signed-in account\n  role              Show your roles\n  version           Current release\n  status            Connection status\n  announcements     Open What's New\n  settings          Open Settings\n  shop              Open XP shop (if enabled)\n  fullscreen        Toggle full screen\n  echo <text>       Print text\n  date              Show local date and time\n  incognito <alias>  Enable alias + hidden avatar\n  incognito         Toggle saved alias\n  incognito off     Disable alias\n  incognito status  Check incognito mode\n  exit              Close console\n\nUse ↑ and ↓ to browse command history.");
           break;
         case "clear":case "cls":consoleOutput.replaceChildren();break;
         case "whoami":consolePrint(user?`Signed in: ${user.displayName||user.email||user.uid}`:"Not signed in");break;
@@ -1642,6 +1683,7 @@
         case "fullscreen":consoleClose();$("fullscreenToggle").click();break;
         case "echo":consolePrint(args.join(" "));break;
         case "date":consolePrint(new Date().toLocaleString());break;
+        case "incognito":incognitoCommand(args);break;
         case "exit":consoleClose();break;
         default:consolePrint(`'${cmd}' is not recognized. Type HELP to see commands.`,"error");
       }
@@ -1955,7 +1997,7 @@
       btn.disabled=true;
       try {
         const name=newCallName();
-        await push(ref(db,"chatMessages"),{uid:user.uid,name:username,text:CALL_PREFIX+name,createdAt:serverTimestamp()});
+        await push(ref(db,"chatMessages"),{uid:user.uid,name:incognitoDisplayName(),text:CALL_PREFIX+name,createdAt:serverTimestamp()});
         // Browser popup policies may block opening a tab after an asynchronous write;
         // the persistent Join call link in the invitation is always available.
         const url="https://meet.jit.si/"+encodeURIComponent(name);
@@ -2132,20 +2174,22 @@
       wrap.dataset.searchText = data.name+" "+data.text;
       const avatar=document.createElement("img");avatar.className="message-avatar";
       avatar.alt="";avatar.dataset.uid=data.uid||"";
-      avatar.src=avatarUrls.get(data.uid)||avatarFallback;
+      if(data.name.startsWith(INCOGNITO_PREFIX))avatar.dataset.incognito="true";
+      const incognitoMessage=data.name.startsWith(INCOGNITO_PREFIX);
+      avatar.src=incognitoMessage?INCOGNITO_AVATAR:(avatarUrls.get(data.uid)||avatarFallback);
       avatar.referrerPolicy="no-referrer";avatar.loading="lazy";
       avatar.classList.add("profile-click");avatar.tabIndex=0;avatar.setAttribute("role","button");
       avatar.setAttribute("aria-label","View "+data.name+"'s profile");
       avatar.addEventListener("click",()=>openUserProfile(data.uid,data.name));
       avatar.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openUserProfile(data.uid,data.name);}});
-      if(typeof data.uid==="string")ensureAvatarSubscription(data.uid);
+      if(typeof data.uid==="string"&&!incognitoMessage)ensureAvatarSubscription(data.uid);
       const messageMain=document.createElement("div");messageMain.className="message-main";
       const meta = document.createElement("div");
       meta.className = "meta";
       const nameSpan=document.createElement("span");
       nameSpan.textContent=data.name;
       nameSpan.dataset.authorUid=data.uid||"";
-      const effect=displayedRoleEffect(data.uid);
+      const effect=incognitoMessage?"none":displayedRoleEffect(data.uid);
       nameSpan.classList.toggle("admin-rgb-name",effect==="admin");
       nameSpan.classList.toggle("moderator-blue-name",effect==="moderator");
       nameSpan.classList.toggle("plus-gold-name",effect==="plus");
@@ -2508,7 +2552,7 @@
     async function sendMediaText(text) {
       if (!canSendGif()) throw new Error("Join chat first, or wait until lockdown/slowmode ends.");
       if (text.length > 500) throw new Error("Media link exceeds the 500-character message limit.");
-      await push(ref(db,roomMessagePath()),{uid:user.uid,name:username,text,createdAt:serverTimestamp()});
+      await push(ref(db,roomMessagePath()),{uid:user.uid,name:incognitoDisplayName(),text,createdAt:serverTimestamp()});
       lastSentAt = Date.now(); updateSlowUI();
     }
     function openAttachmentPanel(panelId, focusId) {
@@ -2730,7 +2774,7 @@
       if (!canSendGif()) throw new Error("Join chat first, or wait for lockdown/slowmode to end.");
       const text = "FILE: " + JSON.stringify({n:cleaned,u:url});
       if (text.length > 500) throw new Error("File link is too long (Firebase limit: 500 characters).");
-      await push(ref(db,roomMessagePath()), {uid:user.uid,name:username,text,createdAt:serverTimestamp()});
+      await push(ref(db,roomMessagePath()), {uid:user.uid,name:incognitoDisplayName(),text,createdAt:serverTimestamp()});
       lastSentAt = Date.now(); updateSlowUI();
       $("fileStatus").textContent = "File shared!";
       $("filePanel").hidden = true;
@@ -2794,7 +2838,7 @@
       const btn = $("gifSendUrl"); btn.disabled = true;
       try {
         await push(ref(db, roomMessagePath()), {
-          uid: user.uid, name: username, text: "GIF: " + url, createdAt: serverTimestamp()
+          uid: user.uid, name: incognitoDisplayName(), text: "GIF: " + url, createdAt: serverTimestamp()
         });
         lastSentAt = Date.now(); updateSlowUI();
         $("gifPanel").hidden = true;
@@ -2932,7 +2976,7 @@
       try {
         await push(ref(db, roomMessagePath()), {
           uid: user.uid,
-          name: username,
+          name: incognitoDisplayName(),
           text: text.slice(0, 500),
           createdAt: serverTimestamp()
         });
