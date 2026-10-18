@@ -403,10 +403,10 @@
           <label for="announcementDraftVersion">Version</label>
           <input id="announcementDraftVersion" type="text" maxlength="20" value="0.3" placeholder="0.3">
           <label for="announcementDraftFeatured">🌟 Featured (bold, appears directly below the version)</label>
-          <input id="announcementDraftFeatured" type="text" maxlength="180" value="⌨️ Windows-style Command Console and improved release notes!" placeholder="🌟 Our biggest update yet!">
+          <input id="announcementDraftFeatured" type="text" value="⌨️ Windows-style Command Console and improved release notes!" placeholder="🌟 Our biggest update yet!">
           <p class="draft-helper">Write each change under its own section. You can leave a section empty.</p>
           <label for="announcementDraftFeatures">✨ ADDED — New features (one per line)</label>
-          <textarea id="announcementDraftFeatures" rows="5" maxlength="4000" placeholder="✨ Feature one!&#10;🚀 Feature two!&#10;🎨 Feature three!">📢 Admin-only announcement drafts, previews and manual publishing!
+          <textarea id="announcementDraftFeatures" rows="5" placeholder="✨ Feature one!&#10;🚀 Feature two!&#10;🎨 Feature three!">📢 Admin-only announcement drafts, previews and manual publishing!
 🔒 Chat+ feature restrictions for Plus and Admin roles!
 🎛️ Chat+ settings disabled by default for new users!
 ⌨️ Windows-style command console with a Help command!
@@ -415,9 +415,9 @@
 🌟 Featured, ✨ Added, 🐛 Fixed and 🗑️ Removed announcement sections!
 📝 Release notes now track new features, fixes and removals in the draft!</textarea>
           <label for="announcementDraftFixed">🐛 FIXED — Bug fixes (one per line)</label>
-          <textarea id="announcementDraftFixed" rows="3" maxlength="4000" placeholder="🎨 Google sign-in button contrast fixed!">🎨 Fixed invisible text on the white Google sign-in button!</textarea>
+          <textarea id="announcementDraftFixed" rows="3" placeholder="🎨 Google sign-in button contrast fixed!">🎨 Fixed invisible text on the white Google sign-in button!</textarea>
           <label for="announcementDraftRemoved">🗑️ REMOVED — Removed features (one per line)</label>
-          <textarea id="announcementDraftRemoved" rows="3" maxlength="4000" placeholder="🧹 Removed an outdated option"></textarea>
+          <textarea id="announcementDraftRemoved" rows="3" placeholder="🧹 Removed an outdated option"></textarea>
           <div class="draft-actions"><button type="button" id="announcementSaveDraft">💾 Save draft</button><button type="button" id="announcementPublishNow">📢 Publish to everyone</button><button type="button" id="announcementNextDraft">⏭️ Next update / Reset</button></div>
           <p id="announcementDraftStatus" role="status">Only admins can view and publish this preview.</p>
           <div id="announcementDraftPreview" class="release-card" style="opacity:.7"></div>
@@ -1434,7 +1434,8 @@
         "🌟 Featured, ✨ Added, 🐛 Fixed and 🗑️ Removed announcement sections!",
         "📝 Release notes now track new features, fixes and removals in the draft!",
         "🕵️ NEW! Incognito terminal command with custom display aliases and anonymous-style avatars for new messages!",
-        "🔐 Incognito retains Firebase account identity, roles and moderation controls!"
+        "🔐 Incognito retains Firebase account identity, roles and moderation controls!",
+        "📝 Announcement drafts now accept emojis, symbols, Unicode and much longer entries without the old 30-entry / 180-character limit!"
       ],
       fixed:[
         "🎨 Fixed invisible text on the white Google sign-in button!"
@@ -1516,7 +1517,10 @@
       const version=$("announcementDraftVersion").value.trim();
       const features=collectDraftFeatures();
       if(!/^[0-9]+\.[0-9]+(?:\.[0-9]+)?$/.test(version)||version.length>20)throw Error("Use a version like 0.3 or 0.3.1.");
-      if(!features.length||features.length>30||features.some(f=>f.length>180))throw Error("Enter 1–30 total entries, each up to 180 characters.");
+      if(!features.length)throw Error("Add at least one announcement entry before saving.");
+      if(features.length>500)throw Error("This draft is too large (maximum 500 entries).");
+      if(features.some(f=>f.length>4000))throw Error("One entry is over 4,000 characters. Split it into multiple lines.");
+      if(features.reduce((total,f)=>total+f.length,0)>100000)throw Error("Draft is over 100,000 characters. Please split it into releases.");
       if(CHAT_RELEASES.some(r=>r.version===version)||publishedReleases.some(r=>r.version===version))throw Error("This version is already published. Choose a new version.");
       return {version,features};
     }
