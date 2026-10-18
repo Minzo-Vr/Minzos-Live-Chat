@@ -1642,7 +1642,11 @@
       if(!isAdmin)return 0;
       const version=$("announcementDraftVersion").value.trim();
       if(publishedReleases.some(r=>r.version===version))return 0;
-      const notes=version==="0.3"?CURRENT_CHANGELOG:RELEASE_CHANGE_LOG[version];
+      const baseNotes=version==="0.3"?CURRENT_CHANGELOG:RELEASE_CHANGE_LOG[version];
+      const fullscreenFix="🖥️ Fixed the DM sidebar disappearing outside the fullscreen chat view!";
+      const alreadyAnnounced=publishedReleases.some(r=>releaseParts(r).fixed.includes(fullscreenFix));
+      const pendingFix=version!=="0.3"&&!alreadyAnnounced?[fullscreenFix]:[];
+      const notes=baseNotes?{...baseNotes,fixed:[...(baseNotes.fixed||[]),...pendingFix]}:{featured:"",added:[],fixed:pendingFix,removed:[]};
       if(!notes)return 0;
       let count=0;
       const featured=$("announcementDraftFeatured");
