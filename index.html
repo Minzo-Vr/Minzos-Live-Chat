@@ -384,10 +384,11 @@
           <div class="draft-topline">🔒 <strong>Admin-only unpublished announcement</strong> <span class="draft-pill">DRAFT · NOT PUBLIC</span></div>
           <label for="announcementDraftVersion">Version</label>
           <input id="announcementDraftVersion" type="text" maxlength="20" value="0.3" placeholder="0.3">
-          <label for="announcementDraftFeatures">Features (one feature per line, emojis welcome 🎉)</label>
+          <label for="announcementDraftFeatures">Features &amp; bug fixes (one item per line, emojis welcome 🎉)</label>
           <textarea id="announcementDraftFeatures" rows="5" maxlength="4000" placeholder="✨ Feature one!&#10;🚀 Feature two!&#10;🎨 Feature three!">📢 Admin-controlled announcement drafts and publishing!
 🔒 Chat+ features now require Plus or Admin access!
-🎛️ Chat+ settings are off by default for new users!</textarea>
+🎛️ Chat+ settings are off by default for new users!
+🐛 FIXED: Google sign-in button text is now visible on its white background! 🎨</textarea>
           <div class="draft-actions"><button type="button" id="announcementSaveDraft">💾 Save draft</button><button type="button" id="announcementPublishNow">📢 Publish to everyone</button></div>
           <p id="announcementDraftStatus" role="status">Only admins can view and publish this preview.</p>
           <div id="announcementDraftPreview" class="release-card" style="opacity:.7"></div>
@@ -1344,6 +1345,17 @@
         card.append(heading,date,ul);list.append(card);
       }
     }
+    // Release notes include fixes alongside features. Keep this entry in the
+    // admin-only draft until an admin chooses to publish it.
+    const CURRENT_BUG_FIXES=[
+      "🐛 FIXED: Google sign-in button text is now visible on its white background! 🎨"
+    ];
+    function includeCurrentBugFixes(){
+      const textarea=$("announcementDraftFeatures");
+      const current=textarea.value.split("\n").map(line=>line.trim());
+      const additions=CURRENT_BUG_FIXES.filter(line=>!current.includes(line));
+      if(additions.length){textarea.value=textarea.value.trimEnd()+"\n"+additions.join("\n");}
+    }
     function renderDraftPreview(){
       const box=$("announcementDraftPreview");box.replaceChildren();
       const version=$("announcementDraftVersion").value.trim()||"0.3";
@@ -1403,10 +1415,12 @@
           const draft=snap.val();
           if(draft){$("announcementDraftVersion").value=draft.version||"0.3";$("announcementDraftFeatures").value=(draft.features||[]).join("\n");}
           else if(!$("announcementDraftVersion").value)$("announcementDraftVersion").value="0.3";
+          includeCurrentBugFixes();
           renderDraftPreview();
         },err=>{$("announcementDraftStatus").textContent="Draft unavailable: "+(err.code||err.message);});
       }
     }
+    includeCurrentBugFixes();
     renderDraftPreview();
     function closeAnnouncements(){announcementsOverlay.hidden=true;announcementPreviousFocus?.focus();}
     announcementsToggle.addEventListener("click",()=>{
