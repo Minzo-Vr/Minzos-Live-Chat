@@ -418,7 +418,7 @@
           <textarea id="announcementDraftFixed" rows="3" maxlength="4000" placeholder="🎨 Google sign-in button contrast fixed!">🎨 Fixed invisible text on the white Google sign-in button!</textarea>
           <label for="announcementDraftRemoved">🗑️ REMOVED — Removed features (one per line)</label>
           <textarea id="announcementDraftRemoved" rows="3" maxlength="4000" placeholder="🧹 Removed an outdated option"></textarea>
-          <div class="draft-actions"><button type="button" id="announcementSaveDraft">💾 Save draft</button><button type="button" id="announcementPublishNow">📢 Publish to everyone</button></div>
+          <div class="draft-actions"><button type="button" id="announcementSaveDraft">💾 Save draft</button><button type="button" id="announcementPublishNow">📢 Publish to everyone</button><button type="button" id="announcementNextDraft">⏭️ Next update / Reset</button></div>
           <p id="announcementDraftStatus" role="status">Only admins can view and publish this preview.</p>
           <div id="announcementDraftPreview" class="release-card" style="opacity:.7"></div>
         </section>
@@ -1441,7 +1441,7 @@
     };
     function mergeCurrentChangelog(){
       if(!isAdmin)return;
-      if($('announcementDraftVersion').value.trim()!=='0.3')return;
+      if($('announcementDraftVersion').value.trim()!=='0.3'||publishedReleases.some(r=>r.version==='0.3'))return;
       const featured=$('announcementDraftFeatured');
       if(!featured.value.trim())featured.value=CURRENT_CHANGELOG.featured;
       for(const [category,id] of [
@@ -1455,6 +1455,32 @@
         if(additions.length)textarea.value=[...lines,...additions].join('\n');
       }
     }
+    // A reset only clears the unpublished draft; it never changes published releases.
+    const NEXT_DRAFT_KEY="communityChatNextAnnouncementVersionV1";
+    function nextAnnouncementVersion(version){
+      const match=String(version||"0.3").match(/^(\d+)\.(\d+)$/);
+      if(!match)return "0.4";
+      return match[1]+"."+(Number(match[2])+1);
+    }
+    function blankAnnouncementDraft(version){
+      $("announcementDraftVersion").value=version;
+      for(const id of ["announcementDraftFeatured","announcementDraftFeatures","announcementDraftFixed","announcementDraftRemoved"])$(id).value="";
+      renderDraftPreview();
+    }
+    $("announcementNextDraft").addEventListener("click",async()=>{
+      if(!isAdmin||!user||!db)return;
+      const oldVersion=$("announcementDraftVersion").value.trim()||"0.3";
+      const next=nextAnnouncementVersion(oldVersion);
+      if(!confirm(`Start Version ${next}? This will DISCARD the current unpublished draft (Version ${oldVersion}), including unsaved edits. Published announcements will stay available.`))return;
+      const button=$("announcementNextDraft");button.disabled=true;
+      try{
+        await remove(ref(db,"chatAnnouncementDraft"));
+        localStorage.setItem(NEXT_DRAFT_KEY,next);
+        blankAnnouncementDraft(next);
+        $("announcementDraftStatus").textContent=`📝 Version ${next} is ready! Add your changes and click Save draft. Nothing has been published.`;
+      }catch(err){$("announcementDraftStatus").textContent="Could not reset draft: "+(err.code||err.message);}
+      finally{button.disabled=false;}
+    });
     function draftLines(id){
       return $(id).value.split("\n").map(line=>line.trim()).filter(Boolean);
     }
@@ -1509,9 +1535,11 @@
         $("announcementPublishNow").disabled=true;
         await set(ref(db,"chatAnnouncementPublished/"+key),{...draft,date:new Date().toLocaleDateString("en-AU",{day:"numeric",month:"long",year:"numeric"}),publishedAt:Date.now()});
         $("announcementDraftStatus").textContent=`📢 Version ${draft.version} published to everyone!`;
-        $("announcementDraftVersion").value="";
-        for(const id of ["announcementDraftFeatured","announcementDraftFeatures","announcementDraftFixed","announcementDraftRemoved"])$(id).value="";
+        const next=nextAnnouncementVersion(draft.version);
+        localStorage.setItem(NEXT_DRAFT_KEY,next);
+        blankAnnouncementDraft(next);
         await remove(ref(db,"chatAnnouncementDraft"));
+        $("announcementDraftStatus").textContent=`📢 Version ${draft.version} published! Version ${next} is ready for your next changes.`;
       }catch(err){$("announcementDraftStatus").textContent="Publish failed: "+(err.code||err.message);}
       finally{$("announcementPublishNow").disabled=false;}
     });
@@ -1530,8 +1558,13 @@
       if(isAdmin){
         draftUnsub=onValue(ref(db,"chatAnnouncementDraft"),snap=>{
           const draft=snap.val();
-          if(draft)loadDraftFields(draft);
-          else if(!$("announcementDraftVersion").value)$("announcementDraftVersion").value="0.3";
+          if(draft){
+            loadDraftFields(draft);
+            try{localStorage.setItem(NEXT_DRAFT_KEY,draft.version);}catch{}
+          }else{
+            const preferred=localStorage.getItem(NEXT_DRAFT_KEY);
+            if(preferred&&/^\d+\.\d+$/.test(preferred))$("announcementDraftVersion").value=preferred;
+          }
           mergeCurrentChangelog();
           renderDraftPreview();
         },err=>{$("announcementDraftStatus").textContent="Draft unavailable: "+(err.code||err.message);});
