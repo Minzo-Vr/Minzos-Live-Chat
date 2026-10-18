@@ -102,6 +102,18 @@
     .theme-actions button{padding:8px 10px;font-size:12px}
     .theme-actions .theme-reset{background:#64748b;color:#fff}
     #themeFeedback{font-size:12px;color:var(--theme-secondary);margin-top:8px}
+    .announcements-dialog{width:min(510px,100%)}
+    .announcements-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:1px solid var(--theme-border,#dce1ec);padding-bottom:12px;margin-bottom:12px}
+    .announcements-heading h2{margin:0 0 5px;font-size:23px}
+    .announcements-heading p{margin:0;color:var(--theme-secondary,#64748b);font-size:13px}
+    #announcementsClose{background:#64748b;color:white;border:0;border-radius:8px;padding:6px 10px;cursor:pointer}
+    .release-card{border:1px solid var(--theme-border,#dce1ec);border-radius:12px;padding:14px;margin:10px 0;background:var(--theme-panel,#f8faff)}
+    .release-card h3{font-size:17px;margin:0 0 8px;color:var(--theme-text,#202437)}
+    .release-card time{font-size:11px;color:var(--theme-secondary,#64748b);display:block;margin-bottom:8px}
+    .release-card ul{padding-left:20px;margin:8px 0 0}
+    .release-card li{margin:8px 0;line-height:1.4;font-size:14px;color:var(--theme-text,#202437)}
+    .announcements-unread{position:relative}
+    .announcements-unread::after{content:"";position:absolute;top:3px;right:3px;width:7px;height:7px;background:#ff4d6d;border:2px solid white;border-radius:50%}
     .settings-btn{background:#ffffff24;color:white;padding:6px 10px;font-size:19px;border-radius:9px}
     .settings-overlay{position:fixed;inset:0;background:#101528aa;display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
     .settings-overlay[hidden]{display:none}
@@ -303,6 +315,7 @@
     <header>
       <div><div style="display:flex;align-items:center;gap:8px"><h1>Community Chat</h1><button type="button" class="settings-btn" id="settingsBtn" aria-label="Chat settings" title="Chat settings" hidden>⚙️</button></div><p>General Chat · Messages and group calls</p></div>
       <div class="header-right">
+        <button type="button" id="announcementsToggle" class="fullscreen-toggle" aria-label="Open announcements" aria-haspopup="dialog" title="What’s new">📢</button>
         <button type="button" id="fullscreenToggle" class="fullscreen-toggle" aria-label="Enter full screen" title="Toggle full screen">⛶ Full screen</button>
         <button type="button" id="roomsToggle" class="rooms-toggle" aria-label="Open chat rooms" title="Chat rooms">☰ Rooms</button>
         <span class="status" id="status">Connecting…</span>
@@ -324,6 +337,15 @@
         <div class="music-volume-pop" id="musicVolumePop" hidden><label for="musicVolume">Music volume: <span id="musicVolumeValue">35%</span></label><input id="musicVolume" type="range" min="0" max="100" step="1" value="35"></div>
       </div>
       <audio id="backgroundMusic" preload="none"></audio>
+    </div>
+    <div id="announcementsOverlay" class="settings-overlay" hidden>
+      <div class="settings-dialog announcements-dialog" role="dialog" aria-modal="true" aria-labelledby="announcementsTitle" tabindex="-1">
+        <div class="announcements-heading">
+          <div><h2 id="announcementsTitle">📢 What's New?</h2><p>Community Chat updates and new features! 🎉</p></div>
+          <button type="button" id="announcementsClose" aria-label="Close announcements">✕</button>
+        </div>
+        <div id="announcementsList"></div>
+      </div>
     </div>
     <div id="settingsOverlay" class="settings-overlay" hidden>
       <div class="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
@@ -1135,6 +1157,53 @@
     });
 
 
+
+    // Announcements are a versioned changelog, not Firebase chat messages.
+    // Add a new object to the TOP of this list for each future release.
+    const CHAT_RELEASES = [
+      {version:"0.1",date:"18 October 2026",features:[
+        "📢 NEW! Announcements tab — see every update in one place!",
+        "🎨 Collapsible secondary colour settings and full-theme HEX controls!",
+        "⚠️ Experimental Quick Exit with a custom keyboard shortcut!",
+        "💬 Discord-style live typing indicator!",
+        "✨ Multiple roles and role-based username effects!",
+        "🌈 Animated Admin rainbow usernames!",
+        "💙 Moderator usernames and moderation controls!",
+        "🏆 Chat+ golden usernames and experimental features!",
+        "⭐ XP levels, /shop and unlockable badges!",
+        "🎵 Background music and volume controls!",
+        "🖼️ Profile pictures, bios, GIFs and file sharing!",
+        "🏠 Chat rooms, 🔎 search, 📞 group call invites and ⛶ fullscreen!"
+      ]}
+    ];
+    const announcementsOverlay=$("announcementsOverlay");
+    const announcementsToggle=$("announcementsToggle");
+    const latestVersion=CHAT_RELEASES[0].version;
+    const seenKey="communityChatSeenAnnouncementVersion";
+    let announcementPreviousFocus=null;
+    function renderAnnouncements(){
+      const list=$("announcementsList");list.replaceChildren();
+      for(const release of CHAT_RELEASES){
+        const card=document.createElement("section");card.className="release-card";
+        const heading=document.createElement("h3");heading.textContent=`🚀 Version ${release.version}`;
+        const date=document.createElement("time");date.textContent=release.date;
+        const ul=document.createElement("ul");
+        for(const feature of release.features){const li=document.createElement("li");li.textContent=feature;ul.append(li);}
+        card.append(heading,date,ul);list.append(card);
+      }
+    }
+    function closeAnnouncements(){announcementsOverlay.hidden=true;announcementPreviousFocus?.focus();}
+    announcementsToggle.addEventListener("click",()=>{
+      announcementPreviousFocus=document.activeElement;
+      renderAnnouncements();announcementsOverlay.hidden=false;
+      try{localStorage.setItem(seenKey,latestVersion);}catch{}
+      announcementsToggle.classList.remove("announcements-unread");
+      $("announcementsClose").focus();
+    });
+    $("announcementsClose").addEventListener("click",closeAnnouncements);
+    announcementsOverlay.addEventListener("click",e=>{if(e.target===announcementsOverlay)closeAnnouncements();});
+    document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!announcementsOverlay.hidden)closeAnnouncements();});
+    try{if(localStorage.getItem(seenKey)!==latestVersion)announcementsToggle.classList.add("announcements-unread");}catch{}
 
     // Fullscreen requires a user gesture and permission from the embedding page.
     const fullscreenBtn=$("fullscreenToggle");
