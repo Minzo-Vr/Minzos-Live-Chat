@@ -423,6 +423,11 @@
     .chat:fullscreen #dmSidebar{position:absolute}
     #groupSection:not([hidden]){display:flex;flex-direction:column;flex:1;min-height:0}
     #groupLog{flex:1;min-height:180px;overflow-y:auto}
+    .group-friend-picker[hidden]{display:none!important}
+    .group-friend-picker{padding:12px;border:1px solid var(--theme-border,#d9deeb);border-radius:10px;margin:10px 0;max-height:240px;overflow-y:auto;background:var(--theme-surface,#fff)}
+    .group-friend-choice{border:1px solid var(--theme-border,#d9deeb);border-radius:8px;margin:6px 0;padding:8px}
+    .group-friend-choice summary{cursor:pointer;font-weight:600}
+    .group-friend-choice-body{padding:9px 0 2px}
     #chatProtected.dm-main-active > #sendForm,
     #chatProtected.dm-main-active > #typingIndicator,
     #chatProtected.dm-main-active > #filePanel,
@@ -836,7 +841,8 @@
         </section>
 
     <section id="groupSection" hidden>
-          <div class="dm-main-header"><button type="button" id="groupBackToGeneral">← General Chat</button><h3 id="groupTitle">👥 Group Chat</h3><button type="button" id="groupAddMembers">＋ Add friends</button><button type="button" id="groupLeave">Leave</button></div>
+          <div class="dm-main-header"><button type="button" id="groupBackToGeneral">← General Chat</button><h3 id="groupTitle">👥 Group Chat</h3><span class="group-add-control"><button type="button" id="groupAddMembers" aria-expanded="false" aria-controls="groupFriendPicker">＋ Add friends ▾</button></span><button type="button" id="groupLeave">Leave</button></div>
+          <div id="groupFriendPicker" class="group-friend-picker" hidden><p class="friends-note">Select a friend to expand their options.</p><div id="groupFriendOptions"></div></div>
           <p id="groupStatus" class="friends-note" role="status"></p>
           <div id="groupLog" class="dm-log" role="log" aria-live="polite"></div>
           <form id="groupForm" class="dm-form"><input id="groupInput" maxlength="500" placeholder="Message your group…" required><button type="submit">Send</button></form>
@@ -2081,32 +2087,41 @@
         btn.addEventListener("click",()=>openGroup(id));nav.append(btn);
       }
     }
-    async function addGroupFriends(id,existing={}){
+    function closeGroupFriendPicker(){
+      $("groupFriendPicker").hidden=true;
+      $("groupAddMembers").setAttribute("aria-expanded","false");
+    }
+    function renderGroupFriendPicker(){
+      const container=$("groupFriendOptions");container.replaceChildren();
+      const existing=activeGroup?.members||{};
       const options=Object.keys(friendMap).filter(uid=>!existing[uid]);
-      if(!options.length){groupStatus("No additional friends to add.");return;}
-      const labels=options.map((uid,i)=>`${i+1}. ${friendName(uid)}`).join("\n");
-      const chosen=prompt("Add friends by number (comma-separated):\n"+labels);
-      if(chosen===null)return;
-      const indices=[...new Set(chosen.split(",").map(v=>Number(v.trim())-1))];
-      if(!indices.length||indices.some(i=>!Number.isInteger(i)||i<0||i>=options.length)){groupStatus("Please choose valid friend numbers.");return;}
-      const updates={};
-      for(const i of indices){
-        const uid=options[i];
-        updates[`chatGroups/${id}/members/${uid}`]=true;
-        updates[`chatGroupMembership/${uid}/${id}`]={name:activeGroup?.name||groupIndex[id]?.name||"Group chat"};
+      if(!options.length){
+        const p=document.createElement("p");p.className="friends-note";
+        p.textContent="All your friends are already in this group, or you have no friends to add.";
+        container.append(p);return;
       }
+      for(const uid of options){
+        const details=document.createElement("details");details.className="group-friend-choice";
+        const summary=document.createElement("summary");summary.textContent="👤 "+friendName(uid);
+        const body=document.createElement("div");body.className="group-friend-choice-body";
+        const button=document.createElement("button");button.type="button";
+        button.textContent="＋ Add "+friendName(uid);button.addEventListener("click",()=>addGroupFriend(uid,button));
+        body.append(button);details.append(summary,body);container.append(details);
+      }
+    }
+    async function addGroupFriend(uid,button){
+      const id=activeGroupId;
+      if(!id||!activeGroup||!friendMap[uid]||activeGroup.members?.[uid])return;
+      button.disabled=true;groupStatus("Adding "+friendName(uid)+"…");
       try{
-        // Add actual members first; the membership index is written only after
-        // Firebase rules can verify that each target belongs to the group.
-        const memberUpdates={};const indexUpdates={};
-        for(const [path,value] of Object.entries(updates)){
-          (path.startsWith("chatGroups/")?memberUpdates:indexUpdates)[path]=value;
-        }
-        await update(ref(db),memberUpdates);
-        await update(ref(db),indexUpdates);
-        groupStatus("Friends added! 💜");
+        await set(ref(db,`chatGroups/${id}/members/${uid}`),true);
+        await set(ref(db,`chatGroupMembership/${uid}/${id}`),{name:activeGroup.name||"Group chat"});
+        groupStatus("Added "+friendName(uid)+"! 💜");
+        closeGroupFriendPicker();
+      }catch(err){
+        groupStatus("Could not add friend: "+(err.code||err.message)+". Check group Firebase rules.");
+        button.disabled=false;
       }
-      catch(err){groupStatus("Could not add friends: "+(err.code||err.message)+". Check group Firebase rules.");}
     }
     $("createGroupChat").addEventListener("click",async()=>{
       if(!user||!joined)return showError("Join the chat first.");
@@ -2141,13 +2156,14 @@
       if(dmUnsub){dmUnsub();dmUnsub=null;}
       activeDmUid=null;$("dmSection").hidden=true;
       if(groupUnsub)groupUnsub();if(groupMessagesUnsub)groupMessagesUnsub();
-      activeGroupId=id;activeGroup=null;
+      closeGroupFriendPicker();activeGroupId=id;activeGroup=null;
       $("groupSection").hidden=false;$("chatProtected").classList.add("dm-main-active");
       $("groupTitle").textContent="👥 "+(groupIndex[id].name||"Group chat");
       $("groupLog").replaceChildren();groupStatus("Loading group…");drawGroups();drawFriends();
       groupUnsub=onValue(ref(db,`chatGroups/${id}`),snap=>{
         if(activeGroupId!==id)return;
         activeGroup=snap.val();
+        if(!$("groupFriendPicker").hidden)renderGroupFriendPicker();
         if(!activeGroup?.members?.[user.uid]){groupStatus("You are no longer in this group.");showGeneralChat();return;}
         $("groupTitle").textContent="👥 "+(activeGroup.name||"Group chat")+" ("+Object.keys(activeGroup.members).length+")";
         groupStatus("Members: "+Object.keys(activeGroup.members).map(uid=>uid===user.uid?"You":friendName(uid)).join(", "));
@@ -2162,7 +2178,13 @@
       },err=>groupStatus("Messages unavailable: "+(err.code||err.message)));
     }
     $("groupBackToGeneral").addEventListener("click",showGeneralChat);
-    $("groupAddMembers").addEventListener("click",()=>{if(activeGroupId&&activeGroup)addGroupFriends(activeGroupId,activeGroup.members||{});});
+    $("groupAddMembers").addEventListener("click",()=>{
+      if(!activeGroupId||!activeGroup)return;
+      const picker=$("groupFriendPicker"),opening=picker.hidden;
+      picker.hidden=!opening;
+      $("groupAddMembers").setAttribute("aria-expanded",String(opening));
+      if(opening)renderGroupFriendPicker();
+    });
     $("groupLeave").addEventListener("click",async()=>{
       if(!activeGroupId||!user||!confirm("Leave this group chat?"))return;
       if(activeGroup?.owner===user.uid){groupStatus("The group creator cannot leave yet. Transfer or delete ownership first.");return;}
