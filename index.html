@@ -484,6 +484,15 @@
     .setting-feature-fold{border:1px solid #dce1ee;border-radius:10px;margin:9px 0;padding:9px 12px;background:rgba(255,255,255,.55)}
     .setting-feature-fold>summary{cursor:pointer;font-weight:700;list-style:revert;padding:3px 0}
     .setting-feature-fold[open]>summary{margin-bottom:10px}
+    /* Use the entire browser viewport in normal mode, not only fullscreen mode. */
+    html,body{width:100%;min-height:100%;margin:0}
+    body{padding:0!important;overflow-x:hidden}
+    main.chat{width:100%;max-width:none!important;min-height:100dvh;margin:0;border:0;border-radius:0;box-shadow:none;display:flex;flex-direction:column}
+    main.chat #chatProtected{flex:1;min-height:0;display:flex;flex-direction:column}
+    main.chat #messages{height:auto;min-height:220px;flex:1;overflow-y:auto}
+    main.chat.dm-sidebar-layout{padding-left:260px}
+    main.chat #dmSection:not([hidden]){flex:1;min-height:0}
+    @media(max-width:700px){main.chat.dm-sidebar-layout{padding-left:0}}
   </style>
 </head>
 <body>
@@ -1715,6 +1724,7 @@
       "0.4":{
         featured:"📝 Automatic release-note logging for Community Chat!",
         // Settings features now have independent collapsible panels.
+        // Main chat now fills the browser window without needing fullscreen.
         added:[
           "📝 Added automatic changelog suggestions for the active announcement version!",
           "🗑️ Added Serious Features account deletion, with server-side removal of public messages and personal data (requires function deployment)!",
