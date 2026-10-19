@@ -3332,16 +3332,18 @@
     function addMessageActions(wrap,data,key,path){
       const actions=document.createElement("div");actions.className="msg-actions";
       const own=!!user&&data.uid===user.uid;
+      const canModerate=!!user&&(isAdmin||hasRole(user.uid,"admin")||hasRole(user.uid,"moderator"));
+      const canManage=own||canModerate;
       const make=(symbol,label,fn)=>{
         const b=document.createElement("button");b.type="button";b.textContent=symbol;b.title=label;b.setAttribute("aria-label",label);b.addEventListener("click",fn);actions.append(b);
       };
-      if(own){
-        make("🗑️","Delete your message",async()=>{
-          if(!confirm("Permanently delete this message?"))return;
+      if(canManage){
+        make("🗑️",own?"Delete your message":"Delete message as moderator",async()=>{
+          if(!confirm(own?"Permanently delete this message?":"Permanently delete this user’s message?"))return;
           try{await remove(ref(db,path+"/"+key));}
           catch(err){showError("Could not delete message: "+(err.code||err.message)+". Check Firebase rules.");}
         });
-        make("✏️","Edit your message",()=>{
+        make("✏️",own?"Edit your message":"Edit message as moderator",()=>{
           if(wrap.querySelector(".msg-edit-form"))return;
           const bubble=wrap.querySelector(".bubble");
           const form=document.createElement("form");form.className="msg-edit-form";
