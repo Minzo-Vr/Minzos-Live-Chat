@@ -96,7 +96,16 @@
     }
     .panic-settings{border-top:1px solid var(--theme-border);margin-top:12px;padding-top:12px}
     .panic-settings strong{color:var(--theme-text)!important}
-    .theme-editor{border-top:1px solid var(--theme-border);padding-top:12px;margin-top:12px}
+    /* Consistent collapsible appearance settings */
+    .theme-mode-settings,.theme-editor{border:1px solid var(--theme-border);border-radius:10px;margin:10px 0;padding:0;background:var(--theme-surface);color:var(--theme-text)}
+    .theme-mode-settings>summary,.theme-editor>summary{display:list-item;list-style:none;position:relative;padding:12px 36px 12px 14px;cursor:pointer;font-size:13px;font-weight:700;line-height:1.4;color:var(--theme-text)}
+    .theme-mode-settings>summary::-webkit-details-marker,.theme-editor>summary::-webkit-details-marker{display:none}
+    .theme-mode-settings>summary::after,.theme-editor>summary::after{content:"▾";position:absolute;right:14px;top:50%;transform:translateY(-50%);transition:transform .15s}
+    .theme-mode-settings[open]>summary::after,.theme-editor[open]>summary::after{transform:translateY(-50%) rotate(180deg)}
+    .theme-mode-settings[open]>summary,.theme-editor[open]>summary{border-bottom:1px solid var(--theme-border)}
+    .theme-mode-settings>p,.theme-editor>p,.theme-editor>strong,.theme-mode-settings>.theme-mode-options,.theme-editor>#themeColorRows,.theme-editor>.theme-actions{margin-left:14px;margin-right:14px}
+    .theme-mode-settings>p:last-child,.theme-editor>p:last-child{margin-bottom:14px}
+    .theme-editor{border-top:1px solid var(--theme-border);padding-top:0;margin-top:10px}
     .theme-editor>p{font-size:12px;color:var(--theme-secondary);margin:4px 0 10px}
     .theme-color-row{display:grid;grid-template-columns:minmax(100px,1fr) 43px 100px;gap:7px;align-items:center;margin:8px 0}
     .theme-color-row label{font-size:12px!important;color:var(--theme-text)!important;padding:0!important}
@@ -751,7 +760,7 @@
               <p id="chatHexHelp" role="status">Default purple: #5865F2. Example: #FF6699.</p>
             </div>
             <details class="theme-mode-settings" data-setting-label="dark bright light system automatic appearance mode theme">
-              <summary style="cursor:pointer;font-weight:700;color:var(--theme-text)">🌗 Appearance mode ▾</summary>
+              <summary style="cursor:pointer;font-weight:700;color:var(--theme-text)">🌗 Appearance mode</summary>
               <p>Choose how Community Chat looks. System follows your device's appearance.</p>
               <div class="theme-mode-options" role="group" aria-label="Appearance mode">
                 <button type="button" data-theme-mode="bright">☀️ Bright</button>
@@ -761,7 +770,7 @@
               <p id="themeModeFeedback" role="status"></p>
             </details>
             <details class="theme-editor" data-setting-label="all colours background white text buttons surfaces bubbles full theme">
-              <summary style="cursor:pointer;font-weight:700;color:var(--theme-text)">🎨 Secondary colours &amp; full theme ▾</summary>
+              <summary style="cursor:pointer;font-weight:700;color:var(--theme-text)">🎨 Secondary colours &amp; full theme</summary>
               <strong style="margin-top:12px">Customise every chat colour</strong>
               <p>Pick a colour or paste a #RRGGBB HEX code for each part of your chat. Changes are only for your browser.</p>
               <div id="themeColorRows"></div>
