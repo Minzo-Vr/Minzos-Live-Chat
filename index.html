@@ -481,6 +481,9 @@
       color:var(--theme-text,#202437);
       border-color:var(--theme-border,#dce1ec);
     }
+    .setting-feature-fold{border:1px solid #dce1ee;border-radius:10px;margin:9px 0;padding:9px 12px;background:rgba(255,255,255,.55)}
+    .setting-feature-fold>summary{cursor:pointer;font-weight:700;list-style:revert;padding:3px 0}
+    .setting-feature-fold[open]>summary{margin-bottom:10px}
   </style>
 </head>
 <body>
@@ -1251,8 +1254,40 @@
       $("settingsName").focus();
     });
     // Settings search reveals matching collapsible sections and hides unrelated controls.
+    // Every individual Settings feature can be expanded or collapsed independently.
+    function makeSettingFold(node,title,keywords){
+      if(!node||node.closest(".setting-feature-fold"))return;
+      const fold=document.createElement("details");
+      fold.className="setting-feature-fold";
+      fold.dataset.settingLabel=(title+" "+(keywords||"")).toLowerCase();
+      const summary=document.createElement("summary");
+      summary.textContent=title;
+      node.before(fold);fold.append(summary,node);
+    }
+    const userSettings=$("userSettingsSection");
+    const userInner=userSettings.querySelector(".user-options-inner");
+    makeSettingFold(userInner.querySelector(".avatar-settings"),"🖼️ Profile picture","avatar upload photo pfp");
+    makeSettingFold($("settingsForm"),"✏️ Chat username","name rename");
+    makeSettingFold(userInner.querySelector(".email-link-settings"),"🔗 Link email & password","google sign in account");
+    makeSettingFold(userInner.querySelector(".role-effects-box"),"✨ Username effects & role visibility","role appearance");
+    makeSettingFold(userInner.querySelector(".notification-settings"),"📢 Announcements & notifications","alerts red dot browser");
+    makeSettingFold(userInner.querySelector(".bio-editor"),"🔒 Profile privacy & bio","who can view your profile everyone friends only no one biography");
+    const advanced=document.querySelector(".advanced-options-inner");
+    for(const label of [...advanced.querySelectorAll(":scope > label")]){
+      makeSettingFold(label,label.textContent.trim(),"advanced toggles");
+    }
+    const experimental=$("experimentalFeatures");
+    makeSettingFold(experimental.querySelector(".chat-color-option"),"⏱️ Timed Quick Exit","timer inactivity");
+    for(const label of [...experimental.querySelectorAll(":scope > label")]){
+      makeSettingFold(label,label.textContent.trim(),"experimental toggle");
+    }
+    const hexFeature=[...experimental.querySelectorAll(":scope > .chat-color-option")].find(el=>el.querySelector("#chatHexInput"));
+    makeSettingFold(hexFeature,"🎨 Chat colour (HEX)","color wheel picker");
+    makeSettingFold(experimental.querySelector(".panic-settings"),"⚠️ Quick Exit shortcut","panic dead mans switch");
+    const serious=$("seriousFeaturesSection");
+    makeSettingFold(serious.querySelector(".user-options-inner > strong"),"🗑️ Account deletion information","delete account");
     const settingsSearch=$("settingsSearch");
-    const settingSections=[$("userSettingsSection"),document.querySelector(".advanced-options"),document.querySelector(".experimental-panel")];
+    const settingSections=[$("userSettingsSection"),$("seriousFeaturesSection"),document.querySelector(".advanced-options"),document.querySelector(".experimental-panel")];
     settingsSearch.addEventListener("input",()=>{
       const query=settingsSearch.value.trim().toLowerCase();
       let matches=0;
@@ -1261,6 +1296,12 @@
         section.classList.toggle("settings-filter-hidden",!found);
         if(found){matches++;if(query&&section.tagName==="DETAILS")section.open=true;}
       }
+      for(const fold of document.querySelectorAll(".setting-feature-fold")){
+        const found=!query||(fold.dataset.settingLabel||"").includes(query);
+        fold.classList.toggle("settings-filter-hidden",!found);
+        if(query&&found){fold.open=true;const parent=fold.closest("#userSettingsSection,#seriousFeaturesSection,.advanced-options,.experimental-panel");if(parent){parent.classList.remove("settings-filter-hidden");if(parent.tagName==="DETAILS")parent.open=true;}}
+      }
+      if(query)matches=document.querySelectorAll(".setting-feature-fold:not(.settings-filter-hidden)").length;
       $("settingsSearchEmpty").hidden=matches!==0;
       if(query&&document.querySelector(".experimental-panel:not(.settings-filter-hidden)")&&
          !($("experimentalFeatures").hidden)){
@@ -1673,6 +1714,7 @@
     const RELEASE_CHANGE_LOG={
       "0.4":{
         featured:"📝 Automatic release-note logging for Community Chat!",
+        // Settings features now have independent collapsible panels.
         added:[
           "📝 Added automatic changelog suggestions for the active announcement version!",
           "🗑️ Added Serious Features account deletion, with server-side removal of public messages and personal data (requires function deployment)!",
