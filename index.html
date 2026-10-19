@@ -606,6 +606,12 @@
               <p id="linkEmailFeedback" role="status" class="hint"></p>
             </form>
           </div>
+          <div class="email-link-settings" data-setting-label="link google account to email password built in sign in">
+            <strong>🔗 Connect Google to your Community Chat account</strong>
+            <p class="hint">Signed up with email and password? Link Google to this same account. Afterwards, both Google sign-in and email/password sign-in open the same profile, friends, XP and messages.</p>
+            <button type="button" id="linkGoogleButton">🔗 Link my Google account</button>
+            <p id="linkGoogleFeedback" class="hint" role="status"></p>
+          </div>
           <div class="role-effects-box" data-setting-label="username effects role rainbow moderator blue plus gold member">
             <strong>✨ Username effects</strong>
             <small>Role colours unlock only when an Admin assigns you that role. You can turn your effect off without losing your role.</small>
@@ -987,7 +993,7 @@
     */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, EmailAuthProvider, linkWithCredential, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, EmailAuthProvider, linkWithCredential, linkWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
     import {
       getDatabase, ref, push, query, limitToLast, limitToFirst, orderByKey, get, update, onChildAdded, onChildRemoved, onValue, set, remove, serverTimestamp, runTransaction, onDisconnect
     } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
@@ -1288,6 +1294,7 @@
     makeSettingFold(userInner.querySelector(".avatar-settings"),"🖼️ Profile picture","avatar upload photo pfp");
     makeSettingFold($("settingsForm"),"✏️ Chat username","name rename");
     makeSettingFold(userInner.querySelector(".email-link-settings"),"🔗 Link email & password","google sign in account");
+    makeSettingFold($("linkGoogleButton").closest(".email-link-settings"),"🔗 Link Google account","connect google email password login");
     makeSettingFold(userInner.querySelector(".role-effects-box"),"✨ Username effects & role visibility","role appearance");
     makeSettingFold(userInner.querySelector(".notification-settings"),"📢 Announcements & notifications","alerts red dot browser");
     makeSettingFold(userInner.querySelector(".bio-editor"),"🔒 Profile privacy & bio","who can view your profile everyone friends only no one biography");
@@ -1764,7 +1771,9 @@
     };
     const RECENT_SITE_CHANGES={
       featured:"💜 Community Chat update: bigger chat, cleaner settings and better DMs!",
+      // Google linking added for existing email/password accounts.
       added:[
+        "🔗 Link a Google account to your existing email/password Community Chat account without losing your UID, friends, XP or messages!",
         "🖥️ Community Chat now fills the entire browser window automatically, with more space for messages!",
         "🗂️ Individual Settings features are now collapsible so controls are easier to find!",
         "💬 Direct messages open inside the main Community Chat area, alongside the connected friends sidebar!",
@@ -3297,6 +3306,32 @@
         feedback.textContent="Linked successfully! You can now sign in with email/password without a Google popup. Your UID is unchanged.";
       }catch(err){console.error("Link email/password",err);feedback.textContent=emailAuthError(err);}
       finally{button.disabled=false;}
+    });
+    $("linkGoogleButton").addEventListener("click",async()=>{
+      const account=auth?.currentUser,feedback=$("linkGoogleFeedback"),button=$("linkGoogleButton");
+      if(!account){feedback.textContent="Sign in with your existing Community Chat account first.";return;}
+      if(account.providerData.some(p=>p.providerId==="google.com")){
+        feedback.textContent="Google is already connected! You can sign in with either method.";return;
+      }
+      button.disabled=true;feedback.textContent="Opening Google to link it to your current account…";
+      try{
+        const originalUid=account.uid;
+        const result=await linkWithPopup(account,new GoogleAuthProvider());
+        if(result.user.uid!==originalUid)throw new Error("The account changed unexpectedly. Please contact an admin.");
+        feedback.textContent="✅ Google linked! Your account, username, friends, XP and messages are unchanged. Next time, choose Continue with Google or sign in with your email and password.";
+      }catch(err){
+        console.error("Link Google",err);
+        const messages={
+          "auth/credential-already-in-use":"That Google account already belongs to another Community Chat account. It cannot be merged automatically.",
+          "auth/email-already-in-use":"That Google email is already used by another account. It cannot be merged automatically.",
+          "auth/provider-already-linked":"Google is already linked to this account.",
+          "auth/popup-closed-by-user":"Google linking was cancelled. Nothing changed.",
+          "auth/popup-blocked":"Allow popups for this site, then try again.",
+          "auth/requires-recent-login":"For security, sign out and sign back in with email/password, then try linking again.",
+          "auth/operation-not-allowed":"Enable Google sign-in in Firebase Authentication → Sign-in method."
+        };
+        feedback.textContent=messages[err.code]||emailAuthError(err);
+      }finally{button.disabled=false;}
     });
     $("anonymousSignIn").addEventListener("click",async()=>{
       if(!anonymousAccountsEnabled)return;
