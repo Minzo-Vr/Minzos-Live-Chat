@@ -2269,7 +2269,8 @@
         const info=invite.val();
         if(!info||info.enabled!==true){alert("This group invitation is unavailable or disabled.");return;}
         if(!confirm("Join group chat: "+(info.name||"Group chat")+"?"))return;
-        await set(ref(db,`chatGroups/${id}/members/${user.uid}`),true);
+        const existingMembership=await get(ref(db,`chatGroupMembership/${user.uid}/${id}`));
+        if(!existingMembership.exists())await set(ref(db,`chatGroups/${id}/members/${user.uid}`),true);
         await set(ref(db,`chatGroupMembership/${user.uid}/${id}`),{name:info.name||"Group chat"});
         history.replaceState(null,"",window.location.pathname+window.location.search.replace(/([?&])joinGroup=[^&]*&?/,"$1").replace(/[?&]$/,"")+window.location.hash);
         groupIndex[id]={name:info.name||"Group chat"};
