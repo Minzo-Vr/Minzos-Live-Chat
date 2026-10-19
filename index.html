@@ -1140,7 +1140,7 @@
     import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, EmailAuthProvider, linkWithCredential, linkWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
     import {
-      getDatabase, ref, push, query, limitToLast, limitToFirst, orderByKey, get, update, onChildAdded, onChildChanged, onChildRemoved, onValue, set, remove, serverTimestamp, runTransaction, onDisconnect
+      getDatabase, ref, push, query, limitToLast, limitToFirst, orderByKey, orderByChild, equalTo, get, update, onChildAdded, onChildChanged, onChildRemoved, onValue, set, remove, serverTimestamp, runTransaction, onDisconnect
     } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
     const firebaseConfig = {
@@ -2673,6 +2673,34 @@
       }
       consolePrint("Deleted "+deleted+" of your messages."+ (failed?" "+failed+" deletion/read operation(s) failed; check Firebase rules.":" No other users' messages were selected."),failed?"error":"success");
     }
+    // Email directory: database rules MUST restrict reads to admins/moderators.
+    // Never place email addresses in publicly readable chatProfiles.
+    async function indexOwnEmailForModeration(account){
+      if(!account?.uid||!account.email||account.isAnonymous||!account.emailVerified)return;
+      try{
+        await set(ref(db,"chatEmailDirectory/"+account.uid),{
+          email:account.email.trim().toLowerCase(),uid:account.uid,
+          name:account.displayName||"Member"
+        });
+      }catch(err){console.warn("Private email directory registration unavailable; check Firebase rules.",err.code||err.message);}
+    }
+    async function consoleFindUserByEmail(email){
+      if(!user||!isModerator()){
+        consolePrint("Access denied: Admins and Moderators only.","error");return;
+      }
+      email=(email||"").trim().toLowerCase();
+      if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){
+        consolePrint("Usage: finduser email@example.com","error");return;
+      }
+      try{
+        const result=await get(query(ref(db,"chatEmailDirectory"),orderByChild("email"),equalTo(email)));
+        if(!result.exists()){consolePrint("No indexed user found. Older users may need to sign in again.","muted");return;}
+        result.forEach(child=>{
+          const record=child.val();
+          consolePrint("Match: "+(record.name||"Member")+" | UID: "+child.key+" | Roles: "+(userRoles(child.key).join(", ")||"Member"),"success");
+        });
+      }catch(err){consolePrint("Email lookup unavailable: database rules must grant moderator/admin-only read access. "+(err.code||""),"error");}
+    }
     function consoleExecute(raw){
       const line=raw.trim();
       if(!line)return;
@@ -2684,6 +2712,7 @@
           break;
         case "clear":case "cls":consoleOutput.replaceChildren();break;
         case "whoami":consolePrint(user?`Signed in: ${user.displayName||user.email||user.uid}`:"Not signed in");break;
+        case "finduser":void consoleFindUserByEmail(args.join(" "));break;
         case "role":consolePrint(user?`Roles: ${userRoles(user.uid).join(", ")||"Member"}`:"Sign in to view roles");break;
         case "version":consolePrint("Community Chat v0.3 (draft release)");break;
         case "status":consolePrint($("status").textContent||"Status unavailable");break;
@@ -3662,6 +3691,7 @@
         await signOut(auth);return;
       }
       resetChatIdentity();setAuthDisplay(true);
+      void indexOwnEmailForModeration(account);
       if(account.isAnonymous)$("accountLabel").textContent="🕵️ Signed in anonymously — choose a chat username";
       else if(emailPassword&&!google&&!isAdmin)$("accountLabel").textContent="✉️ Signed in with email — choose a chat username";
       startAnnouncementListeners();
