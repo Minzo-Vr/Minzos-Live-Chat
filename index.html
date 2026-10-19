@@ -422,6 +422,16 @@
     .chat:fullscreen.dm-sidebar-layout{padding-left:260px}
     .chat:fullscreen #dmSidebar{position:absolute}
     #groupSection:not([hidden]){display:flex;flex-direction:column;flex:1;min-height:0}
+    .msg{position:relative}
+    .msg-actions{display:flex;gap:4px;position:absolute;right:8px;top:-13px;padding:3px;border:1px solid var(--theme-border,#d5d9e7);border-radius:8px;background:var(--theme-surface,#fff);box-shadow:0 3px 12px #0002;opacity:0;pointer-events:none;transition:opacity .12s}
+    .msg:hover .msg-actions,.msg:focus-within .msg-actions{opacity:1;pointer-events:auto}
+    .msg-actions button{padding:5px 7px;font-size:14px;line-height:1.2;background:transparent!important;color:var(--theme-text,#202437)!important}
+    .msg-actions button:hover{background:#8882!important}
+    .msg-edit-form{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+    .msg-edit-form input{flex:1;min-width:150px}
+    .msg-edited{font-size:11px;opacity:.7;margin-left:5px}
+    .msg:target{outline:2px solid var(--accent,#5865f2);outline-offset:3px;border-radius:7px}
+    @media(hover:none){.msg-actions{position:static;opacity:1;pointer-events:auto;width:max-content;margin-left:auto}}
     .cc-embed{border-left:4px solid #5865f2;border-radius:8px;background:rgba(88,101,242,.09);padding:12px;margin-top:8px;max-width:540px;overflow-wrap:anywhere}
     .cc-embed strong{display:block;font-size:15px;margin-bottom:5px}
     .cc-embed p{margin:5px 0;white-space:pre-wrap}
@@ -1023,7 +1033,7 @@
     import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, EmailAuthProvider, linkWithCredential, linkWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
     import {
-      getDatabase, ref, push, query, limitToLast, limitToFirst, orderByKey, get, update, onChildAdded, onChildRemoved, onValue, set, remove, serverTimestamp, runTransaction, onDisconnect
+      getDatabase, ref, push, query, limitToLast, limitToFirst, orderByKey, get, update, onChildAdded, onChildChanged, onChildRemoved, onValue, set, remove, serverTimestamp, runTransaction, onDisconnect
     } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
     const firebaseConfig = {
@@ -3035,11 +3045,65 @@
     });
     const displayedMessages = new Map();
     applyChatPreferences();
-    let stopRemovedMessages;
+    let stopRemovedMessages,stopChangedMessages;
+    function messagePermalink(path,key){
+      const url=new URL(location.href);
+      url.searchParams.set("chatMessage",key);
+      url.searchParams.set("chatRoom",path==="chatMessages"?"general":path.split("/")[1]);
+      url.hash="";
+      return url.href;
+    }
+    async function copyMessageLink(path,key){
+      const link=messagePermalink(path,key);
+      try{await navigator.clipboard.writeText(link);showError("Message link copied! 🔗");}
+      catch{window.prompt("Copy this message link:",link);}
+    }
+    function jumpToLinkedMessage(){
+      const params=new URLSearchParams(location.search),key=params.get("chatMessage");
+      if(!key)return;
+      const room=params.get("chatRoom")||"general";
+      if(room!==(activeRoom?roomKey(activeRoom):"general"))return;
+      const node=displayedMessages.get(key);
+      if(node){node.scrollIntoView({behavior:"smooth",block:"center"});node.focus({preventScroll:true});}
+    }
+    function addMessageActions(wrap,data,key,path){
+      const actions=document.createElement("div");actions.className="msg-actions";
+      const own=!!user&&data.uid===user.uid;
+      const make=(symbol,label,fn)=>{
+        const b=document.createElement("button");b.type="button";b.textContent=symbol;b.title=label;b.setAttribute("aria-label",label);b.addEventListener("click",fn);actions.append(b);
+      };
+      if(own){
+        make("🗑️","Delete your message",async()=>{
+          if(!confirm("Permanently delete this message?"))return;
+          try{await remove(ref(db,path+"/"+key));}
+          catch(err){showError("Could not delete message: "+(err.code||err.message)+". Check Firebase rules.");}
+        });
+        make("✏️","Edit your message",()=>{
+          if(wrap.querySelector(".msg-edit-form"))return;
+          const bubble=wrap.querySelector(".bubble");
+          const form=document.createElement("form");form.className="msg-edit-form";
+          const input=document.createElement("input");input.maxLength=500;input.required=true;input.value=data.text;
+          const save=document.createElement("button");save.type="submit";save.textContent="Save";
+          const cancel=document.createElement("button");cancel.type="button";cancel.textContent="Cancel";
+          cancel.addEventListener("click",()=>form.remove());
+          form.addEventListener("submit",async e=>{
+            e.preventDefault();const text=input.value.trim();
+            if(!text)return;
+            save.disabled=true;
+            try{await update(ref(db,path+"/"+key),{text,editedAt:Date.now()});form.remove();}
+            catch(err){showError("Could not edit message: "+(err.code||err.message)+". Check Firebase rules.");save.disabled=false;}
+          });
+          form.append(input,save,cancel);bubble.after(form);input.focus();input.select();
+        });
+      }
+      make("🔗","Copy message link",()=>copyMessageLink(path,key));
+      wrap.append(actions);
+    }
     function addMessage(data, key) {
       if (!data || typeof data.text !== "string" || typeof data.name !== "string") return;
       const wrap = document.createElement("article");
       wrap.className = "msg";
+      wrap.id="chat-msg-"+key;wrap.tabIndex=-1;
       wrap.dataset.searchText = data.name+" "+data.text;
       const avatar=document.createElement("img");avatar.className="message-avatar";
       avatar.alt="";avatar.dataset.uid=data.uid||"";
@@ -3134,7 +3198,9 @@
       }
       }
       }
+      if(data.editedAt){const edited=document.createElement("span");edited.className="msg-edited";edited.textContent="(edited)";meta.append(edited);}
       messageMain.append(meta,bubble);wrap.append(avatar,messageMain);
+      addMessageActions(wrap,data,key,roomMessagePath());
       messages.appendChild(wrap);
       displayedMessages.set(key, wrap);
       filterChatMessages();
@@ -3144,6 +3210,7 @@
         oldest.remove();
       }
       messages.scrollTop = messages.scrollHeight;
+      jumpToLinkedMessage();
     }
 
     // Ephemeral, per-room typing presence. One record per account, automatically
@@ -3222,6 +3289,15 @@
         status.textContent = "Connection error";
         console.error(err);
       });
+      const offChanged=onChildChanged(recentMessages,snapshot=>{
+        const old=displayedMessages.get(snapshot.key);
+        if(!old)return;
+        const wasLinked=old.id===("chat-msg-"+new URLSearchParams(location.search).get("chatMessage"));
+        old.remove();displayedMessages.delete(snapshot.key);
+        addMessage(snapshot.val(),snapshot.key);
+        if(wasLinked)jumpToLinkedMessage();
+      });
+      stopChangedMessages=offChanged;
       stopRemovedMessages = onChildRemoved(recentMessages, snapshot => {
         const node = displayedMessages.get(snapshot.key);
         if (node) node.remove();
@@ -3273,6 +3349,7 @@
       for(const off of stopRoomMeta)off();stopRoomMeta=[];
       activeRoom=0;roomMeta={};roomMembers={};
       if(stopRemovedMessages){stopRemovedMessages();stopRemovedMessages=null;}
+      if(stopChangedMessages){stopChangedMessages();stopChangedMessages=null;}
       for(const off of stopSettings)off();stopSettings=[];
       if(stopVotes){stopVotes();stopVotes=null;}
       if(stopPresenceList){stopPresenceList();stopPresenceList=null;}
