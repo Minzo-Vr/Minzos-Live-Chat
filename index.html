@@ -421,6 +421,8 @@
     .chat.dm-sidebar-layout{padding-left:260px;max-width:1020px}
     .chat:fullscreen.dm-sidebar-layout{padding-left:260px}
     .chat:fullscreen #dmSidebar{position:absolute}
+    #groupSection:not([hidden]){display:flex;flex-direction:column;flex:1;min-height:0}
+    #groupLog{flex:1;min-height:180px;overflow-y:auto}
     #chatProtected.dm-main-active > #sendForm,
     #chatProtected.dm-main-active > #typingIndicator,
     #chatProtected.dm-main-active > #filePanel,
@@ -501,6 +503,8 @@
       <div class="dm-side-head"><strong>💬 Direct Messages</strong><button id="dmSideClose" type="button" aria-label="Collapse Direct Messages">✕</button></div>
       <div class="dm-side-content">
         <div class="dm-side-tools"><button id="dmSideRequests" type="button">👥 Friends & Requests</button></div>
+        <div class="dm-side-label">GROUP CHATS <button type="button" id="createGroupChat" title="Create group chat">＋ New</button></div>
+        <nav id="dmSideGroups" aria-label="Your group chats"></nav>
         <div class="dm-side-label">YOUR FRIENDS</div>
         <nav id="dmSideFriends" aria-label="Friends to message"></nav>
         <div id="dmSideConversation"></div>
@@ -825,6 +829,12 @@
           <p class="friends-note">Gifting deducts 25%: sending 100 XP gives your friend 75 XP. Gift transfers require the secure server function to be deployed.</p>
         </section>
 
+    <section id="groupSection" hidden>
+          <div class="dm-main-header"><button type="button" id="groupBackToGeneral">← General Chat</button><h3 id="groupTitle">👥 Group Chat</h3><button type="button" id="groupAddMembers">＋ Add friends</button><button type="button" id="groupLeave">Leave</button></div>
+          <p id="groupStatus" class="friends-note" role="status"></p>
+          <div id="groupLog" class="dm-log" role="log" aria-live="polite"></div>
+          <form id="groupForm" class="dm-form"><input id="groupInput" maxlength="500" placeholder="Message your group…" required><button type="submit">Send</button></form>
+        </section>
     <section id="messages" aria-live="polite"><div class="system">Connect the chat to Firebase to start messaging.</div></section>
     <p id="sessionExpiredNotice" class="lockdown-banner" hidden>🔒 Session expired after 5 minutes. Re-enter your username to view the chat again.</p>
     <p class="lockdown-banner" id="lockdownBanner" hidden>🔒 Chat is locked. You can read messages, but visitors cannot send new ones.</p>
@@ -2026,12 +2036,122 @@
     function stopFriends(){
       for(const stop of friendUnsubs)stop();friendUnsubs=[];
       if(dmUnsub){dmUnsub();dmUnsub=null;}
-      friendMap={};friendRequests={};showGeneralChat();
+      friendMap={};friendRequests={};stopGroups();showGeneralChat();
       closeDmSidebar();
     }
     function friendStatus(text){$("friendsFeedback").textContent=text;}
+    // Group chats are private, membership-indexed conversations. Firebase rules must
+    // enforce membership on reads/writes before this feature can be used securely.
+    let groupIndexUnsub=null,groupUnsub=null,groupMessagesUnsub=null;
+    let groupIndex={},activeGroupId=null,activeGroup=null;
+    function groupStatus(message){$("groupStatus").textContent=message;}
+    function stopGroups(){
+      if(groupIndexUnsub){groupIndexUnsub();groupIndexUnsub=null;}
+      if(groupUnsub){groupUnsub();groupUnsub=null;}
+      if(groupMessagesUnsub){groupMessagesUnsub();groupMessagesUnsub=null;}
+      groupIndex={};activeGroupId=null;activeGroup=null;
+      $("groupSection").hidden=true;drawGroups();
+    }
+    function startGroups(){
+      stopGroups();if(!user||!db)return;
+      const uid=user.uid;
+      groupIndexUnsub=onValue(ref(db,`chatGroupMembership/${uid}`),snap=>{
+        if(user?.uid!==uid)return;
+        groupIndex=snap.val()||{};drawGroups();
+        if(activeGroupId&&!groupIndex[activeGroupId])showGeneralChat();
+      },err=>console.warn("Group membership unavailable",err));
+    }
+    function drawGroups(){
+      const nav=$("dmSideGroups");nav.replaceChildren();
+      const ids=Object.keys(groupIndex);
+      if(!ids.length){const p=document.createElement("p");p.className="friends-note";p.textContent="No groups yet. Create one with friends!";nav.append(p);}
+      for(const id of ids){
+        const btn=document.createElement("button");btn.type="button";
+        btn.className="dm-side-friend"+(activeGroupId===id?" active":"");
+        btn.textContent="👥 "+(groupIndex[id]?.name||"Group chat");
+        btn.addEventListener("click",()=>openGroup(id));nav.append(btn);
+      }
+    }
+    async function addGroupFriends(id,existing={}){
+      const options=Object.keys(friendMap).filter(uid=>!existing[uid]);
+      if(!options.length){groupStatus("No additional friends to add.");return;}
+      const labels=options.map((uid,i)=>`${i+1}. ${friendName(uid)}`).join("\n");
+      const chosen=prompt("Add friends by number (comma-separated):\n"+labels);
+      if(chosen===null)return;
+      const indices=[...new Set(chosen.split(",").map(v=>Number(v.trim())-1))];
+      if(!indices.length||indices.some(i=>!Number.isInteger(i)||i<0||i>=options.length)){groupStatus("Please choose valid friend numbers.");return;}
+      const updates={};
+      for(const i of indices){
+        const uid=options[i];
+        updates[`chatGroups/${id}/members/${uid}`]=true;
+        updates[`chatGroupMembership/${uid}/${id}`]={name:activeGroup?.name||groupIndex[id]?.name||"Group chat"};
+      }
+      try{await update(ref(db),updates);groupStatus("Friends added! 💜");}
+      catch(err){groupStatus("Could not add friends: "+(err.code||err.message)+". Check group Firebase rules.");}
+    }
+    $("createGroupChat").addEventListener("click",async()=>{
+      if(!user||!joined)return showError("Join the chat first.");
+      const name=prompt("Name your new group chat (up to 40 characters):");
+      if(!name?.trim())return;
+      const id=push(ref(db,"chatGroups")).key;
+      const groupName=name.trim().slice(0,40);
+      const updates={};
+      updates[`chatGroups/${id}/name`]=groupName;
+      updates[`chatGroups/${id}/owner`]=user.uid;
+      updates[`chatGroups/${id}/createdAt`]=Date.now();
+      updates[`chatGroups/${id}/members/${user.uid}`]=true;
+      updates[`chatGroupMembership/${user.uid}/${id}`]={name:groupName};
+      try{await update(ref(db),updates);openGroup(id);}
+      catch(err){alert("Group creation unavailable: "+(err.code||err.message)+". Group database rules must be installed.");}
+    });
+    function openGroup(id){
+      if(!user||!groupIndex[id])return;
+      openDmSidebar();
+      if(dmUnsub){dmUnsub();dmUnsub=null;}
+      activeDmUid=null;$("dmSection").hidden=true;
+      if(groupUnsub)groupUnsub();if(groupMessagesUnsub)groupMessagesUnsub();
+      activeGroupId=id;activeGroup=null;
+      $("groupSection").hidden=false;$("chatProtected").classList.add("dm-main-active");
+      $("groupTitle").textContent="👥 "+(groupIndex[id].name||"Group chat");
+      $("groupLog").replaceChildren();groupStatus("Loading group…");drawGroups();drawFriends();
+      groupUnsub=onValue(ref(db,`chatGroups/${id}`),snap=>{
+        if(activeGroupId!==id)return;
+        activeGroup=snap.val();
+        if(!activeGroup?.members?.[user.uid]){groupStatus("You are no longer in this group.");showGeneralChat();return;}
+        $("groupTitle").textContent="👥 "+(activeGroup.name||"Group chat")+" ("+Object.keys(activeGroup.members).length+")";
+        groupStatus("Members: "+Object.keys(activeGroup.members).map(uid=>uid===user.uid?"You":friendName(uid)).join(", "));
+      },err=>groupStatus("Group unavailable: "+(err.code||err.message)));
+      groupMessagesUnsub=onValue(query(ref(db,`chatGroupMessages/${id}`),limitToLast(100)),snap=>{
+        if(activeGroupId!==id)return;
+        const log=$("groupLog");log.replaceChildren();
+        snap.forEach(child=>{const msg=child.val();if(!msg||typeof msg.text!=="string")return;
+          const line=document.createElement("div");line.className="dm-line"+(msg.from===user.uid?" mine":"");
+          line.textContent=(msg.from===user.uid?"You":msg.name||"Member")+": "+msg.text;log.append(line);
+        });log.scrollTop=log.scrollHeight;
+      },err=>groupStatus("Messages unavailable: "+(err.code||err.message)));
+    }
+    $("groupBackToGeneral").addEventListener("click",showGeneralChat);
+    $("groupAddMembers").addEventListener("click",()=>{if(activeGroupId&&activeGroup)addGroupFriends(activeGroupId,activeGroup.members||{});});
+    $("groupLeave").addEventListener("click",async()=>{
+      if(!activeGroupId||!user||!confirm("Leave this group chat?"))return;
+      if(activeGroup?.owner===user.uid){groupStatus("The group creator cannot leave yet. Transfer or delete ownership first.");return;}
+      const updates={};
+      updates[`chatGroups/${activeGroupId}/members/${user.uid}`]=null;
+      updates[`chatGroupMembership/${user.uid}/${activeGroupId}`]=null;
+      try{await update(ref(db),updates);showGeneralChat();}
+      catch(err){groupStatus("Could not leave: "+(err.code||err.message));}
+    });
+    $("groupForm").addEventListener("submit",async e=>{
+      e.preventDefault();
+      if(!user||!activeGroupId||!activeGroup?.members?.[user.uid])return;
+      if(blockedFromChat())return groupStatus("You cannot message while timed out or banned.");
+      const input=$("groupInput"),message=input.value.trim();if(!message)return;
+      try{await push(ref(db,`chatGroupMessages/${activeGroupId}`),{from:user.uid,name:username||user.displayName||"Member",text:message.slice(0,500),at:Date.now()});input.value="";}
+      catch(err){groupStatus("Message failed: "+(err.code||err.message));}
+    });
     function drawFriends(){
       const side=$("dmSideFriends");side.replaceChildren();
+      drawGroups();
       const friendsForSide=Object.keys(friendMap);
       if(!friendsForSide.length){const empty=document.createElement("p");empty.className="friends-note";empty.textContent="No friends yet. Open Friends & Requests to add someone!";side.append(empty);}
       for(const uid of friendsForSide){
@@ -2064,7 +2184,7 @@
     }
     function startFriends(){
       stopFriends();if(!user||!db)return;
-      const uid=user.uid;
+      const uid=user.uid;startGroups();
       friendUnsubs.push(onValue(ref(db,`chatFriends/${uid}`),snap=>{
         if(user?.uid!==uid)return;friendMap=snap.val()||{};drawFriends();
         if(activeDmUid&&!friendMap[activeDmUid]){$("dmSection").hidden=true;activeDmUid=null;if(dmUnsub){dmUnsub();dmUnsub=null;}}
@@ -2108,6 +2228,10 @@
     }
     // The sidebar is navigation; DM conversations render in the main chat view.
     function showGeneralChat(){
+      activeGroupId=null;activeGroup=null;
+      if(groupUnsub){groupUnsub();groupUnsub=null;}
+      if(groupMessagesUnsub){groupMessagesUnsub();groupMessagesUnsub=null;}
+      $("groupSection").hidden=true;drawGroups();
       activeDmUid=null;
       if(dmUnsub){dmUnsub();dmUnsub=null;}
       $("dmSection").hidden=true;
@@ -2124,6 +2248,10 @@
     function openDm(uid){
       if(!user||!friendMap[uid]){friendStatus("Accept a friend request first.");return;}
       $("friendsOverlay").hidden=true;openDmSidebar();if(dmUnsub){dmUnsub();dmUnsub=null;}
+      activeGroupId=null;activeGroup=null;
+      if(groupUnsub){groupUnsub();groupUnsub=null;}
+      if(groupMessagesUnsub){groupMessagesUnsub();groupMessagesUnsub=null;}
+      $("groupSection").hidden=true;drawGroups();
       activeDmUid=uid;$("dmSection").hidden=false;$("chatProtected").classList.add("dm-main-active");drawFriends();
       $("dmTitle").textContent="💬 DM with "+friendName(uid);
       $("dmLog").replaceChildren();
