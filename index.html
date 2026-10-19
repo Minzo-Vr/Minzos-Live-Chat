@@ -414,6 +414,31 @@
     body.dm-sidebar-open{padding-left:270px}
     @media(max-width:700px){body.dm-sidebar-open{padding-left:0}#dmSidebar{width:min(300px,90vw);box-shadow:0 0 0 100vw #0006,4px 0 20px #0007}}
 
+    /* Connected Discord-style sidebar + full-height DM conversation in main chat. */
+    .chat{position:relative}
+    #dmSidebar{position:absolute;top:0;bottom:0;left:0;height:100%;max-height:100%;box-shadow:none;border-right:1px solid #454b61}
+    body.dm-sidebar-open{padding-left:12px}
+    .chat.dm-sidebar-layout{padding-left:260px;max-width:1020px}
+    .chat:fullscreen.dm-sidebar-layout{padding-left:260px}
+    .chat:fullscreen #dmSidebar{position:absolute}
+    #chatProtected.dm-main-active > #messages,
+    #chatProtected.dm-main-active > #sessionExpiredNotice,
+    #chatProtected.dm-main-active > #lockdownBanner,
+    #chatProtected.dm-main-active > #slowBanner,
+    #chatProtected.dm-main-active > #voteSection,
+    #chatProtected.dm-main-active > #gifPanel,
+    #chatProtected.dm-main-active > #chatSearch,
+    #chatProtected.dm-main-active > #chatSearchResults,
+    #chatProtected.dm-main-active > #roomTools,
+    #chatProtected.dm-main-active > #roomsDrawer{display:none!important}
+    #chatProtected.dm-main-active > #dmSection{display:flex!important;flex-direction:column;min-height:360px;height:min(64vh,680px);padding:14px;background:var(--theme-surface,#fff);color:var(--theme-text,#202437)}
+    #chatProtected.dm-main-active > #dmSection[hidden]{display:none!important}
+    #chatProtected.dm-main-active > #dmSection .dm-log{flex:1;height:auto;min-height:180px;overflow-y:auto}
+    .dm-main-header{display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--theme-border,#e2e8f0);padding-bottom:10px}
+    .dm-main-header h3{margin:0;font-size:16px}
+    .dm-main-header button{padding:8px 11px;border-radius:8px;cursor:pointer}
+    @media(max-width:700px){.chat.dm-sidebar-layout{padding-left:0}#dmSidebar{z-index:65;width:min(260px,85vw);box-shadow:0 0 0 100vw #0006,4px 0 20px #0007}.chat:fullscreen.dm-sidebar-layout{padding-left:0}}
+    
     /* Consistent Settings section backgrounds and heading colours.
        Keep this after the original styles so custom HEX themes work. */
     #settingsOverlay .user-options,
@@ -678,13 +703,6 @@
         <p class="friends-note">Send a request from someone's profile in General Chat. Both people must accept friendship before private messages work.</p>
         <h3>📨 Friend requests</h3><div id="friendRequests" class="friends-list"></div>
         <h3>💜 Your friends</h3><div id="friendList" class="friends-list"></div>
-        <section id="dmSection" hidden>
-          <h3 id="dmTitle">💬 Direct Messages</h3>
-          <div id="dmLog" class="dm-log" role="log" aria-live="polite"></div>
-          <form id="dmForm" class="dm-form"><input id="dmInput" maxlength="500" placeholder="Write a private message…" required><button type="submit">Send</button></form>
-          <div class="friends-toolbar" style="margin-top:10px"><input id="giftAmount" type="number" min="4" max="100000" step="4" placeholder="XP to gift (multiple of 4)"><button type="button" id="giftXpButton">🎁 Gift XP</button></div>
-          <p class="friends-note">Gifting deducts 25%: sending 100 XP gives your friend 75 XP. Gift transfers require the secure server function to be deployed.</p>
-        </section>
         <p id="friendsFeedback" role="status" class="friends-note"></p>
         <button type="button" id="friendsClose">Close</button>
       </div>
@@ -771,6 +789,14 @@
     </form>
     <p class="error" id="error" role="alert"></p>
     <div id="chatSearchBar" class="chat-search-bar" hidden><label for="chatSearchInput">🔎 Search messages in this room</label><div class="chat-search-row"><input id="chatSearchInput" type="search" placeholder="Search usernames or messages…" autocomplete="off"><button type="button" id="chatSearchClear">Clear</button></div><small id="chatSearchCount">Searches recent loaded messages only.</small></div>
+        <section id="dmSection" hidden>
+          <div class="dm-main-header"><button type="button" id="dmBackToGeneral">← General Chat</button><h3 id="dmTitle">💬 Direct Messages</h3></div>
+          <div id="dmLog" class="dm-log" role="log" aria-live="polite"></div>
+          <form id="dmForm" class="dm-form"><input id="dmInput" maxlength="500" placeholder="Write a private message…" required><button type="submit">Send</button></form>
+          <div class="friends-toolbar" style="margin-top:10px"><input id="giftAmount" type="number" min="4" max="100000" step="4" placeholder="XP to gift (multiple of 4)"><button type="button" id="giftXpButton">🎁 Gift XP</button></div>
+          <p class="friends-note">Gifting deducts 25%: sending 100 XP gives your friend 75 XP. Gift transfers require the secure server function to be deployed.</p>
+        </section>
+
     <section id="messages" aria-live="polite"><div class="system">Connect the chat to Firebase to start messaging.</div></section>
     <p id="sessionExpiredNotice" class="lockdown-banner" hidden>🔒 Session expired after 5 minutes. Re-enter your username to view the chat again.</p>
     <p class="lockdown-banner" id="lockdownBanner" hidden>🔒 Chat is locked. You can read messages, but visitors cannot send new ones.</p>
@@ -1652,7 +1678,8 @@
           "🔐 Corrected Firebase version validation for Next Update / Reset!",
           "📝 Fixed saving empty announcement drafts without requiring an entry!",
           "🐛 Fixed new update versions showing empty changelogs when known changes exist!",
-          "🖥️ Fixed the DM sidebar disappearing outside the fullscreen chat view!"
+          "🖥️ Fixed the DM sidebar disappearing outside the fullscreen chat view!",
+          "💬 NEW! DMs open in the main Community Chat area, connected to the friends sidebar!"
         ],removed:[]
       }
     };
@@ -1913,8 +1940,7 @@
     function stopFriends(){
       for(const stop of friendUnsubs)stop();friendUnsubs=[];
       if(dmUnsub){dmUnsub();dmUnsub=null;}
-      friendMap={};friendRequests={};activeDmUid=null;
-      $("dmSection").hidden=true;drawFriends();
+      friendMap={};friendRequests={};showGeneralChat();
       closeDmSidebar();
     }
     function friendStatus(text){$("friendsFeedback").textContent=text;}
@@ -1987,15 +2013,22 @@
     }
     function openDmSidebar(){
       if(!user||!joined){showError("Sign in and join before opening DMs.");return;}
-      $("dmSidebar").hidden=false;document.body.classList.add("dm-sidebar-open");
+      $("dmSidebar").hidden=false;document.body.classList.add("dm-sidebar-open");document.querySelector("main.chat").classList.add("dm-sidebar-layout");
       $("friendsToggle").setAttribute("aria-expanded","true");drawFriends();
     }
     function closeDmSidebar(){
-      $("dmSidebar").hidden=true;document.body.classList.remove("dm-sidebar-open");
+      $("dmSidebar").hidden=true;document.body.classList.remove("dm-sidebar-open");document.querySelector("main.chat").classList.remove("dm-sidebar-layout");
       $("friendsToggle").setAttribute("aria-expanded","false");
     }
-    // Keep the conversation attached to the sidebar, never inside the popup.
-    $("dmSideConversation").append($("dmSection"));
+    // The sidebar is navigation; DM conversations render in the main chat view.
+    function showGeneralChat(){
+      activeDmUid=null;
+      if(dmUnsub){dmUnsub();dmUnsub=null;}
+      $("dmSection").hidden=true;
+      $("chatProtected").classList.remove("dm-main-active");
+      drawFriends();
+    }
+    $("dmBackToGeneral").addEventListener("click",showGeneralChat);
     $("dmSideClose").addEventListener("click",closeDmSidebar);
     $("dmSideRequests").addEventListener("click",()=>openFriends());
     function openFriends(){
@@ -2005,7 +2038,7 @@
     function openDm(uid){
       if(!user||!friendMap[uid]){friendStatus("Accept a friend request first.");return;}
       $("friendsOverlay").hidden=true;openDmSidebar();if(dmUnsub){dmUnsub();dmUnsub=null;}
-      activeDmUid=uid;$("dmSection").hidden=false;drawFriends();
+      activeDmUid=uid;$("dmSection").hidden=false;$("chatProtected").classList.add("dm-main-active");drawFriends();
       $("dmTitle").textContent="💬 DM with "+friendName(uid);
       $("dmLog").replaceChildren();
       dmUnsub=onValue(query(ref(db,`chatDMs/${user.uid}/${uid}`),limitToLast(80)),snap=>{
