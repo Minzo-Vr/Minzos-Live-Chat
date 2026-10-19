@@ -8,6 +8,7 @@
     :root { color-scheme: light; --accent:#5865f2; --bg:#f4f6fb; --ink:#202437; --muted:#697087; }
     * { box-sizing: border-box; }
     body { margin:0; padding:12px; background:transparent; color:var(--ink); font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+    body.chat-session-expired #messages,body.chat-session-expired #dmSidebar,body.chat-session-expired #friendsOverlay{display:none!important}
     .chat:fullscreen{width:100vw;height:100dvh;max-width:none;border:0;border-radius:0;display:flex;flex-direction:column;overflow:auto}
     .chat:fullscreen #messages{height:auto;min-height:0;flex:1;overflow-y:auto}
     .chat:fullscreen{position:relative}
@@ -615,6 +616,7 @@
           <p id="experimentalHint" class="experimental-hint" role="status">🔒 Plus or Admin role required.</p>
           <div id="experimentalFeatures" hidden>
             <strong>Experimental features</strong>
+            <div class="chat-color-option"><strong>⏱️ Timed Quick Exit</strong><label><input type="checkbox" id="timedExitEnabled"> Enable automatic chat exit</label><label for="timedExitMinutes">Minutes (1–240)</label><input type="number" id="timedExitMinutes" min="1" max="240" value="15"><button type="button" id="timedExitSave">Save and start timer</button><p id="timedExitStatus" role="status">Disabled by default.</p></div>
             <label><input type="checkbox" id="enableRooms" checked> Enable chat rooms</label>
             <label><input type="checkbox" id="enableSearch"> Enable search bar</label>
             <label><input type="checkbox" id="enableXp" checked> Enable XP leveling system</label>
@@ -770,6 +772,7 @@
     <p class="error" id="error" role="alert"></p>
     <div id="chatSearchBar" class="chat-search-bar" hidden><label for="chatSearchInput">🔎 Search messages in this room</label><div class="chat-search-row"><input id="chatSearchInput" type="search" placeholder="Search usernames or messages…" autocomplete="off"><button type="button" id="chatSearchClear">Clear</button></div><small id="chatSearchCount">Searches recent loaded messages only.</small></div>
     <section id="messages" aria-live="polite"><div class="system">Connect the chat to Firebase to start messaging.</div></section>
+    <p id="sessionExpiredNotice" class="lockdown-banner" hidden>🔒 Session expired after 5 minutes. Re-enter your username to view the chat again.</p>
     <p class="lockdown-banner" id="lockdownBanner" hidden>🔒 Chat is locked. You can read messages, but visitors cannot send new ones.</p>
     <p id="slowBanner" class="lockdown-banner" hidden></p>
     <section id="voteSection" style="padding:10px 14px;border-top:1px solid #edf0f6" hidden>
@@ -1156,7 +1159,7 @@
       } catch(e) { console.error("Profile read:",e); showError("Could not load saved username: "+(e.code||e.message)); }
     }
     async function enterChat(name,fromProfile=false) {
-      username=name;joined=true;lastMessageActivity=Date.now();
+      username=name;joined=true;lastMessageActivity=Date.now();document.body.classList.remove("chat-session-expired");$("sessionExpiredNotice").hidden=true;
       usernameInput.value=name;usernameInput.disabled=true;joinBtn.disabled=true;
       updateLockdownUI();
       addSystem(`You joined as ${name}.`);
@@ -1169,6 +1172,7 @@
       if(!joined || Date.now()-lastMessageActivity < INACTIVITY_MS) return;
       joined=false;
       username="";
+      document.body.classList.add("chat-session-expired");$("sessionExpiredNotice").hidden=false;$("dmSidebar").hidden=true;$("friendsOverlay").hidden=true;
       usernameInput.disabled=false;joinBtn.disabled=false;
       usernameInput.value="";
       usernameInput.placeholder="Re-enter username to rejoin";
@@ -1629,6 +1633,8 @@
         featured:"📝 Automatic release-note logging for Community Chat!",
         added:[
           "📝 Added automatic changelog suggestions for the active announcement version!",
+          "⏱️ Added experimental automatic Timed Quick Exit (1–240 minutes)!",
+          "🔒 Chat messages and DMs now hide after the five-minute inactivity timeout!",
           "🔒 Added Private Profile: Everyone, Friends only, and No one visibility!",
           "🔄 Added a Log recent changes button to refill missing release notes!",
           "🕵️ Improved Incognito profiles: hide public role badges, bio and personal avatar while preserving Firebase identity!",
@@ -2380,6 +2386,30 @@
       document.title="Blank";
       try{window.close();}catch{}
     }
+    const TIMED_EXIT_KEY="communityChatTimedExitV1";
+    let timedExitTimer=null;
+    function startTimedExit(){
+      if(timedExitTimer)clearTimeout(timedExitTimer);
+      timedExitTimer=null;
+      let settings={enabled:false,minutes:15};
+      try{settings={...settings,...JSON.parse(localStorage.getItem(TIMED_EXIT_KEY)||"{}")};}catch{}
+      $("timedExitEnabled").checked=settings.enabled===true;
+      $("timedExitMinutes").value=settings.minutes;
+      if(!settings.enabled||!hasExperimentalAccess())return;
+      const minutes=Math.max(1,Math.min(240,Number(settings.minutes)||15));
+      timedExitTimer=setTimeout(quickExit,minutes*60000);
+      $("timedExitStatus").textContent="Timer running: "+minutes+" minutes.";
+    }
+    $("timedExitSave").addEventListener("click",()=>{
+      if(!hasExperimentalAccess())return;
+      const minutes=Number($("timedExitMinutes").value);
+      if(!Number.isInteger(minutes)||minutes<1||minutes>240){$("timedExitStatus").textContent="Choose 1–240 minutes.";return;}
+      const enabled=$("timedExitEnabled").checked;
+      try{localStorage.setItem(TIMED_EXIT_KEY,JSON.stringify({enabled,minutes}));}catch{}
+      startTimedExit();
+      if(!enabled)$("timedExitStatus").textContent="Timer disabled.";
+    });
+    setTimeout(startTimedExit,1200);
     document.addEventListener("keydown",event=>{
       if(!panicPrefs.enabled||!hasExperimentalAccess()||event.repeat||event.ctrlKey||event.altKey||event.metaKey)return;
       const element=event.target;
@@ -2866,7 +2896,7 @@
       clearMyTyping().catch(console.warn);
       if(typingUnsub){typingUnsub();typingUnsub=null;}
       typingEntries={};drawTyping();
-      joined=false;username="";savedUsername="";lastMessageActivity=0;usernameInput.value="";usernameInput.disabled=false;joinBtn.disabled=false;
+      joined=false;username="";savedUsername="";lastMessageActivity=0;document.body.classList.remove("chat-session-expired");$("sessionExpiredNotice").hidden=true;usernameInput.value="";usernameInput.disabled=false;joinBtn.disabled=false;
     }
     let anonymousAccountsEnabled=false,anonymousFlagUnsub=null;
     function renderAnonymousSignInAvailability(){
