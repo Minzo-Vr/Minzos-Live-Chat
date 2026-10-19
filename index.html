@@ -251,6 +251,15 @@
     .role-creator input{width:100%;margin:5px 0 9px;padding:7px}
     .role-creator input[type=color]{height:42px}
     .custom-role-row{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:7px 0}
+    .theme-mode-options{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+    .theme-mode-options button[aria-pressed="true"]{outline:3px solid var(--accent,#5865f2);outline-offset:1px}
+    .community-dark .bubble{background:var(--theme-message)!important;color:var(--theme-text)!important;border-color:var(--theme-border)!important}
+    .community-dark input,.community-dark textarea,.community-dark select{background:var(--theme-input)!important;color:var(--theme-text)!important;border-color:var(--theme-border)!important}
+    .community-dark .settings-dialog,.community-dark .user-options,.community-dark .setting-feature-fold,.community-dark .theme-mode-settings,.community-dark .cc-embed,.community-dark .dm-log,.community-dark #groupSection,.community-dark #dmSection{background:var(--theme-surface)!important;color:var(--theme-text)!important}
+    .community-dark .msg-actions{background:var(--theme-panel)!important}
+    .testsubject-metal-name{font-weight:900!important;background:linear-gradient(110deg,#134f30 0%,#43a86b 24%,#c5ffdb 43%,#3e9d64 58%,#0e482a 78%,#8bdcaa 100%);background-size:210% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:testMetalShine 5s linear infinite;text-shadow:0 1px 1px #174b2820}
+    @keyframes testMetalShine{to{background-position:210% 0}}
+    @media(prefers-reduced-motion:reduce){.testsubject-metal-name{animation:none}}
     .moderator-blue-name{font-weight:800;background:linear-gradient(90deg,#b4e6ff,#55aaff,#1755ce,#55aaff,#b4e6ff);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:modBlue 3s linear infinite}
     @media(prefers-reduced-motion:reduce){.admin-rgb-name,.moderator-blue-name{animation:none}}
 
@@ -647,6 +656,7 @@
               <option value="plus">✦ Plus — animated gold 🔒</option>
               <option value="moderator">🛡️ Moderator — animated blue 🔒</option>
               <option value="admin">🌈 Admin — animated rainbow 🔒</option>
+              <option value="testsubject">🧪 Test Subject — metallic green 🔒</option>
             </select>
             <p id="usernameEffectHelp" role="status" style="font-size:12px;color:#64748b"></p>
             <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="showRoleOnProfile" checked> Show my role on my profile / bio</label>
@@ -720,6 +730,16 @@
                 <button type="button" id="chatColorReset" class="chat-color-reset">Reset</button>
               </div>
               <p id="chatHexHelp" role="status">Default purple: #5865F2. Example: #FF6699.</p>
+            </div>
+            <div class="theme-mode-settings" data-setting-label="dark bright light system automatic appearance mode theme">
+              <strong>🌗 Appearance mode</strong>
+              <p>Choose how Community Chat looks. System follows your device's appearance.</p>
+              <div class="theme-mode-options" role="group" aria-label="Appearance mode">
+                <button type="button" data-theme-mode="bright">☀️ Bright</button>
+                <button type="button" data-theme-mode="system">💻 System</button>
+                <button type="button" data-theme-mode="dark">🌙 Dark</button>
+              </div>
+              <p id="themeModeFeedback" role="status"></p>
             </div>
             <details class="theme-editor" data-setting-label="all colours background white text buttons surfaces bubbles full theme">
               <summary style="cursor:pointer;font-weight:700;color:var(--theme-text)">🎨 Secondary colours &amp; full theme ▾</summary>
@@ -1072,9 +1092,9 @@
     const bioPath = uid => `chatProfiles/${uid}/bio`;
     const privacyPath = uid => `chatProfiles/${uid}/privacy`;
     const appearancePath = uid => `chatRoleAppearance/${uid}`;
-    const validEffects=new Set(["none","member","plus","moderator","admin"]);
+    const validEffects=new Set(["none","member","plus","moderator","admin","testsubject"]);
     let appearanceByUid={},appearanceUnsub=null;
-    const BUILTIN_ROLES=["admin","moderator","plus"];
+    const BUILTIN_ROLES=["admin","moderator","plus","testsubject"];
     let customRoles={},customRoleUnsub=null;
     function userRoles(uid){
       const raw=roleMap[uid];
@@ -1083,7 +1103,7 @@
       return roles;
     }
     function hasRole(uid,role){return userRoles(uid).includes(role);}
-    function actualRole(uid){const roles=userRoles(uid);return roles.includes("admin")?"admin":roles.includes("moderator")?"moderator":roles.includes("plus")?"plus":roles.find(k=>customRoles[k])||"member";}
+    function actualRole(uid){const roles=userRoles(uid);return roles.includes("admin")?"admin":roles.includes("moderator")?"moderator":roles.includes("plus")?"plus":roles.includes("testsubject")?"testsubject":roles.find(k=>customRoles[k])||"member";}
     function displayedRoleEffect(uid){
       const roles=userRoles(uid),chosen=appearanceByUid[uid]?.effect;
       if(chosen==="none")return "none";
@@ -1096,6 +1116,7 @@
         el.classList.toggle("admin-rgb-name",effect==="admin");
         el.classList.toggle("moderator-blue-name",effect==="moderator");
         el.classList.toggle("plus-gold-name",effect==="plus");
+        el.classList.toggle("testsubject-metal-name",effect==="testsubject");
         el.style.color=customRoles[effect]?.color||"";
         el.style.fontWeight=customRoles[effect]?"800":"";
       });
@@ -1105,7 +1126,7 @@
       for(const opt of choice.options){
         opt.disabled=opt.value!=="none"&&opt.value!=="member"&&!roles.includes(opt.value);
         if(BUILTIN_ROLES.includes(opt.value)){
-          const label={plus:"✦ Plus — animated gold",moderator:"🛡️ Moderator — animated blue",admin:"🌈 Admin — animated rainbow"}[opt.value];
+          const label={plus:"✦ Plus — animated gold",moderator:"🛡️ Moderator — animated blue",admin:"🌈 Admin — animated rainbow",testsubject:"🧪 Test Subject — metallic green"}[opt.value];
           opt.textContent=label+(roles.includes(opt.value)?" ✓":" 🔒");
         }
       }
@@ -1131,7 +1152,7 @@
     function renderRoleChoices(uid){
       const wrap=$("profileRoleChoices");wrap.replaceChildren();
       const current=new Set(userRoles(uid));
-      for(const [id,label] of [["admin","🌈 Admin"],["moderator","🔵 Moderator"],["plus","✨ Plus"]]){
+      for(const [id,label] of [["admin","🌈 Admin"],["moderator","🔵 Moderator"],["plus","✨ Plus"],["testsubject","🧪 Test Subject"]]){
         const line=document.createElement("label"),input=document.createElement("input");
         input.type="checkbox";input.value=id;input.checked=current.has(id);
         line.append(input,document.createTextNode(label));wrap.append(line);
@@ -1170,8 +1191,8 @@
       // Existing per-browser preferences remain stored, but Plus-only features are unavailable without a role.
       if(typeof applyChatPreferences==="function")applyChatPreferences();
       if(typeof themeApplyPalette==="function" && typeof defaultPalette==="function"){
-        if(!allowed)themeApplyPalette(defaultPalette());
-        else if(typeof themePalette!=="undefined")themeApplyPalette(themePalette);
+        if(!allowed)applyAppearanceMode();
+        else if(typeof themePalette!=="undefined")applyAppearanceMode();
       }
     }
     const blockedFromChat=()=>!isAdmin && (moderationState.banned===true || (Number(moderationState.until)||0)>Date.now());
@@ -1811,6 +1832,8 @@
       featured:"💜 Community Chat update: group chats, YouTube embeds, and message controls!",
       // Google linking added for existing email/password accounts.
       added:[
+        "🧪 New Test Subject role with bold metallic green usernames, assignable by admins!",
+        "🌗 New Bright / System / Dark appearance selector with saved preference and automatic system theme tracking!",
         "👥 Create group chats, invite friends, chat together and manage membership!",
         "🗂️ Group friend invitations now use expandable dropdowns instead of numbered popups!",
         "▶️ YouTube links automatically display playable embedded video players in General Chat!",
@@ -2647,6 +2670,34 @@
       ["accent","Buttons / header","#5865F2","--accent"]
     ];
     const defaultPalette=()=>Object.fromEntries(THEME_FIELDS.map(([key,,value])=>[key,value]));
+    const darkPalette=()=>({
+      page:"#101218",surface:"#1b1f2a",panel:"#242a38",message:"#2a3040",
+      text:"#f1f3fa",secondary:"#b7bfd1",border:"#41495e",input:"#292f3e",
+      headerText:"#ffffff",buttonText:"#ffffff",accent:"#5865F2"
+    });
+    const THEME_MODE_KEY="communityChatAppearanceModeV1";
+    let themeMode=localStorage.getItem(THEME_MODE_KEY)||"bright";
+    if(!["bright","system","dark"].includes(themeMode))themeMode="bright";
+    const systemDark=window.matchMedia("(prefers-color-scheme: dark)");
+    function effectiveDarkMode(){return themeMode==="dark"||(themeMode==="system"&&systemDark.matches);}
+    function applyAppearanceMode(){
+      const dark=effectiveDarkMode();
+      const palette=dark?darkPalette():defaultPalette();
+      themeApplyPalette(palette);
+      document.documentElement.classList.toggle("community-dark",dark);
+      document.documentElement.style.colorScheme=dark?"dark":"light";
+      document.querySelectorAll("[data-theme-mode]").forEach(button=>{
+        const selected=button.dataset.themeMode===themeMode;
+        button.setAttribute("aria-pressed",String(selected));
+      });
+      $("themeModeFeedback").textContent="Current appearance: "+(dark?"Dark":"Bright")+(themeMode==="system"?" (following system)":"")+".";
+    }
+    document.querySelectorAll("[data-theme-mode]").forEach(button=>button.addEventListener("click",()=>{
+      themeMode=button.dataset.themeMode;
+      localStorage.setItem(THEME_MODE_KEY,themeMode);
+      applyAppearanceMode();
+    }));
+    systemDark.addEventListener?.("change",()=>{if(themeMode==="system")applyAppearanceMode();});
     let themePalette=defaultPalette();
     function themeApplyPalette(palette){
       for(const [key,,fallback,cssVar] of THEME_FIELDS){
@@ -2687,10 +2738,11 @@
         for(const [key] of THEME_FIELDS)if(validChatHex(stored[key]))themePalette[key]=stored[key];
       }else{themePalette.accent=savedChatColor;}
     }catch{themePalette.accent=savedChatColor;}
-    themeShowInputs(themePalette);themeApplyPalette(hasExperimentalAccess()?themePalette:defaultPalette());
+    themeShowInputs(themePalette);applyAppearanceMode();
     $("themeApply").addEventListener("click",()=>{
       if(!hasExperimentalAccess())return;
       try{
+        themeMode="bright";localStorage.setItem(THEME_MODE_KEY,themeMode);
         themePalette=themeReadInputs();themeApplyPalette(themePalette);
         localStorage.setItem(THEME_KEY,JSON.stringify(themePalette));
         localStorage.setItem(CHAT_COLOR_KEY,themePalette.accent);
@@ -2699,7 +2751,8 @@
     });
     $("themeReset").addEventListener("click",()=>{
       if(!hasExperimentalAccess())return;
-      themePalette=defaultPalette();themeShowInputs(themePalette);themeApplyPalette(themePalette);
+      themeMode="bright";localStorage.setItem(THEME_MODE_KEY,themeMode);
+      themePalette=defaultPalette();themeShowInputs(themePalette);applyAppearanceMode();
       localStorage.removeItem(THEME_KEY);localStorage.removeItem(CHAT_COLOR_KEY);
       $("themeFeedback").textContent="Original colours restored.";
     });
@@ -3169,6 +3222,7 @@
       nameSpan.classList.toggle("admin-rgb-name",effect==="admin");
       nameSpan.classList.toggle("moderator-blue-name",effect==="moderator");
       nameSpan.classList.toggle("plus-gold-name",effect==="plus");
+      nameSpan.classList.toggle("testsubject-metal-name",effect==="testsubject");
       if(customRoles[effect]){nameSpan.style.color=customRoles[effect].color;nameSpan.style.fontWeight="800";}
       const timeSpan=document.createElement("span");
       timeSpan.textContent=` · ${new Date(data.createdAt || Date.now()).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}`;
