@@ -161,6 +161,11 @@
     .dm-log{height:220px;overflow:auto;background:var(--theme-page,#f4f6fb);border-radius:9px;padding:10px;margin:10px 0;display:grid;align-content:start;gap:8px}
     .dm-line{padding:8px 10px;border-radius:9px;background:var(--theme-message,#fff);color:var(--theme-text,#222);overflow-wrap:anywhere}
     .dm-line.mine{border-left:3px solid var(--accent,#5865f2)}
+    #groupLog{display:flex;flex-direction:column;align-content:normal;gap:12px}
+    #groupLog .group-message{max-width:100%;width:100%;background:transparent;border:0;padding:0}
+    #groupLog .group-message .message-main{min-width:0}
+    #groupLog .group-message .bubble{display:table;max-width:100%;width:auto}
+
     .dm-form{display:flex;gap:7px}.dm-form input{flex:1;min-width:0}
     .friends-note{font-size:12px;color:var(--theme-secondary,#667085)}
     .email-auth-details,.email-link-settings{margin:12px 0;padding:12px;border:1px solid var(--theme-border,#dce1ec);border-radius:10px;background:var(--theme-surface,#fff);color:var(--theme-text,#202437)}
@@ -2248,9 +2253,41 @@
       groupMessagesUnsub=onValue(query(ref(db,`chatGroupMessages/${id}`),limitToLast(100)),snap=>{
         if(activeGroupId!==id)return;
         const log=$("groupLog");log.replaceChildren();
-        snap.forEach(child=>{const msg=child.val();if(!msg||typeof msg.text!=="string")return;
-          const line=document.createElement("div");line.className="dm-line"+(msg.from===user.uid?" mine":"");
-          line.textContent=(msg.from===user.uid?"You":msg.name||"Member")+": "+msg.text;log.append(line);
+        snap.forEach(child=>{
+          const msg=child.val();
+          if(!msg||typeof msg.text!=="string")return;
+          const uid=typeof msg.from==="string"?msg.from:"";
+          const name=typeof msg.name==="string"?msg.name:"Member";
+          const incognitoMessage=name.startsWith(INCOGNITO_PREFIX);
+          const wrap=document.createElement("article");wrap.className="msg group-message";
+          const avatar=document.createElement("img");avatar.className="message-avatar profile-click";
+          avatar.alt="";avatar.dataset.uid=uid;
+          if(incognitoMessage)avatar.dataset.incognito="true";
+          avatar.src=incognitoMessage?INCOGNITO_AVATAR:(avatarUrls.get(uid)||avatarFallback);
+          avatar.referrerPolicy="no-referrer";avatar.loading="lazy";
+          avatar.tabIndex=0;avatar.setAttribute("role","button");avatar.setAttribute("aria-label","View "+name+"'s profile");
+          const openProfile=()=>openUserProfile(uid,name,incognitoMessage);
+          avatar.addEventListener("click",openProfile);
+          avatar.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openProfile();}});
+          if(uid&&!incognitoMessage)ensureAvatarSubscription(uid);
+          const main=document.createElement("div");main.className="message-main";
+          const meta=document.createElement("div");meta.className="meta profile-click";
+          meta.tabIndex=0;meta.setAttribute("role","button");meta.setAttribute("aria-label","View "+name+"'s profile");
+          meta.addEventListener("click",openProfile);
+          meta.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openProfile();}});
+          const nameSpan=document.createElement("span");nameSpan.textContent=name;nameSpan.dataset.authorUid=uid;
+          const effect=incognitoMessage?"none":displayedRoleEffect(uid);
+          nameSpan.classList.toggle("admin-rgb-name",effect==="admin");
+          nameSpan.classList.toggle("moderator-blue-name",effect==="moderator");
+          nameSpan.classList.toggle("plus-gold-name",effect==="plus");
+          nameSpan.classList.toggle("testsubject-metal-name",effect==="testsubject");
+          if(customRoles[effect]){nameSpan.style.color=customRoles[effect].color;nameSpan.style.fontWeight="800";}
+          const time=document.createElement("span");
+          time.textContent=" · "+new Date(msg.at||Date.now()).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+          meta.append(nameSpan,time);
+          const bubble=document.createElement("div");bubble.className="bubble";
+          renderTextWithEmbed(bubble,msg.text);
+          main.append(meta,bubble);wrap.append(avatar,main);log.append(wrap);
         });log.scrollTop=log.scrollHeight;
       },err=>groupStatus("Messages unavailable: "+(err.code||err.message)));
     }
