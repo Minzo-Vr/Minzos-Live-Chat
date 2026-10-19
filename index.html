@@ -900,7 +900,7 @@
         </section>
 
     <section id="groupSection" hidden>
-          <div class="dm-main-header"><button type="button" id="groupBackToGeneral">← General Chat</button><h3 id="groupTitle">👥 Group Chat</h3><span class="group-add-control"><button type="button" id="groupAddMembers" aria-expanded="false" aria-controls="groupFriendPicker">＋ Add friends ▾</button></span><button type="button" id="groupLeave">Leave</button></div>
+          <div class="dm-main-header"><button type="button" id="groupBackToGeneral">← General Chat</button><h3 id="groupTitle">👥 Group Chat</h3><span class="group-add-control"><button type="button" id="groupAddMembers" aria-expanded="false" aria-controls="groupFriendPicker">＋ Add friends ▾</button></span><button type="button" id="groupShareLink">🔗 Share group</button><button type="button" id="groupLeave">Leave</button></div>
           <div id="groupFriendPicker" class="group-friend-picker" hidden><p class="friends-note">Select a friend to expand their options.</p><div id="groupFriendOptions"></div></div>
           <p id="groupStatus" class="friends-note" role="status"></p>
           <div id="groupLog" class="dm-log" role="log" aria-live="polite"></div>
@@ -2232,6 +2232,41 @@
         alert("Group setup failed while "+stage+": "+(err.code||err.message)+". Check the published Firebase group rules.");
       }
     });
+    function groupInviteUrl(id){
+      const url=new URL(window.location.href);
+      url.searchParams.set("joinGroup",id);
+      url.searchParams.delete("chatMessage");
+      url.searchParams.delete("chatRoom");
+      url.hash="";
+      return url.href;
+    }
+    $("groupShareLink").addEventListener("click",async()=>{
+      if(!user||!activeGroupId||!activeGroup?.members?.[user.uid])return;
+      const link=groupInviteUrl(activeGroupId);
+      try{await navigator.clipboard.writeText(link);groupStatus("Group invite link copied! Anyone signed in with this link can request to join.");}
+      catch{window.prompt("Copy your group invite link:",link);}
+    });
+    let groupInvitePending=false;
+    async function tryJoinGroupInvite(){
+      if(groupInvitePending||!user||!joined||!db)return;
+      const params=new URLSearchParams(window.location.search);
+      const id=params.get("joinGroup");
+      if(!id||!/^[A-Za-z0-9_-]{12,80}$/.test(id))return;
+      groupInvitePending=true;
+      try{
+        const invite=await get(ref(db,`chatGroupInvites/${id}`));
+        const info=invite.val();
+        if(!info||info.enabled!==true){alert("This group invitation is unavailable or disabled.");return;}
+        if(!confirm("Join group chat: "+(info.name||"Group chat")+"?"))return;
+        await set(ref(db,`chatGroups/${id}/members/${user.uid}`),true);
+        await set(ref(db,`chatGroupMembership/${user.uid}/${id}`),{name:info.name||"Group chat"});
+        history.replaceState(null,"",window.location.pathname+window.location.search.replace(/([?&])joinGroup=[^&]*&?/,"$1").replace(/[?&]$/,"")+window.location.hash);
+        groupIndex[id]={name:info.name||"Group chat"};
+        drawGroups();openGroup(id);
+        groupStatus("You joined using a shared group link! 💜");
+      }catch(err){alert("Could not join group: "+(err.code||err.message)+". Check the Firebase group invitation rules.");}
+      finally{groupInvitePending=false;}
+    }
     function openGroup(id){
       if(!user||!groupIndex[id])return;
       openDmSidebar();
@@ -2352,6 +2387,7 @@
     function startFriends(){
       stopFriends();if(!user||!db)return;
       const uid=user.uid;startGroups();
+      setTimeout(tryJoinGroupInvite,400);
       friendUnsubs.push(onValue(ref(db,`chatFriends/${uid}`),snap=>{
         if(user?.uid!==uid)return;friendMap=snap.val()||{};drawFriends();
         if(activeDmUid&&!friendMap[activeDmUid]){$("dmSection").hidden=true;activeDmUid=null;if(dmUnsub){dmUnsub();dmUnsub=null;}}
