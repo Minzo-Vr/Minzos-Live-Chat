@@ -1752,23 +1752,40 @@
         ],removed:[]
       }
     };
+    const RECENT_SITE_CHANGES={
+      featured:"💜 Community Chat update: bigger chat, cleaner settings and better DMs!",
+      added:[
+        "🖥️ Community Chat now fills the entire browser window automatically, with more space for messages!",
+        "🗂️ Individual Settings features are now collapsible so controls are easier to find!",
+        "💬 Direct messages open inside the main Community Chat area, alongside the connected friends sidebar!",
+        "🔒 Profile visibility choices: Everyone, Friends only, or No one (requires updated Firebase rules).",
+        "⚠️ Serious Features now shows an account-deletion control; secure server-side deletion still requires deployment."
+      ],
+      fixed:[
+        "📐 Removed the narrow, centered chat layout on desktop!",
+        "📝 Fixed the release-note logger not finding recent changes after moving to a new version!"
+      ],
+      removed:[]
+    };
     function logChangesForVersion(){
       if(!isAdmin)return 0;
       const version=$("announcementDraftVersion").value.trim();
       if(publishedReleases.some(r=>r.version===version))return 0;
       const baseNotes=version==="0.3"?CURRENT_CHANGELOG:RELEASE_CHANGE_LOG[version];
-      const fullscreenFix="🖥️ Fixed the DM sidebar disappearing outside the fullscreen chat view!";
-      const alreadyAnnounced=publishedReleases.some(r=>releaseParts(r).fixed.includes(fullscreenFix));
-      const pendingFix=version!=="0.3"&&!alreadyAnnounced?[fullscreenFix]:[];
-      const notes=baseNotes?{...baseNotes,fixed:[...(baseNotes.fixed||[]),...pendingFix]}:{featured:"",added:[],fixed:pendingFix,removed:[]};
-      if(!notes)return 0;
+      // Recent website changes are eligible for any unpublished draft version.
+      const notes={
+        featured:RECENT_SITE_CHANGES.featured,
+        added:[...(baseNotes?.added||[]),...RECENT_SITE_CHANGES.added],
+        fixed:[...(baseNotes?.fixed||[]),...RECENT_SITE_CHANGES.fixed],
+        removed:[...(baseNotes?.removed||[])]
+      };
       let count=0;
       const featured=$("announcementDraftFeatured");
-      if(!featured.value.trim()&&notes.featured){featured.value=notes.featured;count++;}
+      if(!featured.value.trim()){featured.value=notes.featured;count++;}
       for(const [category,id] of [["added","announcementDraftFeatures"],["fixed","announcementDraftFixed"],["removed","announcementDraftRemoved"]]){
         const input=$(id);
         const existing=input.value.split("\n").map(x=>x.trim()).filter(Boolean);
-        const missing=(notes[category]||[]).filter(x=>!existing.includes(x));
+        const missing=[...new Set(notes[category]||[])].filter(x=>!existing.includes(x));
         if(missing.length){input.value=[...existing,...missing].join("\n");count+=missing.length;}
       }
       renderDraftPreview();
