@@ -97,6 +97,25 @@
     .panic-settings{border-top:1px solid var(--theme-border);margin-top:12px;padding-top:12px}
     .panic-settings strong{color:var(--theme-text)!important}
 
+
+    /* Readable role assignment text across light and dark themes */
+    #profileRoleChoices.role-choices {
+      background:var(--theme-surface,#f5f6fa);
+      border:1px solid var(--theme-border,#dce1ec);
+      color:var(--theme-text,#111827);
+    }
+    #profileRoleChoices.role-choices label,
+    #profileRoleChoices.role-choices label span,
+    #profileRoleActions > label {
+      color:var(--theme-text,#111827)!important;
+    }
+    html:not(.community-dark) #profileRoleChoices.role-choices,
+    html:not(.community-dark) #profileRoleChoices.role-choices label,
+    html:not(.community-dark) #profileRoleChoices.role-choices label span {color:#111827!important;}
+    html.community-dark #profileRoleChoices.role-choices,
+    html.community-dark #profileRoleChoices.role-choices label,
+    html.community-dark #profileRoleChoices.role-choices label span {color:#ffffff!important;}
+
     /* Uniform collapsible settings: consistent sizing without changing functionality */
     #settingsOverlay .theme-mode-settings,
     #settingsOverlay .theme-editor {
