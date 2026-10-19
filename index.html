@@ -1808,9 +1808,18 @@
       }
     };
     const RECENT_SITE_CHANGES={
-      featured:"💜 Community Chat update: bigger chat, cleaner settings and better DMs!",
+      featured:"💜 Community Chat update: group chats, YouTube embeds, and message controls!",
       // Google linking added for existing email/password accounts.
       added:[
+        "👥 Create group chats, invite friends, chat together and manage membership!",
+        "🗂️ Group friend invitations now use expandable dropdowns instead of numbered popups!",
+        "▶️ YouTube links automatically display playable embedded video players in General Chat!",
+        "🔗 Website links display safe clickable preview cards in General Chat!",
+        "🧩 Create custom Discord-style embeds with a title, description, image, link and accent colour!",
+        "🗑️ Delete your own General Chat messages using the hover bin icon (requires updated Firebase rules)!",
+        "✏️ Edit your own General Chat messages using the hover pencil icon, with an edited label (requires updated Firebase rules)!",
+        "🔗 Copy a direct link to a General Chat message using the chain icon; links work for recently loaded messages!",
+        "📱 Message action icons remain visible on touch devices!",
         "🔗 Link a Google account to your existing email/password Community Chat account without losing your UID, friends, XP or messages!",
         "🖥️ Community Chat now fills the entire browser window automatically, with more space for messages!",
         "🗂️ Individual Settings features are now collapsible so controls are easier to find!",
@@ -1819,6 +1828,8 @@
         "⚠️ Serious Features now shows an account-deletion control; secure server-side deletion still requires deployment."
       ],
       fixed:[
+        "🔧 Improved group creation error messages to identify which Firebase step failed!",
+        "🔧 Aligned group creation and invitations with group membership database rules!",
         "📐 Removed the narrow, centered chat layout on desktop!",
         "📝 Fixed the release-note logger not finding recent changes after moving to a new version!"
       ],
