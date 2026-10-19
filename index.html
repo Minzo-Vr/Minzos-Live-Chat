@@ -2458,6 +2458,34 @@
       }
       consolePrint("Your Firebase UID and moderation permissions are unchanged. Anonymous message profiles hide public role labels and bios. Older messages remain identifiable.","muted");
     }
+    async function deleteOwnChatMessages(){
+      if(!user){consolePrint("Sign in before deleting your messages.","error");return;}
+      const uid=user.uid;
+      if(!confirm("Permanently delete ALL messages you posted in General Chat and every chat room? This cannot be undone. Other people's messages will not be touched.")){consolePrint("Deletion cancelled.");return;}
+      consolePrint("Searching for your messages in General Chat and rooms…","muted");
+      let deleted=0,failed=0;
+      const paths=["chatMessages",...Array.from({length:6},(_,n)=>"roomMessages/room"+n)];
+      for(const path of paths){
+        try{
+          const snapshot=await get(ref(db,path));
+          const ids=[];
+          snapshot.forEach(child=>{if(child.val()?.uid===uid)ids.push(child.key);});
+          for(let offset=0;offset<ids.length;offset+=100){
+            const batch=ids.slice(offset,offset+100),updates={};
+            for(const id of batch)updates[path+"/"+id]=null;
+            try{await update(ref(db),updates);deleted+=batch.length;}
+            catch(err){
+              console.warn("Bulk delete batch",path,err);
+              for(const id of batch){
+                try{await remove(ref(db,path+"/"+id));deleted++;}
+                catch(e){failed++;console.warn("Cannot delete own message",path,id,e);}
+              }
+            }
+          }
+        }catch(err){failed++;console.warn("Cannot read messages for deletion",path,err);}
+      }
+      consolePrint("Deleted "+deleted+" of your messages."+ (failed?" "+failed+" deletion/read operation(s) failed; check Firebase rules.":" No other users' messages were selected."),failed?"error":"success");
+    }
     function consoleExecute(raw){
       const line=raw.trim();
       if(!line)return;
@@ -2465,7 +2493,7 @@
       const [cmd,...args]=line.split(/\s+/);
       switch(cmd.toLowerCase()){
         case "help":
-          consolePrint("COMMANDS\n  help              Show commands\n  clear / cls       Clear the console\n  whoami            Show signed-in account\n  role              Show your roles\n  version           Current release\n  status            Connection status\n  announcements     Open What's New\n  settings          Open Settings\n  shop              Open XP shop (if enabled)\n  fullscreen        Toggle full screen\n  echo <text>       Print text\n  date              Show local date and time\n  incognito <alias>  Enable alias + hidden avatar\n  incognito         Toggle saved alias\n  incognito off     Disable alias\n  incognito status  Check incognito mode\n  exit              Close console\n\nUse ↑ and ↓ to browse command history.");
+          consolePrint("COMMANDS\n  help              Show commands\n  clear / cls       Clear the console\n  whoami            Show signed-in account\n  role              Show your roles\n  version           Current release\n  status            Connection status\n  announcements     Open What's New\n  settings          Open Settings\n  shop              Open XP shop (if enabled)\n  fullscreen        Toggle full screen\n  echo <text>       Print text\n  date              Show local date and time\n  delete my messages  Permanently delete ALL your General Chat + room messages\n  incognito <alias>  Enable alias + hidden avatar\n  incognito         Toggle saved alias\n  incognito off     Disable alias\n  incognito status  Check incognito mode\n  exit              Close console\n\nUse ↑ and ↓ to browse command history.");
           break;
         case "clear":case "cls":consoleOutput.replaceChildren();break;
         case "whoami":consolePrint(user?`Signed in: ${user.displayName||user.email||user.uid}`:"Not signed in");break;
@@ -2484,6 +2512,10 @@
         case "fullscreen":consoleClose();$("fullscreenToggle").click();break;
         case "echo":consolePrint(args.join(" "));break;
         case "date":consolePrint(new Date().toLocaleString());break;
+        case "delete":
+          if(args.join(" ").toLowerCase()==="my messages")void deleteOwnChatMessages();
+          else consolePrint("Use: delete my messages","error");
+          break;
         case "incognito":incognitoCommand(args);break;
         case "exit":consoleClose();break;
         default:consolePrint(`'${cmd}' is not recognized. Type HELP to see commands.`,"error");
