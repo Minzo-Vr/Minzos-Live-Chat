@@ -1314,6 +1314,7 @@
       await registerPresence();
       listenTyping();
       renderRooms();
+      setTimeout(tryJoinGroupInvite,300);
       if(!fromProfile) messageInput.focus();
     }
     async function expireChatForInactivity() {
