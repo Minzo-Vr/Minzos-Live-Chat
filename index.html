@@ -257,6 +257,19 @@
     .community-dark input,.community-dark textarea,.community-dark select{background:var(--theme-input)!important;color:var(--theme-text)!important;border-color:var(--theme-border)!important}
     .community-dark .settings-dialog,.community-dark .user-options,.community-dark .setting-feature-fold,.community-dark .theme-mode-settings,.community-dark .cc-embed,.community-dark .dm-log,.community-dark #groupSection,.community-dark #dmSection{background:var(--theme-surface)!important;color:var(--theme-text)!important}
     .community-dark .msg-actions{background:var(--theme-panel)!important}
+    /* Full dark-mode coverage: general chat, sidebars, overlays and legacy panels. */
+    html.community-dark{--bg:var(--theme-page);--ink:var(--theme-text);--muted:var(--theme-secondary);color-scheme:dark}
+    html.community-dark body,html.community-dark .chat,html.community-dark #chatProtected{background:var(--theme-page)!important;color:var(--theme-text)!important}
+    html.community-dark #messages,html.community-dark #groupLog,html.community-dark #dmLog{background:var(--theme-page)!important;color:var(--theme-text)!important}
+    html.community-dark .chat,html.community-dark header,html.community-dark .compose{border-color:var(--theme-border)!important}
+    html.community-dark .bubble,html.community-dark .dm-line,html.community-dark .group-line{background:var(--theme-message)!important;color:var(--theme-text)!important;border-color:var(--theme-border)!important}
+    html.community-dark .meta,html.community-dark .system,html.community-dark .friends-note,html.community-dark small,html.community-dark .draft-helper{color:var(--theme-secondary)}
+    html.community-dark .settings-overlay,html.community-dark .friends-overlay,html.community-dark .profile-overlay,html.community-dark .announcements-overlay{background:rgba(0,0,0,.72)}
+    html.community-dark .settings-dialog,html.community-dark .profile-card,html.community-dark .announcement-dialog,html.community-dark .friends-dialog,html.community-dark .rooms-drawer,html.community-dark #dmSidebar,html.community-dark .attach-menu,html.community-dark .emoji-picker,html.community-dark .group-friend-picker,html.community-dark .cc-embed,html.community-dark .announcement-draft,html.community-dark .release-card,html.community-dark .setting-feature-fold,html.community-dark .user-options,html.community-dark .advanced-options,html.community-dark .admin,html.community-dark .join,html.community-dark .signed-account,html.community-dark .auth-gate,html.community-dark .room-tools,html.community-dark .presence-list,html.community-dark .shop-item,html.community-dark .role-effects-box,html.community-dark .theme-editor,html.community-dark .theme-mode-settings{background:var(--theme-surface)!important;color:var(--theme-text)!important;border-color:var(--theme-border)!important}
+    html.community-dark .rooms-grid button,html.community-dark .group-friend-choice,html.community-dark .msg-actions,html.community-dark .file-card,html.community-dark .call-card{background:var(--theme-panel)!important;color:var(--theme-text)!important;border-color:var(--theme-border)!important}
+    html.community-dark input:not([type=checkbox]):not([type=color]),html.community-dark textarea,html.community-dark select{background:var(--theme-input)!important;color:var(--theme-text)!important;border-color:var(--theme-border)!important}
+    html.community-dark .auth-gate button,html.community-dark .email-auth-details button,html.community-dark .email-link-settings button{background:var(--theme-panel)!important;color:var(--theme-text)!important;border-color:var(--theme-border)!important}
+    html.community-dark .msg-actions button{color:var(--theme-text)!important}
     .testsubject-metal-name{font-weight:900!important;background:linear-gradient(110deg,#134f30 0%,#43a86b 24%,#c5ffdb 43%,#3e9d64 58%,#0e482a 78%,#8bdcaa 100%);background-size:210% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:testMetalShine 5s linear infinite;text-shadow:0 1px 1px #174b2820}
     @keyframes testMetalShine{to{background-position:210% 0}}
     @media(prefers-reduced-motion:reduce){.testsubject-metal-name{animation:none}}
@@ -1844,6 +1857,7 @@
         "⚠️ Serious Features now shows an account-deletion control; secure server-side deletion still requires deployment."
       ],
       fixed:[
+        "🌙 Dark mode now covers the General Chat background, messages, sidebars, settings, overlays and legacy panels!",
         "🔧 Improved group creation error messages to identify which Firebase step failed!",
         "🔧 Aligned group creation and invitations with group membership database rules!",
         "📐 Removed the narrow, centered chat layout on desktop!",
@@ -2674,6 +2688,9 @@
       const palette=dark?darkPalette():defaultPalette();
       themeApplyPalette(palette);
       document.documentElement.classList.toggle("community-dark",dark);
+      document.documentElement.style.setProperty("--bg",palette.page);
+      document.documentElement.style.setProperty("--ink",palette.text);
+      document.documentElement.style.setProperty("--muted",palette.secondary);
       document.documentElement.style.colorScheme=dark?"dark":"light";
       document.querySelectorAll("[data-theme-mode]").forEach(button=>{
         const selected=button.dataset.themeMode===themeMode;
