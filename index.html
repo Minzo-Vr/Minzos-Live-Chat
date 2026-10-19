@@ -96,6 +96,46 @@
     }
     .panic-settings{border-top:1px solid var(--theme-border);margin-top:12px;padding-top:12px}
     .panic-settings strong{color:var(--theme-text)!important}
+
+    /* Uniform collapsible settings: consistent sizing without changing functionality */
+    #settingsOverlay .theme-mode-settings,
+    #settingsOverlay .theme-editor {
+      display:block;
+      box-sizing:border-box;
+      width:100%;
+      max-width:100%;
+      min-width:0;
+      margin:10px 0;
+      padding:0;
+      border:1px solid var(--theme-border,#dce1ec);
+      border-radius:10px;
+      overflow:hidden;
+    }
+    #settingsOverlay .theme-mode-settings > summary,
+    #settingsOverlay .theme-editor > summary {
+      display:block;
+      box-sizing:border-box;
+      width:100%;
+      min-height:44px;
+      margin:0;
+      padding:12px 38px 12px 14px;
+      line-height:20px;
+      list-style:none;
+      border-radius:0;
+      overflow-wrap:anywhere;
+    }
+    #settingsOverlay .theme-mode-settings > summary::marker,
+    #settingsOverlay .theme-editor > summary::marker {content:"";}
+    #settingsOverlay .theme-mode-settings > summary::-webkit-details-marker,
+    #settingsOverlay .theme-editor > summary::-webkit-details-marker {display:none;}
+    #settingsOverlay .theme-mode-settings > p,
+    #settingsOverlay .theme-editor > p {
+      margin:10px 14px;
+    }
+    #settingsOverlay .theme-editor > strong {margin:12px 14px 8px;}
+    #settingsOverlay .theme-mode-options,
+    #settingsOverlay #themeColorRows,
+    #settingsOverlay .theme-actions {box-sizing:border-box;max-width:calc(100% - 28px);}
     /* Consistent collapsible appearance settings */
     .theme-mode-settings,.theme-editor{border:1px solid var(--theme-border);border-radius:10px;margin:10px 0;padding:0;background:var(--theme-surface);color:var(--theme-text)}
     .theme-mode-settings>summary,.theme-editor>summary{display:list-item;list-style:none;position:relative;padding:12px 36px 12px 14px;cursor:pointer;font-size:13px;font-weight:700;line-height:1.4;color:var(--theme-text)}
