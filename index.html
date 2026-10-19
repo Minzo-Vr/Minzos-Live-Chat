@@ -2222,6 +2222,8 @@
         await set(ref(db,`chatGroups/${id}`),{
           name:groupName,owner:user.uid,createdAt:Date.now(),members:{[user.uid]:true}
         });
+        stage="enabling shareable invitations";
+        await set(ref(db,`chatGroupInvites/${id}`),{name:groupName,enabled:true,owner:user.uid});
         stage="adding the group to your sidebar";
         await set(ref(db,`chatGroupMembership/${user.uid}/${id}`),{name:groupName});
         groupIndex[id]={name:groupName};
@@ -2242,6 +2244,14 @@
     }
     $("groupShareLink").addEventListener("click",async()=>{
       if(!user||!activeGroupId||!activeGroup?.members?.[user.uid])return;
+      try{
+        const inviteRef=ref(db,`chatGroupInvites/${activeGroupId}`);
+        const existing=await get(inviteRef);
+        if(!existing.exists()){
+          if(activeGroup.owner!==user.uid){groupStatus("Only the group creator can enable its invite link.");return;}
+          await set(inviteRef,{name:activeGroup.name||"Group chat",enabled:true,owner:user.uid});
+        }else if(existing.val()?.enabled!==true){groupStatus("This group invitation is disabled.");return;}
+      }catch(err){groupStatus("Could not enable invite: "+(err.code||err.message)+". Update Firebase rules.");return;}
       const link=groupInviteUrl(activeGroupId);
       try{await navigator.clipboard.writeText(link);groupStatus("Group invite link copied! Anyone signed in with this link can request to join.");}
       catch{window.prompt("Copy your group invite link:",link);}
