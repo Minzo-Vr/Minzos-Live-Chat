@@ -1114,7 +1114,7 @@
       const roles=userRoles(uid),chosen=appearanceByUid[uid]?.effect;
       if(chosen==="none")return "none";
       if(BUILTIN_ROLES.includes(chosen)&&roles.includes(chosen))return chosen;
-      return roles.includes("admin")?"admin":roles.includes("moderator")?"moderator":roles.includes("plus")?"plus":roles.find(k=>customRoles[k])||"member";
+      return roles.includes("admin")?"admin":roles.includes("moderator")?"moderator":roles.includes("plus")?"plus":roles.includes("testsubject")?"testsubject":roles.find(k=>customRoles[k])||"member";
     }
     function refreshRoleNameEffects(){
       document.querySelectorAll("[data-author-uid]").forEach(el=>{
@@ -1259,7 +1259,7 @@
           await set(ref(db,`chatModeration/${uid}`),{banned:true,until:0,by:user.uid});
         }else if(action==="unban")await remove(ref(db,`chatModeration/${uid}`));
         feedback.textContent="Saved successfully.";
-      }catch(err){feedback.textContent="Failed: "+(err.code||err.message);}
+      }catch(err){feedback.textContent="Failed: "+(err.code||err.message)+(action==="role"?" — Firebase Realtime Database rules must allow admins to assign the testsubject role under chatRoles.":"");}
     }
     $("profileSaveRole").addEventListener("click",()=>manageProfile("role"));
     $("profileTimeoutBtn").addEventListener("click",()=>manageProfile("timeout"));
