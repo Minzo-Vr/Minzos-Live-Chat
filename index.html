@@ -2095,7 +2095,17 @@
         updates[`chatGroups/${id}/members/${uid}`]=true;
         updates[`chatGroupMembership/${uid}/${id}`]={name:activeGroup?.name||groupIndex[id]?.name||"Group chat"};
       }
-      try{await update(ref(db),updates);groupStatus("Friends added! 💜");}
+      try{
+        // Add actual members first; the membership index is written only after
+        // Firebase rules can verify that each target belongs to the group.
+        const memberUpdates={};const indexUpdates={};
+        for(const [path,value] of Object.entries(updates)){
+          (path.startsWith("chatGroups/")?memberUpdates:indexUpdates)[path]=value;
+        }
+        await update(ref(db),memberUpdates);
+        await update(ref(db),indexUpdates);
+        groupStatus("Friends added! 💜");
+      }
       catch(err){groupStatus("Could not add friends: "+(err.code||err.message)+". Check group Firebase rules.");}
     }
     $("createGroupChat").addEventListener("click",async()=>{
@@ -2110,7 +2120,14 @@
       updates[`chatGroups/${id}/createdAt`]=Date.now();
       updates[`chatGroups/${id}/members/${user.uid}`]=true;
       updates[`chatGroupMembership/${user.uid}/${id}`]={name:groupName};
-      try{await update(ref(db),updates);openGroup(id);}
+      try{
+        await set(ref(db,`chatGroups/${id}`),{
+          name:groupName,owner:user.uid,createdAt:Date.now(),members:{[user.uid]:true}
+        });
+        await set(ref(db,`chatGroupMembership/${user.uid}/${id}`),{name:groupName});
+        groupIndex[id]={name:groupName};
+        openGroup(id);
+      }
       catch(err){alert("Group creation unavailable: "+(err.code||err.message)+". Group database rules must be installed.");}
     });
     function openGroup(id){
