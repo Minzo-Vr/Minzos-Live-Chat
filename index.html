@@ -2120,15 +2120,20 @@
       updates[`chatGroups/${id}/createdAt`]=Date.now();
       updates[`chatGroups/${id}/members/${user.uid}`]=true;
       updates[`chatGroupMembership/${user.uid}/${id}`]={name:groupName};
+      let stage="creating the group";
       try{
         await set(ref(db,`chatGroups/${id}`),{
           name:groupName,owner:user.uid,createdAt:Date.now(),members:{[user.uid]:true}
         });
+        stage="adding the group to your sidebar";
         await set(ref(db,`chatGroupMembership/${user.uid}/${id}`),{name:groupName});
         groupIndex[id]={name:groupName};
         openGroup(id);
       }
-      catch(err){alert("Group creation unavailable: "+(err.code||err.message)+". Group database rules must be installed.");}
+      catch(err){
+        console.error("Group setup failed while "+stage,err);
+        alert("Group setup failed while "+stage+": "+(err.code||err.message)+". Check the published Firebase group rules.");
+      }
     });
     function openGroup(id){
       if(!user||!groupIndex[id])return;
