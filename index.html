@@ -1237,7 +1237,7 @@
       const anonymous=anonymousDisplay||(uid===user?.uid&&incognito.enabled);
       $("profileTitle").textContent=anonymous?(name?.startsWith(INCOGNITO_PREFIX)?name:INCOGNITO_PREFIX+(incognito.alias||"Anonymous")):(name||"Chat member");
       $("profileRoleLabel").textContent=userRoles(uid).map(k=>customRoles[k]?.name||k.toUpperCase()).join(" · ")||"MEMBER";
-      $("profileRoleLabel").hidden=anonymous||appearanceByUid[uid]?.showRole===false;
+      $("profileRoleLabel").hidden=true;
       $("profileIncognitoNotice").hidden=!anonymous;
       $("profileRoleActions").hidden=!isModerator()||!uid;
       $("profileAddFriend").hidden=!user||!uid||uid===user.uid||!!friendMap[uid];
@@ -1245,10 +1245,9 @@
       $("profileAssignRole").hidden=!isAdmin;
       renderRoleChoices(uid);
       $("profileActionFeedback").textContent="";
-      $("profileCardAvatar").src=anonymous?INCOGNITO_AVATAR:(avatarUrls.get(uid)||avatarFallback);
+      $("profileCardAvatar").src=avatarFallback;
       $("profileCardBio").textContent=anonymous?"Private while Incognito Mode is active.":"Loading bio…";
       $("profileOverlay").hidden=false;
-      if(anonymous)return;
       try{
         if(!uid){$("profileCardBio").textContent="No profile available.";return;}
         const privacySnap=await get(ref(db,privacyPath(uid)));
@@ -1256,6 +1255,9 @@
         const privacy=privacySnap.val()||"everyone";
         const allowed=uid===user?.uid||privacy==="everyone"||(privacy==="friends"&&!!friendMap[uid]);
         if(!allowed){$("profileTitle").textContent="🔒 Private Profile";$("profileCardAvatar").src=avatarFallback;$("profileRoleLabel").hidden=true;$("profileIncognitoNotice").hidden=true;$("profileCardBio").textContent=privacy==="friends"?"Only friends can view this profile.":"This profile is private.";return;}
+        $("profileCardAvatar").src=anonymous?INCOGNITO_AVATAR:(avatarUrls.get(uid)||avatarFallback);
+        $("profileRoleLabel").hidden=anonymous||appearanceByUid[uid]?.showRole===false;
+        if(anonymous){$("profileCardBio").textContent="Private while Incognito Mode is active.";return;}
         const snap=await get(ref(db,bioPath(uid)));
         $("profileCardBio").textContent=snap.val()||"This user hasn't written a bio yet.";
       }catch(err){$("profileCardBio").textContent="Bio unavailable: "+(err.code||err.message);}
