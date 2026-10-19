@@ -624,6 +624,16 @@
           </div>
           </div>
         </details>
+        <details id="seriousFeaturesSection" class="user-options" data-setting-label="serious features delete account permanently remove public messages">
+          <summary>⚠️ Serious Features ▾</summary>
+          <div class="user-options-inner">
+            <strong style="color:#b91c1c">🗑️ Delete account permanently</strong>
+            <p class="hint">Delete your Firebase login, profile, XP, friends, private messages, and every public chat message you posted (including room messages). This cannot be undone.</p>
+            <p class="hint">For security, sign in again recently before deleting. The secure server deletion function must be deployed by the site owner.</p>
+            <button id="deleteMyAccount" type="button" style="background:#b91c1c!important;color:white!important;border:1px solid #991b1b!important">🗑️ Delete my account</button>
+            <p id="deleteAccountFeedback" class="hint" role="status"></p>
+          </div>
+        </details>
         <details class="advanced-options" aria-label="Advanced Options" data-setting-label="advanced music controller pfp images chat plus previews hide show">
           <summary>Advanced Options <span>▾</span></summary>
           <div class="advanced-options-inner"><strong>Toggles</strong>
@@ -1665,6 +1675,7 @@
         featured:"📝 Automatic release-note logging for Community Chat!",
         added:[
           "📝 Added automatic changelog suggestions for the active announcement version!",
+          "🗑️ Added Serious Features account deletion, with server-side removal of public messages and personal data (requires function deployment)!",
           "⏱️ Added experimental automatic Timed Quick Exit (1–240 minutes)!",
           "🔒 Chat messages and DMs now hide after the five-minute inactivity timeout!",
           "🔒 Added Private Profile: Everyone, Friends only, and No one visibility!",
@@ -3006,6 +3017,28 @@
         });
       } catch(err) {console.error(err);showError("Could not initialize Firebase.");}
     }
+    $("deleteMyAccount").addEventListener("click",async()=>{
+      const account=auth?.currentUser,feedback=$("deleteAccountFeedback"),button=$("deleteMyAccount");
+      if(!account){feedback.textContent="Sign in first.";return;}
+      if(!confirm("DELETE ACCOUNT: This permanently removes your login, profile, XP, friends, DMs and ALL public messages you sent. Continue?"))return;
+      const typed=prompt('Type DELETE MY ACCOUNT to confirm. This cannot be undone.');
+      if(typed!=="DELETE MY ACCOUNT"){feedback.textContent="Deletion cancelled.";return;}
+      button.disabled=true;feedback.textContent="Deleting account and messages securely… Do not close this tab.";
+      try{
+        const fn=httpsCallable(getFunctions(app,"us-central1"),"deleteMyChatAccount",{timeout:120000});
+        await fn({});
+        feedback.textContent="Account deleted successfully.";
+        try{await signOut(auth);}catch{}
+        $("settingsOverlay").hidden=true;
+      }catch(err){
+        console.error("Account deletion failed",err);
+        feedback.textContent=err.code==="functions/not-found"||err.code==="functions/unavailable"
+          ?"Secure deletion service is not deployed or is unavailable. Your account has NOT been confirmed deleted."
+          :err.code==="functions/failed-precondition"
+            ?"Sign out, sign back in, then try deletion again (recent authentication required)."
+            :"Deletion failed or was interrupted: "+(err.message||err.code||"unknown error")+". Contact the site admin before retrying.";
+      }finally{button.disabled=false;}
+    });
     $("googleSignIn").addEventListener("click",async()=>{
       const btn=$("googleSignIn");btn.disabled=true;
       $("authFeedback").textContent="Opening Google sign-in…";
