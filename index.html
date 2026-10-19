@@ -422,6 +422,16 @@
     .chat:fullscreen.dm-sidebar-layout{padding-left:260px}
     .chat:fullscreen #dmSidebar{position:absolute}
     #groupSection:not([hidden]){display:flex;flex-direction:column;flex:1;min-height:0}
+    .cc-embed{border-left:4px solid #5865f2;border-radius:8px;background:rgba(88,101,242,.09);padding:12px;margin-top:8px;max-width:540px;overflow-wrap:anywhere}
+    .cc-embed strong{display:block;font-size:15px;margin-bottom:5px}
+    .cc-embed p{margin:5px 0;white-space:pre-wrap}
+    .cc-embed a{color:var(--accent,#5865f2)}
+    .cc-embed iframe{display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:7px;margin-top:8px}
+    .cc-embed img{max-width:100%;max-height:230px;object-fit:contain;border-radius:6px}
+    #embedEditor[hidden]{display:none!important}
+    #embedEditor{padding:12px;border:1px solid #c8cde2;border-radius:10px;background:var(--theme-surface,#fff);margin:8px 0}
+    #embedEditor label{display:block;margin-top:8px}
+    #embedEditor input,#embedEditor textarea{width:100%;max-width:560px}
     #groupLog{flex:1;min-height:180px;overflow-y:auto}
     .group-friend-picker[hidden]{display:none!important}
     .group-friend-picker{padding:12px;border:1px solid var(--theme-border,#d9deeb);border-radius:10px;margin:10px 0;max-height:240px;overflow-y:auto;background:var(--theme-surface,#fff)}
@@ -911,6 +921,17 @@
       <button type="button" id="customEmojiClose" style="background:#73798c">Close</button>
     </section>
     <div id="typingIndicator" class="typing-indicator" aria-live="polite" aria-atomic="true" hidden></div>
+    <section id="embedEditor" hidden>
+      <strong>🧩 Create a Discord-style embed</strong>
+      <label>Title <input id="embedTitle" maxlength="100" placeholder="Announcement title"></label>
+      <label>Description <textarea id="embedDescription" maxlength="300" rows="3" placeholder="Write your embed…"></textarea></label>
+      <label>Image URL (optional, HTTPS) <input id="embedImage" type="url" placeholder="https://example.com/image.png"></label>
+      <label>Link URL (optional, HTTPS) <input id="embedLink" type="url" placeholder="https://example.com"></label>
+      <label>Accent colour <input id="embedColor" type="color" value="#5865f2"></label>
+      <button type="button" id="embedSend">Send embed</button>
+      <button type="button" id="embedCancel">Cancel</button>
+      <p class="hint" id="embedFeedback" role="status"></p>
+    </section>
     <form class="compose" id="sendForm">
       <div class="attach-wrap"><button type="button" id="attachBtn" class="attach-btn" aria-expanded="false" aria-controls="attachMenu" title="Attachments">+</button>
         <div class="attach-menu" id="attachMenu" hidden>
@@ -919,6 +940,7 @@
           <button type="button" id="imageMenuBtn">🖼 Images</button>
           <button type="button" id="stickerMenuBtn">😄 Stickers</button>
           <button type="button" id="fileMenuBtn">📎 Files</button>
+          <button type="button" id="embedMenuBtn">🧩 Custom embed</button>
         </div>
       </div>
       <button type="button" id="startCallBtn" class="call-start" title="Invite everyone to a group call">📞 Call</button>
@@ -2946,6 +2968,71 @@
     }
     $("chatSearchInput").addEventListener("input",filterChatMessages);
     $("chatSearchClear").addEventListener("click",()=>{$("chatSearchInput").value="";filterChatMessages();$("chatSearchInput").focus();});
+    // Link previews use trusted YouTube embeds. Other URLs get a safe clickable
+    // card without fetching arbitrary websites or exposing users to injected HTML.
+    function youtubeVideoId(text){
+      const match=String(text||"").match(/https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?[^\s]*?v=|shorts\/|live\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/i);
+      return match?.[1]||null;
+    }
+    function firstSafeUrl(text){
+      const match=String(text||"").match(/https?:\/\/[^\s<>"]+/i);
+      if(!match)return null;
+      try{const url=new URL(match[0]);return url.protocol==="https:"||url.protocol==="http:"?url:null;}catch{return null;}
+    }
+    function appendEmbedCard(target,embed){
+      const card=document.createElement("div");card.className="cc-embed";
+      if(/^#[0-9a-f]{6}$/i.test(embed.color||""))card.style.borderLeftColor=embed.color;
+      if(embed.title){const title=document.createElement("strong");title.textContent=embed.title;card.append(title);}
+      if(embed.description){const desc=document.createElement("p");desc.textContent=embed.description;card.append(desc);}
+      if(embed.image&&/^https:\/\//i.test(embed.image)){
+        const img=document.createElement("img");img.src=embed.image;img.loading="lazy";img.referrerPolicy="no-referrer";img.alt="Embed image";card.append(img);
+      }
+      if(embed.url&&/^https:\/\//i.test(embed.url)){
+        const link=document.createElement("a");link.href=embed.url;link.target="_blank";link.rel="noopener noreferrer nofollow";link.textContent="Open link ↗";card.append(link);
+      }
+      target.append(card);
+    }
+    function appendLinkPreview(target,text){
+      const id=youtubeVideoId(text);
+      if(id){
+        const card=document.createElement("div");card.className="cc-embed";
+        const title=document.createElement("strong");title.textContent="▶ YouTube video";
+        const frame=document.createElement("iframe");
+        frame.src="https://www.youtube-nocookie.com/embed/"+id;
+        frame.title="YouTube video player";frame.loading="lazy";
+        frame.referrerPolicy="strict-origin-when-cross-origin";
+        frame.allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+        frame.allowFullscreen=true;card.append(title,frame);target.append(card);
+      }else{
+        const url=firstSafeUrl(text);
+        if(url){appendEmbedCard(target,{title:"🔗 "+url.hostname,description:"Website link",url:url.href});}
+      }
+    }
+    function renderTextWithEmbed(target,text){
+      if(String(text).startsWith("[CCEMBED]")){
+        try{
+          const e=JSON.parse(String(text).slice(9));
+          if(e&&typeof e==="object"&&typeof e.title==="string"&&typeof e.description==="string"){
+            appendEmbedCard(target,e);return;
+          }
+        }catch{}
+      }
+      const body=document.createElement("div");body.textContent=text;target.append(body);
+      appendLinkPreview(target,text);
+    }
+    $("embedMenuBtn").addEventListener("click",()=>{$("attachMenu").hidden=true;$("embedEditor").hidden=false;$("embedTitle").focus();});
+    $("embedCancel").addEventListener("click",()=>{$("embedEditor").hidden=true;});
+    $("embedSend").addEventListener("click",()=>{
+      const title=$("embedTitle").value.trim(),description=$("embedDescription").value.trim();
+      const image=$("embedImage").value.trim(),url=$("embedLink").value.trim(),color=$("embedColor").value;
+      if(!title&&!description){$("embedFeedback").textContent="Enter a title or description.";return;}
+      if((image&&!/^https:\/\//i.test(image))||(url&&!/^https:\/\//i.test(url))){$("embedFeedback").textContent="Image and link URLs must start with https://";return;}
+      const payload="[CCEMBED]"+JSON.stringify({title,description,image,url,color});
+      if(payload.length>500){$("embedFeedback").textContent="Embed is too long. Shorten the description or URLs (500 characters total).";return;}
+      $("message").value=payload;
+      $("embedEditor").hidden=true;
+      $("sendForm").requestSubmit();
+    });
     const displayedMessages = new Map();
     applyChatPreferences();
     let stopRemovedMessages;
@@ -3043,7 +3130,7 @@
           a.rel = "noopener noreferrer nofollow"; a.referrerPolicy = "no-referrer";
           a.textContent = "Open / download file ↗";
           card.append(title, a); bubble.append(card);
-        } else bubble.textContent = data.text;
+        } else renderTextWithEmbed(bubble,data.text);
       }
       }
       }
