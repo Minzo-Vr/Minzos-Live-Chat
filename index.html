@@ -531,7 +531,7 @@
         <label for="settingsSearch">Search settings</label>
         <input id="settingsSearch" class="settings-search" type="search" placeholder="Search settings, e.g. music, bio, XP…" autocomplete="off">
         <p id="settingsSearchEmpty" hidden style="color:#64748b;font-size:12px">No matching settings found.</p>
-        <details id="userSettingsSection" class="user-options" data-setting-label="user settings profile picture username bio biography username effects role visibility notifications announcement red circle button alerts">
+        <details id="userSettingsSection" class="user-options" data-setting-label="user settings private profile privacy everyone friends only no one profile picture username bio biography username effects role visibility notifications announcement red circle button alerts">
           <summary>👤 User Settings ▾</summary>
           <div class="user-options-inner">
           <p>Customize your profile. Your photo appears beside messages.</p>
@@ -584,7 +584,7 @@
             <button type="button" id="enableBrowserNotifications">Allow browser notifications</button>
             <p id="notificationFeedback" role="status" style="font-size:12px"></p>
           </div>
-          <div class="bio-editor" data-setting-label="bio biography about me profile description">
+          <div class="bio-editor" data-setting-label="bio biography about me profile description"><label for="profilePrivacySelect">🔒 Who can view your profile?</label><select id="profilePrivacySelect"><option value="everyone">🌍 Everyone</option><option value="friends">💜 Friends only</option><option value="none">🔒 No one (only you)</option></select><button type="button" id="profilePrivacySave">Save privacy</button><p id="profilePrivacyFeedback" role="status"></p>
             <label for="settingsBio">About me / Bio (up to 160 characters)</label>
             <textarea id="settingsBio" class="bio-textarea" maxlength="160" placeholder="Tell people a little about yourself…"></textarea>
             <button type="button" id="settingsBioSave">Save bio</button>
@@ -959,6 +959,7 @@
     const profilePath = uid => `chatProfiles/${uid}/name`;
     const avatarPath = uid => `chatProfiles/${uid}/avatar`;
     const bioPath = uid => `chatProfiles/${uid}/bio`;
+    const privacyPath = uid => `chatProfiles/${uid}/privacy`;
     const appearancePath = uid => `chatRoleAppearance/${uid}`;
     const validEffects=new Set(["none","member","plus","moderator","admin"]);
     let appearanceByUid={},appearanceUnsub=null;
@@ -1196,6 +1197,8 @@
       $("settingsSearch").value="";
       $("settingsSearch").dispatchEvent(new Event("input"));
       $("settingsBio").value="";
+      $("profilePrivacySelect").value="everyone";
+      if(user)get(ref(db,privacyPath(user.uid))).then(x=>{$("profilePrivacySelect").value=["everyone","friends","none"].includes(x.val())?x.val():"everyone";}).catch(console.warn);
       $("bioFeedback").textContent="";
       if(user&&db)get(ref(db,bioPath(user.uid))).then(snap=>{$("settingsBio").value=snap.val()||"";}).catch(err=>{$("bioFeedback").textContent="Bio unavailable: "+(err.code||err.message);});
       $("settingsOverlay").hidden=false;
@@ -1226,6 +1229,7 @@
       try{await set(ref(db,bioPath(user.uid)),bio||null);feedback.textContent="Bio saved!";}
       catch(err){feedback.textContent="Could not save bio: "+(err.code||err.message);}
     });
+    $("profilePrivacySave").addEventListener("click",async()=>{if(!user)return;const value=$("profilePrivacySelect").value;if(!["everyone","friends","none"].includes(value))return;try{await set(ref(db,privacyPath(user.uid)),value);$("profilePrivacyFeedback").textContent="Privacy saved!";}catch(e){$("profilePrivacyFeedback").textContent="Could not save: "+(e.code||e.message);}});
     async function openUserProfile(uid,name,anonymousDisplay=false){
       profileTargetUid=uid||"";
       // Anonymous display never changes the underlying Firebase identity.
@@ -1247,6 +1251,11 @@
       if(anonymous)return;
       try{
         if(!uid){$("profileCardBio").textContent="No profile available.";return;}
+        const privacySnap=await get(ref(db,privacyPath(uid)));
+        if(profileTargetUid!==uid)return;
+        const privacy=privacySnap.val()||"everyone";
+        const allowed=uid===user?.uid||privacy==="everyone"||(privacy==="friends"&&!!friendMap[uid]);
+        if(!allowed){$("profileTitle").textContent="🔒 Private Profile";$("profileCardAvatar").src=avatarFallback;$("profileRoleLabel").hidden=true;$("profileIncognitoNotice").hidden=true;$("profileCardBio").textContent=privacy==="friends"?"Only friends can view this profile.":"This profile is private.";return;}
         const snap=await get(ref(db,bioPath(uid)));
         $("profileCardBio").textContent=snap.val()||"This user hasn't written a bio yet.";
       }catch(err){$("profileCardBio").textContent="Bio unavailable: "+(err.code||err.message);}
@@ -1618,6 +1627,7 @@
         featured:"📝 Automatic release-note logging for Community Chat!",
         added:[
           "📝 Added automatic changelog suggestions for the active announcement version!",
+          "🔒 Added Private Profile: Everyone, Friends only, and No one visibility!",
           "🔄 Added a Log recent changes button to refill missing release notes!",
           "🕵️ Improved Incognito profiles: hide public role badges, bio and personal avatar while preserving Firebase identity!",
           "✉️ NEW! Email/password sign-in and sign-up without Google popup!",
