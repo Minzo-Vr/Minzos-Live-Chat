@@ -818,6 +818,14 @@
               </div>
               <p id="chatHexHelp" role="status">Default purple: #5865F2. Example: #FF6699.</p>
             </div>
+            <details class="theme-mode-settings" data-setting-label="browser tab title rename customise customize tab name page title">
+              <summary style="cursor:pointer;font-weight:700;color:var(--theme-text)">🏷️ Browser tab title</summary>
+              <p>Choose the name shown on your browser tab. This only changes it on your device.</p>
+              <label for="customBrowserTabTitle">Tab title</label>
+              <input id="customBrowserTabTitle" type="text" maxlength="60" placeholder="Live Chat" autocomplete="off" style="width:100%;box-sizing:border-box">
+              <div class="theme-actions" style="margin-top:8px"><button type="button" id="saveBrowserTabTitle">Save tab title</button><button type="button" id="resetBrowserTabTitle">Reset to default</button></div>
+              <p id="browserTabTitleFeedback" role="status"></p>
+            </details>
             <details class="theme-mode-settings" data-setting-label="dark bright light system automatic appearance mode theme">
               <summary style="cursor:pointer;font-weight:700;color:var(--theme-text)">🌗 Appearance mode</summary>
               <p>Choose how Community Chat looks. System follows your device's appearance.</p>
@@ -2580,6 +2588,25 @@
     // commands, not eval(), shell execution or arbitrary Firebase writes.
     const consoleOverlay=$("consoleOverlay"),consoleOutput=$("consoleOutput"),consoleInput=$("consoleInput");
     let consolePreviousFocus=null,consoleHistory=[],consoleHistoryIndex=0;
+    // Browser tab title is a private preference for this browser, not a global site setting.
+    const TAB_TITLE_KEY="communityChatBrowserTabTitleV1";
+    const DEFAULT_TAB_TITLE=document.title;
+    function applyBrowserTabTitle(){
+      let saved="";try{saved=localStorage.getItem(TAB_TITLE_KEY)||"";}catch{}
+      document.title=saved||DEFAULT_TAB_TITLE;
+      $("customBrowserTabTitle").value=saved;
+    }
+    applyBrowserTabTitle();
+    $("saveBrowserTabTitle").addEventListener("click",()=>{
+      const title=$("customBrowserTabTitle").value.trim().slice(0,60);
+      try{if(title)localStorage.setItem(TAB_TITLE_KEY,title);else localStorage.removeItem(TAB_TITLE_KEY);
+        applyBrowserTabTitle();$("browserTabTitleFeedback").textContent="Browser tab title saved!";
+      }catch{$("browserTabTitleFeedback").textContent="Could not save this preference in your browser.";}
+    });
+    $("resetBrowserTabTitle").addEventListener("click",()=>{
+      try{localStorage.removeItem(TAB_TITLE_KEY);applyBrowserTabTitle();$("browserTabTitleFeedback").textContent="Tab title reset.";}
+      catch{$("browserTabTitleFeedback").textContent="Could not reset this preference.";}
+    });
     function consolePrint(message,type=""){
       const line=document.createElement("div");
       line.className="console-line"+(type?" console-"+type:"");
