@@ -623,7 +623,12 @@
     main.chat.dm-sidebar-layout{padding-left:260px}
     main.chat #dmSection:not([hidden]){flex:1;min-height:0}
     @media(max-width:700px){main.chat.dm-sidebar-layout{padding-left:0}}
-  </style>
+  
+    .admin-audit-panel{margin:16px 0;padding:16px;border:1px solid var(--accent,#5865f2);border-radius:14px;background:var(--bg,#f4f6fb);color:var(--ink,#202437)}
+    .admin-audit-panel #auditEntries{display:grid;gap:9px;margin-top:12px}
+    .audit-event{padding:12px;border-radius:10px;background:rgba(127,127,127,.09);border:1px solid rgba(127,127,127,.2)}
+    .audit-event strong{display:block;font-size:13px}.audit-event small{display:block;opacity:.75;margin-top:4px}
+</style>
 </head>
 <body>
   <main class="chat" aria-label="Website visitor live chat">
@@ -690,13 +695,6 @@
           <div class="draft-actions"><button type="button" id="announcementAutoLog">📝 Log recent changes</button><button type="button" id="announcementSaveDraft">💾 Save draft</button><button type="button" id="announcementPublishNow">📢 Publish to everyone</button><button type="button" id="announcementPrevDraft">⏮️ Previous update</button><button type="button" id="announcementNextDraft">⏭️ Next update / Reset</button></div>
           <p id="announcementDraftStatus" role="status">Only admins can view and publish this preview.</p>
           <div id="announcementDraftPreview" class="release-card" style="opacity:.7"></div>
-        </section>
-        <section id="announcementAuditSection" class="announcement-draft" hidden>
-          <div class="draft-topline">🔒 <strong>Admin Activity Log</strong> <span class="draft-pill">PRIVATE</span></div>
-          <p>Recent sign-ins and console commands. Other activity requires server-side audit integration. Never enter passwords or private messages into the console.</p>
-          <button type="button" id="auditRefresh">↻ Refresh log</button>
-          <p id="auditStatus" role="status"></p>
-          <div id="auditEntries" style="max-height:300px;overflow:auto;overflow-wrap:anywhere;font-size:12px"></div>
         </section>
         <div id="announcementsList"></div>
       </div>
@@ -1104,6 +1102,14 @@
       </section>
       <section id="adminPanel" class="admin-controls" hidden>
         <strong>Verified admin ✓</strong>
+        <section id="announcementAuditSection" class="admin-audit-panel" hidden>
+          <div class="draft-topline">🔒 <strong>Admin Activity Log</strong> <span class="draft-pill">PRIVATE</span></div>
+          <p>Recent message changes, moderation actions and account events. Only admins can view these entries.</p>
+          <button type="button" id="auditRefresh">↻ Refresh log</button>
+          <p id="auditStatus" role="status"></p>
+          <div id="auditEntries" style="max-height:300px;overflow:auto;overflow-wrap:anywhere;font-size:12px"></div>
+        </section>
+
         <div class="anonymous-admin-setting">
           <label><input type="checkbox" id="anonymousEnabledAdmin"> 🕵️ Allow anonymous accounts</label>
           <p class="hint">When disabled, the anonymous sign-in button is greyed out. Existing guest accounts also lose access until re-enabled.</p>
@@ -1327,6 +1333,7 @@
         $("adminLogin").hidden=isAdmin;
         updateRoleUI();
         $("announcementAuditSection").hidden=!isAdmin;
+        if(isAdmin)void refreshActivityLog();
         if(!hasExperimentalAccess()&&activeRoom!==0)switchRoom(0).catch(console.warn);
       },err=>console.warn("Roles unavailable",err));
       startAppearanceListener();
@@ -1863,7 +1870,6 @@
       return card;
     }
     function renderAnnouncements(){
-      if(isAdmin)void refreshActivityLog();else $("announcementAuditSection").hidden=true;
       const list=$("announcementsList");list.replaceChildren();
       const versions=new Set();
       for(const release of [...publishedReleases,...CHAT_RELEASES]){
@@ -2742,19 +2748,37 @@
     // Best-effort client audit. For tamper-proof comprehensive auditing, use a trusted backend.
     async function writeActivityLog(action,detail=""){
       if(!user?.uid)return;
-      try{await push(ref(db,"chatActivityLog"),{uid:user.uid,action:String(action).slice(0,50),detail:String(detail).slice(0,180),at:Date.now()});}
+      try{await push(ref(db,"chatActivityLog"),{uid:user.uid,actorName:(user.displayName||"").slice(0,60),action:String(action).slice(0,50),detail:String(detail).slice(0,180),at:Date.now()});}
       catch(err){console.warn("Activity logging unavailable; Firebase rules may need updating.",err.code||err.message);}
     }
     async function refreshActivityLog(){
       if(!isAdmin){$("announcementAuditSection").hidden=true;return;}
       $("announcementAuditSection").hidden=false;
-      const list=$("auditEntries");list.replaceChildren();$("auditStatus").textContent="Loading…";
+      const list=$("auditEntries");list.replaceChildren();$("auditStatus").textContent="Loading activity…";
       try{
         const snap=await get(query(ref(db,"chatActivityLog"),limitToLast(100)));
         const entries=[];snap.forEach(child=>entries.push(child.val()));entries.reverse();
         $("auditStatus").textContent=entries.length?entries.length+" recent events":"No recorded events yet.";
-        for(const event of entries){const line=document.createElement("p");line.style.borderBottom="1px solid var(--theme-border,#ddd)";line.style.padding="6px 0";line.textContent=new Date(event.at||0).toLocaleString()+" — "+(event.action||"Event")+" — "+(event.uid||"Unknown")+(event.detail?" — "+event.detail:"");list.append(line);}
-      }catch(err){$("auditStatus").textContent="Log unavailable. Add Admin-only Firebase rules for chatActivityLog.";}
+        for(const event of entries){
+          let info={};try{info=JSON.parse(event.detail||"{}");}catch{}
+          const action=event.action||"activity";
+          const labels={message_deleted:"Message deleted",message_edited:"Message edited",bulk_messages_deleted:"Messages deleted in bulk",sign_in:"Account signed in",console_command:"Console command",moderation_ban:"Member banned",moderation_unban:"Member unbanned",moderation_timeout:"Member timed out",moderation_role:"Member roles changed"};
+          const title=labels[action]||action.replace(/_/g," ");
+          const actor=event.actorName||"User "+String(event.uid||"unknown").slice(0,8);
+          const room=info.path==="chatMessages"?"General Chat":String(info.path||"").replace("roomMessages/","Room ");
+          let description=actor;
+          if(action==="message_deleted"||action==="message_edited")description+=" "+(action==="message_deleted"?"deleted":"edited")+" "+(info.byModerator?"another member's":"their own")+" message"+(room?" in "+room:"")+(info.authorName?" (author: "+info.authorName+")":"")+(info.preview?" — “"+info.preview+"”":"");
+          else if(action.startsWith("moderation_"))description+=" performed "+title.toLowerCase()+" on "+(info.targetName||String(event.detail||"").replace("targetUid=","user "));
+          else if(action==="bulk_messages_deleted")description+=" deleted "+String(event.detail||"").replace("count=","")+" messages";
+          else if(action==="console_command")description+=" ran a console command: "+(event.detail||"unknown");
+          else if(event.detail)description+=" — "+event.detail;
+          const item=document.createElement("div");item.className="audit-event";
+          const heading=document.createElement("strong");heading.textContent=title;
+          const body=document.createElement("div");body.textContent=description;
+          const date=document.createElement("small");date.textContent=new Date(event.at||0).toLocaleString();
+          item.append(heading,body,date);list.append(item);
+        }
+      }catch(err){$("auditStatus").textContent="Log unavailable. Check Admin-only Firebase read rules for chatActivityLog.";}
     }
     $("auditRefresh").addEventListener("click",()=>void refreshActivityLog());
     function consoleExecute(raw){
@@ -3426,7 +3450,7 @@
       if(canManage){
         make("🗑️",own?"Delete your message":"Delete message as moderator",async()=>{
           if(!confirm(own?"Permanently delete this message?":"Permanently delete this user’s message?"))return;
-          try{await remove(ref(db,path+"/"+key));void writeActivityLog("message_deleted",JSON.stringify({path,key,authorUid:data.uid,byModerator:!own}));}
+          try{await remove(ref(db,path+"/"+key));void writeActivityLog("message_deleted",JSON.stringify({path,key,authorUid:data.uid,authorName:data.name,preview:String(data.text||"").slice(0,90),byModerator:!own}));}
           catch(err){showError("Could not delete message: "+(err.code||err.message)+". Check Firebase rules.");}
         });
         make("✏️",own?"Edit your message":"Edit message as moderator",()=>{
