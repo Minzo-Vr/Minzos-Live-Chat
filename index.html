@@ -1355,6 +1355,7 @@
           if(!confirm("Ban this user from sending messages?"))return;
           await set(ref(db,`chatModeration/${uid}`),{banned:true,until:0,by:user.uid});
         }else if(action==="unban")await remove(ref(db,`chatModeration/${uid}`));
+        void writeActivityLog("moderation_"+action,"targetUid="+uid);
         feedback.textContent="Saved successfully.";
       }catch(err){feedback.textContent="Failed: "+(err.code||err.message)+(action==="role"?" — Firebase Realtime Database rules must allow admins to assign the testsubject role under chatRoles.":"");}
     }
@@ -2707,6 +2708,7 @@
           }
         }catch(err){failed++;console.warn("Cannot read messages for deletion",path,err);}
       }
+      if(deleted)void writeActivityLog("bulk_messages_deleted","count="+deleted);
       consolePrint("Deleted "+deleted+" of your messages."+ (failed?" "+failed+" deletion/read operation(s) failed; check Firebase rules.":" No other users' messages were selected."),failed?"error":"success");
     }
     // Email directory: database rules MUST restrict reads to admins/moderators.
@@ -3424,7 +3426,7 @@
       if(canManage){
         make("🗑️",own?"Delete your message":"Delete message as moderator",async()=>{
           if(!confirm(own?"Permanently delete this message?":"Permanently delete this user’s message?"))return;
-          try{await remove(ref(db,path+"/"+key));}
+          try{await remove(ref(db,path+"/"+key));void writeActivityLog("message_deleted",JSON.stringify({path,key,authorUid:data.uid,byModerator:!own}));}
           catch(err){showError("Could not delete message: "+(err.code||err.message)+". Check Firebase rules.");}
         });
         make("✏️",own?"Edit your message":"Edit message as moderator",()=>{
@@ -3439,7 +3441,7 @@
             e.preventDefault();const text=input.value.trim();
             if(!text)return;
             save.disabled=true;
-            try{await update(ref(db,path+"/"+key),{text,editedAt:Date.now()});form.remove();}
+            try{await update(ref(db,path+"/"+key),{text,editedAt:Date.now()});void writeActivityLog("message_edited",JSON.stringify({path,key,authorUid:data.uid,byModerator:!own}));form.remove();}
             catch(err){showError("Could not edit message: "+(err.code||err.message)+". Check Firebase rules.");save.disabled=false;}
           });
           form.append(input,save,cancel);bubble.after(form);input.focus();input.select();
