@@ -2716,7 +2716,7 @@
         consolePrint("Access denied: Admins and Moderators only.","error");return;
       }
       email=(email||"").trim().toLowerCase();
-      if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
         consolePrint("Usage: finduser email@example.com","error");return;
       }
       try{
