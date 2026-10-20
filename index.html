@@ -2706,7 +2706,7 @@
       if(!account?.uid||!account.email||account.isAnonymous||!account.emailVerified)return;
       try{
         await set(ref(db,"chatEmailDirectory/"+account.uid),{
-          email:account.email.trim().toLowerCase(),uid:account.uid,
+          email:account.email.trim(),uid:account.uid,
           name:account.displayName||"Member"
         });
       }catch(err){console.warn("Private email directory registration unavailable; check Firebase rules.",err.code||err.message);}
@@ -2715,7 +2715,7 @@
       if(!user||!isModerator()){
         consolePrint("Access denied: Admins and Moderators only.","error");return;
       }
-      email=(email||"").trim().toLowerCase();
+      email=(email||"").trim();
       if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
         consolePrint("Usage: finduser email@example.com","error");return;
       }
