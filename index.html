@@ -628,6 +628,13 @@
     .admin-audit-panel #auditEntries{display:grid;gap:9px;margin-top:12px}
     .audit-event{padding:12px;border-radius:10px;background:rgba(127,127,127,.09);border:1px solid rgba(127,127,127,.2)}
     .audit-event strong{display:block;font-size:13px}.audit-event small{display:block;opacity:.75;margin-top:4px}
+
+    .audit-overlay:not([hidden]){position:fixed;inset:0;z-index:99999;background:rgba(9,14,30,.82);display:flex;padding:10px}
+    .audit-window{width:100%;height:100%;background:var(--bg,#f4f6fb);color:var(--ink,#202437);border-radius:14px;padding:16px;overflow:auto;display:flex;flex-direction:column;gap:12px}
+    .audit-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.audit-toolbar strong{margin-right:auto}
+    #auditSearch{width:100%;padding:13px;border:1px solid #9ba3b6;border-radius:10px;font:inherit;background:var(--bg,#fff);color:var(--ink,#222)}
+    #auditEntries{overflow:auto;flex:1;display:grid;align-content:start;gap:10px}.audit-event{overflow-wrap:anywhere}
+    #auditCollapsible summary{cursor:pointer;font-weight:700}
 </style>
 </head>
 <body>
@@ -673,6 +680,14 @@
       <audio id="backgroundMusic" preload="none"></audio>
     </div>
     <div id="chatToastStack" class="chat-toast-stack" aria-live="polite" aria-atomic="false"></div>
+    <div id="auditOverlay" class="audit-overlay" hidden role="dialog" aria-modal="true" aria-label="Admin Activity Log">
+      <div class="audit-window">
+        <header class="audit-toolbar"><strong>🔒 Admin Activity Log</strong><button type="button" id="auditRefresh">↻ Refresh</button><button type="button" id="auditClose" aria-label="Close activity log">✕</button></header>
+        <input id="auditSearch" type="search" placeholder="Search actions, users, message text, dates…" aria-label="Search activity logs" autocomplete="off">
+        <p id="auditStatus" role="status"></p>
+        <div id="auditEntries"></div>
+      </div>
+    </div>
     <div id="announcementsOverlay" class="settings-overlay" hidden>
       <div class="settings-dialog announcements-dialog" role="dialog" aria-modal="true" aria-labelledby="announcementsTitle" tabindex="-1">
         <div class="announcements-heading">
@@ -1102,14 +1117,11 @@
       </section>
       <section id="adminPanel" class="admin-controls" hidden>
         <strong>Verified admin ✓</strong>
-        <section id="announcementAuditSection" class="admin-audit-panel" hidden>
-          <div class="draft-topline">🔒 <strong>Admin Activity Log</strong> <span class="draft-pill">PRIVATE</span></div>
-          <p>Recent message changes, moderation actions and account events. Only admins can view these entries.</p>
-          <button type="button" id="auditRefresh">↻ Refresh log</button>
-          <p id="auditStatus" role="status"></p>
-          <div id="auditEntries" style="max-height:300px;overflow:auto;overflow-wrap:anywhere;font-size:12px"></div>
-        </section>
-
+        <details id="auditCollapsible" class="admin-audit-panel" hidden>
+          <summary>🔒 Admin Activity Log <span style="opacity:.7;font-size:12px">— click to expand</span></summary>
+          <p>View logged actions in a searchable full-screen window.</p>
+          <button type="button" id="auditOpenFull">⛶ Open full-screen logs</button>
+        </details>
         <div class="anonymous-admin-setting">
           <label><input type="checkbox" id="anonymousEnabledAdmin"> 🕵️ Allow anonymous accounts</label>
           <p class="hint">When disabled, the anonymous sign-in button is greyed out. Existing guest accounts also lose access until re-enabled.</p>
@@ -1332,7 +1344,7 @@
         $("adminPanel").hidden=!isAdmin;
         $("adminLogin").hidden=isAdmin;
         updateRoleUI();
-        $("announcementAuditSection").hidden=!isAdmin;
+        $("auditCollapsible").hidden=!isAdmin;
         if(isAdmin)void refreshActivityLog();
         if(!hasExperimentalAccess()&&activeRoom!==0)switchRoom(0).catch(console.warn);
       },err=>console.warn("Roles unavailable",err));
@@ -2778,8 +2790,16 @@
           const date=document.createElement("small");date.textContent=new Date(event.at||0).toLocaleString();
           item.append(heading,body,date);list.append(item);
         }
+        filterAuditEntries();
       }catch(err){$("auditStatus").textContent="Log unavailable. Check Admin-only Firebase read rules for chatActivityLog.";}
     }
+    function filterAuditEntries(){const q=$("auditSearch").value.trim().toLocaleLowerCase();let count=0;for(const item of $("auditEntries").children){const show=item.textContent.toLocaleLowerCase().includes(q);item.hidden=!show;if(show)count++;}if(q)$("auditStatus").textContent=count+" matching events";}
+    $("auditSearch").addEventListener("input",filterAuditEntries);
+    $("auditOpenFull").addEventListener("click",()=>{if(!isAdmin)return;$("auditOverlay").hidden=false;document.body.style.overflow="hidden";void refreshActivityLog();$("auditSearch").focus();});
+    function closeAudit(){ $("auditOverlay").hidden=true;document.body.style.overflow=""; }
+    $("auditClose").addEventListener("click",closeAudit);
+    $("auditOverlay").addEventListener("click",e=>{if(e.target===$("auditOverlay"))closeAudit();});
+    document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("auditOverlay").hidden)closeAudit();});
     $("auditRefresh").addEventListener("click",()=>void refreshActivityLog());
     function consoleExecute(raw){
       const line=raw.trim();
