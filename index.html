@@ -2748,7 +2748,7 @@
     // Best-effort client audit. For tamper-proof comprehensive auditing, use a trusted backend.
     async function writeActivityLog(action,detail=""){
       if(!user?.uid)return;
-      try{await push(ref(db,"chatActivityLog"),{uid:user.uid,actorName:(user.displayName||"").slice(0,60),action:String(action).slice(0,50),detail:String(detail).slice(0,180),at:Date.now()});}
+      try{await push(ref(db,"chatActivityLog"),{uid:user.uid,actorName:(user.displayName||"").slice(0,60),action:String(action).slice(0,50),detail:String(detail).slice(0,1500),at:Date.now()});}
       catch(err){console.warn("Activity logging unavailable; Firebase rules may need updating.",err.code||err.message);}
     }
     async function refreshActivityLog(){
@@ -2767,7 +2767,7 @@
           const actor=event.actorName||"User "+String(event.uid||"unknown").slice(0,8);
           const room=info.path==="chatMessages"?"General Chat":String(info.path||"").replace("roomMessages/","Room ");
           let description=actor;
-          if(action==="message_deleted"||action==="message_edited")description+=" "+(action==="message_deleted"?"deleted":"edited")+" "+(info.byModerator?"another member's":"their own")+" message"+(room?" in "+room:"")+(info.authorName?" (author: "+info.authorName+")":"")+(info.preview?" — “"+info.preview+"”":"");
+          if(action==="message_deleted"||action==="message_edited")description+=" "+(action==="message_deleted"?"deleted":"edited")+" "+(info.byModerator?"another member's":"their own")+" message"+(room?" in "+room:"")+(info.authorName?" (author: "+info.authorName+")":"")+(info.preview?" — Message: “"+info.preview+"”":"")+(action==="message_edited"&&info.newText?" → Changed to: “"+info.newText+"”":"");
           else if(action.startsWith("moderation_"))description+=" performed "+title.toLowerCase()+" on "+(info.targetName||String(event.detail||"").replace("targetUid=","user "));
           else if(action==="bulk_messages_deleted")description+=" deleted "+String(event.detail||"").replace("count=","")+" messages";
           else if(action==="console_command")description+=" ran a console command: "+(event.detail||"unknown");
@@ -3450,7 +3450,7 @@
       if(canManage){
         make("🗑️",own?"Delete your message":"Delete message as moderator",async()=>{
           if(!confirm(own?"Permanently delete this message?":"Permanently delete this user’s message?"))return;
-          try{await remove(ref(db,path+"/"+key));void writeActivityLog("message_deleted",JSON.stringify({path,key,authorUid:data.uid,authorName:data.name,preview:String(data.text||"").slice(0,90),byModerator:!own}));}
+          try{await remove(ref(db,path+"/"+key));void writeActivityLog("message_deleted",JSON.stringify({path,key,authorUid:data.uid,authorName:data.name,preview:String(data.text||"").slice(0,500),byModerator:!own}));}
           catch(err){showError("Could not delete message: "+(err.code||err.message)+". Check Firebase rules.");}
         });
         make("✏️",own?"Edit your message":"Edit message as moderator",()=>{
@@ -3465,7 +3465,7 @@
             e.preventDefault();const text=input.value.trim();
             if(!text)return;
             save.disabled=true;
-            try{await update(ref(db,path+"/"+key),{text,editedAt:Date.now()});void writeActivityLog("message_edited",JSON.stringify({path,key,authorUid:data.uid,byModerator:!own}));form.remove();}
+            try{await update(ref(db,path+"/"+key),{text,editedAt:Date.now()});void writeActivityLog("message_edited",JSON.stringify({path,key,authorUid:data.uid,authorName:data.name,preview:String(data.text||"").slice(0,500),newText:text,byModerator:!own}));form.remove();}
             catch(err){showError("Could not edit message: "+(err.code||err.message)+". Check Firebase rules.");save.disabled=false;}
           });
           form.append(input,save,cancel);bubble.after(form);input.focus();input.select();
