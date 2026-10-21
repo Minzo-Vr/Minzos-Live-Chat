@@ -635,6 +635,8 @@
     #auditSearch{width:100%;padding:13px;border:1px solid #9ba3b6;border-radius:10px;font:inherit;background:var(--bg,#fff);color:var(--ink,#222)}
     #auditEntries{overflow:auto;flex:1;display:grid;align-content:start;gap:10px}.audit-event{overflow-wrap:anywhere}
     #auditCollapsible summary{cursor:pointer;font-weight:700}
+
+    .friend-code-box{padding:14px;border-radius:12px;background:rgba(127,127,127,.09);border:1px solid rgba(127,127,127,.2);margin:12px 0}.friend-code-box #myFriendCode{font-size:28px;font-weight:800;letter-spacing:5px;margin:10px 0}.friend-code-row{display:flex;gap:8px;margin-top:8px}.friend-code-row input{min-width:0;flex:1;font-size:20px;letter-spacing:4px}
 </style>
 </head>
 <body>
@@ -899,7 +901,7 @@
       <div class="settings-dialog friends-dialog" role="dialog" aria-modal="true" aria-labelledby="friendsTitle">
         <h2 id="friendsTitle">👥 Friends & Direct Messages</h2>
         <p class="friends-note">Send a request from someone's profile in General Chat. Both people must accept friendship before private messages work.</p>
-        <h3>📨 Friend requests</h3><div id="friendRequests" class="friends-list"></div>
+        <div class="friend-code-box"><strong>🔢 Your friend code</strong><p id="myFriendCode">Loading your code…</p><form id="friendCodeForm"><label for="friendCodeInput">Add someone by their 4-digit code</label><div class="friend-code-row"><input id="friendCodeInput" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="e.g. 0453" required autocomplete="off"><button type="submit">Send request</button></div></form><p class="friends-note">Codes can start with 0. Share your code only with people you want to connect with.</p></div><h3>📨 Friend requests</h3><div id="friendRequests" class="friends-list"></div>
         <h3>💜 Your friends</h3><div id="friendList" class="friends-list"></div>
         <p id="friendsFeedback" role="status" class="friends-note"></p>
         <button type="button" id="friendsClose">Close</button>
@@ -2238,7 +2240,7 @@
     function stopFriends(){
       for(const stop of friendUnsubs)stop();friendUnsubs=[];
       if(dmUnsub){dmUnsub();dmUnsub=null;}
-      friendMap={};friendRequests={};stopGroups();showGeneralChat();
+      friendMap={};friendRequests={};$("myFriendCode").textContent="Sign in to get a code";stopGroups();showGeneralChat();
       closeDmSidebar();
     }
     function friendStatus(text){$("friendsFeedback").textContent=text;}
@@ -2502,7 +2504,7 @@
     }
     function startFriends(){
       stopFriends();if(!user||!db)return;
-      const uid=user.uid;startGroups();
+      const uid=user.uid;void ensureFriendCode();startGroups();
       setTimeout(tryJoinGroupInvite,400);
       friendUnsubs.push(onValue(ref(db,`chatFriends/${uid}`),snap=>{
         if(user?.uid!==uid)return;friendMap=snap.val()||{};drawFriends();
@@ -2512,6 +2514,39 @@
         if(user?.uid!==uid)return;friendRequests=snap.val()||{};drawFriends();
       },err=>friendStatus("Requests unavailable: "+(err.code||err.message))));
     }
+
+    // Friend codes are reserved atomically to avoid collisions. Firebase rules must
+    // permit authenticated lookups and owner-only reservation/assignment.
+    async function ensureFriendCode(){
+      if(!user||!db)return;
+      const uid=user.uid,display=$("myFriendCode");display.textContent="Loading…";
+      try{
+        const mine=await get(ref(db,`chatFriendCodesByUser/${uid}`));
+        if(mine.exists()){
+          const existing=String(mine.val());
+          const claimed=await get(ref(db,`chatFriendCodeDirectory/${existing}`));
+          if(claimed.val()===uid){display.textContent=existing;return;}
+        }
+        for(let i=0;i<35;i++){
+          const code=String(Math.floor(Math.random()*10000)).padStart(4,"0");
+          const result=await runTransaction(ref(db,`chatFriendCodeDirectory/${code}`),current=>current===null?uid:undefined,{applyLocally:false});
+          if(!result.committed)continue;
+          await set(ref(db,`chatFriendCodesByUser/${uid}`),code);
+          display.textContent=code;return;
+        }
+        throw Error("Could not reserve a unique code. Please retry.");
+      }catch(err){display.textContent="Unavailable";friendStatus("Friend codes require updated Firebase rules: "+(err.code||err.message));}
+    }
+    $("friendCodeForm").addEventListener("submit",async e=>{
+      e.preventDefault();if(!user||!joined)return friendStatus("Join the chat before sending a friend request.");
+      const code=$("friendCodeInput").value.trim();if(!/^\\d{4}$/.test(code))return friendStatus("Enter exactly 4 digits, including leading zeros.");
+      try{
+        const snap=await get(ref(db,`chatFriendCodeDirectory/${code}`));
+        if(!snap.exists())return friendStatus("No user found with that code.");
+        const uid=snap.val();if(uid===user.uid)return friendStatus("That's your own friend code.");
+        await sendFriendRequest(uid);
+      }catch(err){friendStatus("Could not look up that code: "+(err.code||err.message));}
+    });
     async function sendFriendRequest(uid){
       if(!user||!joined||!uid||uid===user.uid)return friendStatus("Join the chat first, then select another member.");
       if(friendMap[uid])return friendStatus("You're already friends!");
