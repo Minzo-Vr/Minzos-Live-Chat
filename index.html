@@ -205,6 +205,10 @@
     .chat-toast{background:#202437;color:white;padding:12px 15px;border-radius:12px;box-shadow:0 8px 26px #0004;font-size:13px;line-height:1.45;pointer-events:auto;animation:toastSlide .22s ease-out}
     .chat-toast strong{display:block;margin-bottom:3px}
     @keyframes toastSlide{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .mentioned-message{border-left:4px solid #eab308!important;outline:1px solid #eab308}
+    .mention-picker{padding:8px 14px;background:var(--theme-panel);display:flex;flex-wrap:wrap;gap:6px}
+    .mention-picker[hidden]{display:none}
+    .mention-picker button{font:inherit;padding:7px 10px;border-radius:8px}
     .notification-settings{border-top:1px solid var(--theme-border,#dce1ec);margin-top:13px;padding-top:12px}
     .notification-settings label{display:flex;align-items:center;gap:8px;margin:9px 0;font-size:13px}
     .notification-settings small{display:block;color:var(--theme-secondary,#64748b);font-size:12px}
@@ -777,7 +781,7 @@
             <strong>📢 Announcements &amp; Notifications</strong>
             <label><input type="checkbox" id="showAnnouncementDot" checked> Announcement red circle</label>
             <label><input type="checkbox" id="showAnnouncementButton" checked> Announcement button 📢</label>
-            <label><input type="checkbox" id="enableChatNotifications"> 🔔 Notifications for announcements &amp; new roles</label>
+            <label><input type="checkbox" id="enableChatNotifications"> 🔔 Notifications for mentions, announcements &amp; new roles</label>
             <small>Notifications appear inside Community Chat while it's open. You can also enable browser notifications where supported.</small>
             <button type="button" id="enableBrowserNotifications">Allow browser notifications</button>
             <p id="notificationFeedback" role="status" style="font-size:12px"></p>
@@ -1803,7 +1807,7 @@
         updateAnnouncementPreferences();
         if(key==="notifications"&&noticePrefs.notifications){
           maybeNotifyAnnouncement();
-          $("notificationFeedback").textContent="Notifications enabled. You'll see alerts for future releases and role assignments.";
+          $("notificationFeedback").textContent="Notifications enabled. You'll see alerts for mentions, future releases and role assignments.";
         }
       });
     }
@@ -1958,8 +1962,10 @@
     // Only changes pending the next announcement belong here.
     // Historical notes remain in the version-specific registry above.
     const RECENT_SITE_CHANGES={
-      featured:"🔑 Community Chat update: password recovery!",
+      featured:"🔔 Community Chat update: mentions and password recovery!",
       added:[
+        "🔔 NEW! Type @username to mention someone, with username suggestions and highlighted messages for the recipient!",
+        "🔔 Mention alerts follow notification preferences while the recipient has the room open; browser alerts require permission!",
         "🔑 NEW! Forgot password? on the email login sends a Firebase password reset link using the entered email address!",
         "✉️ Password recovery works without entering the old password, with an inbox and spam-folder reminder!",
         "🔒 Password reset confirmations protect account privacy, with email validation, duplicate-submit protection and clear connection or retry messages!"
@@ -3294,7 +3300,7 @@
         const names = [];
         snapshot.forEach(account => account.forEach(connection => {
           const name = connection.child("name").val();
-          if (typeof name === "string" && name.trim()) names.push(name);
+          if (typeof name === "string" && name.trim()){names.push(name);mentionNames.add(name);}
         }));
         names.sort((a,b) => a.localeCompare(b));
         presenceButton.textContent = `${names.length} online ▾`;
@@ -3522,6 +3528,58 @@
       make("🔗","Copy message link",()=>copyMessageLink(path,key));
       wrap.append(actions);
     }
+    // Mentions use names visible in the current room and online list.
+    let mentionNames=new Set(),mentionListeningSince=Date.now();
+    const mentionPicker=document.createElement("div");
+    mentionPicker.hidden=true;mentionPicker.className="mention-picker";
+    mentionPicker.setAttribute("aria-label","Mention suggestions");sendForm.before(mentionPicker);
+    function containsMention(text,name){
+      if(!name||typeof text!=="string")return false;
+      const escaped=Array.from(name,ch=>"\\^$.*+?()[]{}|".includes(ch)?"\\"+ch:ch).join("");
+      return new RegExp("(^|[^\\p{L}\\p{N}_@])@"+escaped+"(?=$|[^\\p{L}\\p{N}_])","iu").test(text);
+    }
+    function drawMentionPicker(){
+      mentionPicker.replaceChildren();mentionPicker.hidden=true;
+      if(!joined||messageInput.disabled)return;
+      const cursor=messageInput.selectionStart??messageInput.value.length;
+      const match=messageInput.value.slice(0,cursor).match(/(?:^|\s)@([^@\n]{0,24})$/u);
+      if(!match)return;
+      const term=match[1],start=cursor-term.length-1;
+      const candidates=[...mentionNames].filter(name=>name.toLocaleLowerCase().startsWith(term.toLocaleLowerCase())&&!name.startsWith(INCOGNITO_PREFIX)).sort((a,b)=>a.localeCompare(b)).slice(0,8);
+      for(const name of candidates){
+        const button=document.createElement("button");button.type="button";button.textContent="@"+name;
+        button.addEventListener("click",()=>{
+          const token="@"+name+" ",next=messageInput.value.slice(0,start)+token+messageInput.value.slice(cursor);
+          if(next.length>messageInput.maxLength)return;
+          messageInput.value=next;messageInput.focus();messageInput.setSelectionRange(start+token.length,start+token.length);
+          messageInput.dispatchEvent(new Event("input",{bubbles:true}));mentionPicker.hidden=true;
+        });mentionPicker.append(button);
+      }mentionPicker.hidden=!candidates.length;
+    }
+    messageInput.addEventListener("input",drawMentionPicker);
+    messageInput.addEventListener("click",drawMentionPicker);
+    messageInput.addEventListener("keydown",event=>{
+      if(mentionPicker.hidden)return;
+      if(event.key==="Escape"){event.preventDefault();mentionPicker.hidden=true;}
+      if(event.key==="ArrowDown"){event.preventDefault();mentionPicker.querySelector("button")?.focus();}
+      if(event.key==="Tab"&&mentionPicker.childElementCount===1){event.preventDefault();mentionPicker.firstElementChild.click();}
+    });
+    mentionPicker.addEventListener("keydown",event=>{
+      const buttons=[...mentionPicker.querySelectorAll("button")],index=buttons.indexOf(document.activeElement);
+      if(event.key==="ArrowDown"||event.key==="ArrowUp"){
+        event.preventDefault();buttons[(index+(event.key==="ArrowDown"?1:-1)+buttons.length)%buttons.length]?.focus();
+      }
+      if(event.key==="Escape"){mentionPicker.hidden=true;messageInput.focus();}
+    });
+    document.addEventListener("click",event=>{if(event.target!==messageInput&&!mentionPicker.contains(event.target))mentionPicker.hidden=true;});
+    function handleMentionMessage(data){
+      if(!data||typeof data.text!=="string"||typeof data.name!=="string")return;
+      if(typeof data?.name==="string"&&!data.name.startsWith(INCOGNITO_PREFIX))mentionNames.add(data.name);
+      if(!joined||!user||data?.uid===user.uid||!containsMention(data?.text,username))return;
+      if(typeof data.createdAt!=="number"||data.createdAt<=mentionListeningSince)return;
+      notifyChat("🔔 You were mentioned",data.name+": "+data.text.slice(0,180));
+    }
+
     function addMessage(data, key) {
       if (!data || typeof data.text !== "string" || typeof data.name !== "string") return;
       const wrap = document.createElement("article");
@@ -3560,6 +3618,7 @@
       meta.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openUserProfile(data.uid,data.name,incognitoMessage);}});
       const bubble = document.createElement("div");
       bubble.className = "bubble";
+      if(user&&containsMention(data.text,username)){bubble.classList.add("mentioned-message");wrap.setAttribute("aria-label","Message mentioning you");}
       const imageUrl = imageFromMessage(data.text);
       const sticker = stickerFromMessage(data.text);
       const customEmoji = customEmojiFromMessage(data.text);
@@ -3707,8 +3766,9 @@
       messages.innerHTML = "";
       $("chatSearchInput").value="";
       filterChatMessages();
+      mentionListeningSince=Date.now();mentionNames=new Set();mentionPicker.hidden=true;
       const recentMessages = query(ref(db, roomMessagePath()), limitToLast(80));
-      stopMessages = onChildAdded(recentMessages, snapshot => addMessage(snapshot.val(), snapshot.key), err => {
+      stopMessages = onChildAdded(recentMessages, snapshot => {handleMentionMessage(snapshot.val());addMessage(snapshot.val(), snapshot.key);}, err => {
         showError("Could not load chat messages. Check your Firebase database rules.");
         status.textContent = "Connection error";
         console.error(err);
