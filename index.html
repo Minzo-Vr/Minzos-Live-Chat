@@ -783,6 +783,8 @@
             <label><input type="checkbox" id="showAnnouncementButton" checked> Announcement button 📢</label>
             <label><input type="checkbox" id="enableChatNotifications"> 🔔 Notifications for mentions, announcements &amp; new roles</label>
             <small>Notifications appear inside Community Chat while it's open. You can also enable browser notifications where supported.</small>
+            <button type="button" id="doNotDisturb" aria-pressed="false">🌙 Do Not Disturb: Off</button>
+            <small id="dndHelp">Silence mention, announcement and role alerts in this browser. Messages still arrive.</small>
             <button type="button" id="enableBrowserNotifications">Allow browser notifications</button>
             <p id="notificationFeedback" role="status" style="font-size:12px"></p>
           </div>
@@ -1772,11 +1774,11 @@
     // Preferences apply only to this browser; announcements remain in the HTML.
     const NOTICE_PREF_KEY="communityChatAnnouncementPrefsV1";
     const NOTICE_VERSION_KEY="communityChatNotifiedAnnouncementVersionV1";
-    let noticePrefs={showDot:true,showButton:true,notifications:false};
+    let noticePrefs={showDot:true,showButton:true,notifications:false,dnd:false};
     try{
       const saved=JSON.parse(localStorage.getItem(NOTICE_PREF_KEY)||"null");
       if(saved&&typeof saved==="object"){
-        noticePrefs={showDot:saved.showDot!==false,showButton:saved.showButton!==false,notifications:saved.notifications===true};
+        noticePrefs={showDot:saved.showDot!==false,showButton:saved.showButton!==false,notifications:saved.notifications===true,dnd:saved.dnd===true};
       }
     }catch{}
     function showChatToast(title,message){
@@ -1787,7 +1789,7 @@
       setTimeout(()=>node.remove(),7000);
     }
     function notifyChat(title,message){
-      if(!noticePrefs.notifications)return;
+      if(!noticePrefs.notifications||noticePrefs.dnd)return;
       showChatToast(title,message);
       if(document.hidden&&"Notification" in window&&Notification.permission==="granted"){
         try{new Notification(title,{body:message,tag:"community-chat-"+title});}catch(err){console.warn("Browser notification unavailable",err);}
@@ -1797,6 +1799,8 @@
       $("showAnnouncementDot").checked=noticePrefs.showDot;
       $("showAnnouncementButton").checked=noticePrefs.showButton;
       $("enableChatNotifications").checked=noticePrefs.notifications;
+      $("doNotDisturb").setAttribute("aria-pressed",String(noticePrefs.dnd));
+      $("doNotDisturb").textContent=noticePrefs.dnd?"🌙 Do Not Disturb: On":"🌙 Do Not Disturb: Off";
       announcementsToggle.hidden=!noticePrefs.showButton;
       announcementsToggle.classList.toggle("announcements-unread",noticePrefs.showDot&&localStorage.getItem(seenKey)!==latestPublishedVersion());
     }
@@ -1811,6 +1815,23 @@
         }
       });
     }
+    $("doNotDisturb").addEventListener("click",()=>{
+      noticePrefs.dnd=!noticePrefs.dnd;
+      let saved=true;
+      try{localStorage.setItem(NOTICE_PREF_KEY,JSON.stringify(noticePrefs));}catch{saved=false;}
+      if(noticePrefs.dnd)$("chatToastStack").replaceChildren();
+      updateAnnouncementPreferences();
+      $("notificationFeedback").textContent=(noticePrefs.dnd?"Do Not Disturb is on. Alerts are silenced in this browser.":"Do Not Disturb is off. Your notification preferences apply again.")+(saved?"":" This preference could not be saved and may reset after refresh.");
+    });
+    window.addEventListener("storage",event=>{
+      if(event.key!==NOTICE_PREF_KEY)return;
+      try{
+        const saved=JSON.parse(event.newValue||"{}");
+        noticePrefs={showDot:saved.showDot!==false,showButton:saved.showButton!==false,notifications:saved.notifications===true,dnd:saved.dnd===true};
+        if(noticePrefs.dnd)$("chatToastStack").replaceChildren();
+        updateAnnouncementPreferences();
+      }catch{}
+    });
     $("enableBrowserNotifications").addEventListener("click",async()=>{
       if(!("Notification" in window)){$("notificationFeedback").textContent="Browser notifications aren't supported here. In-chat alerts still work.";return;}
       try{
@@ -1964,6 +1985,7 @@
     const RECENT_SITE_CHANGES={
       featured:"🔔 Community Chat update: mentions and password recovery!",
       added:[
+        "🌙 NEW! Do Not Disturb in notification settings silences mention, announcement and role alerts, remembers your choice and syncs across tabs in this browser!",
         "🔔 NEW! Type @username to mention someone, with username suggestions and highlighted messages for the recipient!",
         "🔔 Mention alerts follow notification preferences while the recipient has the room open; browser alerts require permission!",
         "🔑 NEW! Forgot password? on the email login sends a Firebase password reset link using the entered email address!",
