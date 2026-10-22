@@ -709,7 +709,7 @@
           <textarea id="announcementDraftFixed" rows="3" placeholder="🎨 Google sign-in button contrast fixed!"></textarea>
           <label for="announcementDraftRemoved">🗑️ REMOVED — Removed features (one per line)</label>
           <textarea id="announcementDraftRemoved" rows="3" placeholder="🧹 Removed an outdated option"></textarea>
-          <div class="draft-actions"><button type="button" id="announcementAutoLog">📝 Log recent changes</button><button type="button" id="announcementSaveDraft">💾 Save draft</button><button type="button" id="announcementPublishNow">📢 Publish to everyone</button><button type="button" id="announcementPrevDraft">⏮️ Previous update</button><button type="button" id="announcementNextDraft">⏭️ Next update / Reset</button></div>
+          <div class="draft-actions"><button type="button" id="announcementClearLogs">🧹 Clear draft logs</button><button type="button" id="announcementAutoLog">📝 Log recent changes</button><button type="button" id="announcementSaveDraft">💾 Save draft</button><button type="button" id="announcementPublishNow">📢 Publish to everyone</button><button type="button" id="announcementPrevDraft">⏮️ Previous update</button><button type="button" id="announcementNextDraft">⏭️ Next update / Reset</button></div>
           <p id="announcementDraftStatus" role="status">Only admins can view and publish this preview.</p>
           <div id="announcementDraftPreview" class="release-card" style="opacity:.7"></div>
         </section>
@@ -1955,37 +1955,18 @@
         ],removed:[]
       }
     };
+    // Only changes pending the next announcement belong here.
+    // Historical notes remain in the version-specific registry above.
     const RECENT_SITE_CHANGES={
-      featured:"💜 Community Chat update: group chats, YouTube embeds, and message controls!",
-      // Google linking added for existing email/password accounts.
+      featured:"🔑 Community Chat update: password recovery!",
       added:[
         "🔑 NEW! Forgot password? on the email login sends a Firebase password reset link using the entered email address!",
         "✉️ Password recovery works without entering the old password, with an inbox and spam-folder reminder!",
-        "🔒 Password reset confirmations protect account privacy, with email validation, duplicate-submit protection and clear connection or retry messages!",
-        "🧪 New Test Subject role with bold metallic green usernames, assignable by admins!",
-        "🌗 New Bright / System / Dark appearance selector with saved preference and automatic system theme tracking!",
-        "👥 Create group chats, invite friends, chat together and manage membership!",
-        "🗂️ Group friend invitations now use expandable dropdowns instead of numbered popups!",
-        "▶️ YouTube links automatically display playable embedded video players in General Chat!",
-        "🔗 Website links display safe clickable preview cards in General Chat!",
-        "🧩 Create custom Discord-style embeds with a title, description, image, link and accent colour!",
-        "🗑️ Delete your own General Chat messages using the hover bin icon (requires updated Firebase rules)!",
-        "✏️ Edit your own General Chat messages using the hover pencil icon, with an edited label (requires updated Firebase rules)!",
-        "🔗 Copy a direct link to a General Chat message using the chain icon; links work for recently loaded messages!",
-        "📱 Message action icons remain visible on touch devices!",
-        "🔗 Link a Google account to your existing email/password Community Chat account without losing your UID, friends, XP or messages!",
-        "🖥️ Community Chat now fills the entire browser window automatically, with more space for messages!",
-        "🗂️ Individual Settings features are now collapsible so controls are easier to find!",
-        "💬 Direct messages open inside the main Community Chat area, alongside the connected friends sidebar!",
-        "🔒 Profile visibility choices: Everyone, Friends only, or No one (requires updated Firebase rules).",
-        "⚠️ Serious Features now shows an account-deletion control; secure server-side deletion still requires deployment."
+        "🔒 Password reset confirmations protect account privacy, with email validation, duplicate-submit protection and clear connection or retry messages!"
       ],
       fixed:[
-        "🌙 Dark mode now covers the General Chat background, messages, sidebars, settings, overlays and legacy panels!",
-        "🔧 Improved group creation error messages to identify which Firebase step failed!",
-        "🔧 Aligned group creation and invitations with group membership database rules!",
-        "📐 Removed the narrow, centered chat layout on desktop!",
-        "📝 Fixed the release-note logger not finding recent changes after moving to a new version!"
+        "📝 Fixed announcement logging bringing back previous updates; saved drafts keep their exact entries!",
+        "🧹 Added Clear draft logs to empty the editor before saving a fresh draft!"
       ],
       removed:[]
     };
@@ -1993,17 +1974,20 @@
       if(!isAdmin)return 0;
       const version=$("announcementDraftVersion").value.trim();
       if(publishedReleases.some(r=>r.version===version))return 0;
-      const baseNotes=version==="0.3"?CURRENT_CHANGELOG:RELEASE_CHANGE_LOG[version];
-      // Recent website changes are eligible for any unpublished draft version.
+      // Exclude entries already published, even after advancing to another version.
+      const publishedNotes=[...CHAT_RELEASES,...publishedReleases].map(releaseParts);
+      const publishedText=new Set(publishedNotes.flatMap(parts=>[
+        parts.featured,...parts.added,...parts.fixed,...parts.removed
+      ]).filter(Boolean).map(text=>text.trim()));
       const notes={
-        featured:RECENT_SITE_CHANGES.featured,
-        added:[...(baseNotes?.added||[]),...RECENT_SITE_CHANGES.added],
-        fixed:[...(baseNotes?.fixed||[]),...RECENT_SITE_CHANGES.fixed],
-        removed:[...(baseNotes?.removed||[])]
+        featured:publishedText.has(RECENT_SITE_CHANGES.featured)?"":RECENT_SITE_CHANGES.featured,
+        added:RECENT_SITE_CHANGES.added.filter(text=>!publishedText.has(text.trim())),
+        fixed:RECENT_SITE_CHANGES.fixed.filter(text=>!publishedText.has(text.trim())),
+        removed:RECENT_SITE_CHANGES.removed.filter(text=>!publishedText.has(text.trim()))
       };
       let count=0;
       const featured=$("announcementDraftFeatured");
-      if(!featured.value.trim()){featured.value=notes.featured;count++;}
+      if(!featured.value.trim()&&notes.featured){featured.value=notes.featured;count++;}
       for(const [category,id] of [["added","announcementDraftFeatures"],["fixed","announcementDraftFixed"],["removed","announcementDraftRemoved"]]){
         const input=$(id);
         const existing=input.value.split("\n").map(x=>x.trim()).filter(Boolean);
@@ -2017,7 +2001,12 @@
       const count=logChangesForVersion();
       $("announcementDraftStatus").textContent=count?`📝 Logged ${count} change(s). Click Save draft to keep them in Firebase. Nothing published.`:"📝 No additional logged changes for this version. You can still add your own entries.";
     });
-    function mergeCurrentChangelog(){return logChangesForVersion();}
+    $("announcementClearLogs").addEventListener("click",()=>{
+      if(!isAdmin)return;
+      if(!confirm("Clear all entries in the current draft editor? Click Save draft afterwards to keep it empty. Published announcements are unchanged."))return;
+      blankAnnouncementDraft($("announcementDraftVersion").value.trim()||"0.3");
+      $("announcementDraftStatus").textContent="Draft logs cleared in the editor. Click Save draft to keep this, or Log recent changes to add only the latest changes.";
+    });
     // A reset only clears the unpublished draft; it never changes published releases.
     const NEXT_DRAFT_KEY="communityChatNextAnnouncementVersionV1";
     // Firebase is the source of truth for the editor's current version,
