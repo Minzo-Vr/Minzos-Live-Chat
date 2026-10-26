@@ -655,6 +655,10 @@
     #browserSidebar.browser-maximized{inset:0;width:100vw;min-width:0;z-index:2147483000}
     body.browser-side-open:has(#browserSidebar.browser-maximized) .chat{margin:0 auto;max-width:760px}
     @media(max-width:850px){#browserSidebar{width:min(92vw,620px);min-width:0}body.browser-side-open .chat{margin:0 auto;max-width:760px}}
+    .browser-address-bar{display:flex;align-items:center;gap:7px;padding:8px 10px;background:#111827}
+    .browser-address-bar label{font-size:12px;font-weight:800;color:white}
+    .browser-address-bar input{flex:1;min-width:0;padding:9px 10px;border:1px solid #94a3b8;border-radius:8px;font:13px system-ui;background:white;color:#111827}
+    .browser-address-bar button{padding:9px 10px;border:1px solid #64748b;border-radius:8px;background:#374151;color:white;font-weight:800;cursor:pointer}
 </style>
 </head>
 <body>
@@ -4858,8 +4862,14 @@
       <a href="https://community-scramjet-browser.onrender.com" target="_blank" rel="noopener noreferrer" title="Open browser in a new tab">↗ New tab</a>
       <button type="button" id="browserSidebarClose" aria-label="Close browser sidebar">✕ Close</button>
     </div>
+    <form id="browserAddressForm" class="browser-address-bar" autocomplete="off">
+      <label for="browserAddressInput">URL</label>
+      <input id="browserAddressInput" type="url" inputmode="url" spellcheck="false" aria-label="Browser URL" value="https://community-scramjet-browser.onrender.com" placeholder="https://example.com">
+      <button type="submit" aria-label="Go to URL">Go →</button>
+      <button type="button" id="browserAddressHome" aria-label="Browser home">⌂</button>
+    </form>
     <iframe id="browserSidebarFrame" title="Scramjet Community Browser" loading="lazy" referrerpolicy="no-referrer" allow="fullscreen"></iframe>
-    <div class="browser-side-foot">If the browser cannot load here, choose “New tab”.</div>
+    <div class="browser-side-foot">Some sites block embedded viewing; external URLs entered here open directly, not through Scramjet. For proxy browsing, use the Scramjet page.</div>
   </aside>
   <script>
     (() => {
@@ -4870,6 +4880,27 @@
       const close=document.getElementById("browserSidebarClose");
       if(!panel||!launch||!frame||!expand||!close)return;
       const url="https://community-scramjet-browser.onrender.com";
+      const addressForm=document.getElementById("browserAddressForm");
+      const addressInput=document.getElementById("browserAddressInput");
+      const homeButton=document.getElementById("browserAddressHome");
+      function navigate(raw){
+        let target;
+        try{
+          target=new URL(raw.trim());
+          if(!["https:","http:"].includes(target.protocol))throw new Error("Invalid scheme");
+        }catch(e){
+          addressInput.setCustomValidity("Enter a complete http:// or https:// URL.");
+          addressInput.reportValidity();
+          return;
+        }
+        addressInput.setCustomValidity("");
+        addressInput.value=target.href;
+        frame.src=target.href;
+        setOpen(true);
+      }
+      addressInput.addEventListener("input",()=>addressInput.setCustomValidity(""));
+      addressForm.addEventListener("submit",event=>{event.preventDefault();navigate(addressInput.value);});
+      homeButton.addEventListener("click",()=>navigate(url));
       function setOpen(open){
         panel.hidden=!open;
         document.body.classList.toggle("browser-side-open",open);
