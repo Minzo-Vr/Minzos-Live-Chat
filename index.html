@@ -659,6 +659,19 @@
     .browser-address-bar label{font-size:12px;font-weight:800;color:white}
     .browser-address-bar input{flex:1;min-width:0;padding:9px 10px;border:1px solid #94a3b8;border-radius:8px;font:13px system-ui;background:white;color:#111827}
     .browser-address-bar button{padding:9px 10px;border:1px solid #64748b;border-radius:8px;background:#374151;color:white;font-weight:800;cursor:pointer}
+
+    #communityGameHub[hidden]{display:none!important}
+    #communityGameHub{position:fixed;inset:0;z-index:2147483001;background:#0b1020;color:#f8fafc;display:flex;flex-direction:column;font:14px system-ui,sans-serif}
+    #communityGameHub .game-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px;background:#1e293b}
+    #communityGameHub .game-top strong{font-size:18px;margin-right:auto}
+    #communityGameHub button,#communityGameHub a{background:#334155;color:white;border:1px solid #64748b;border-radius:8px;padding:9px 12px;font-weight:700;text-decoration:none;cursor:pointer}
+    #communityGameHub .game-search{padding:12px 16px;background:#111827}
+    #communityGameHub input{width:100%;padding:12px;border-radius:10px;border:1px solid #64748b;font:15px system-ui}
+    #communityGameHub .game-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;padding:16px;overflow:auto;align-content:start}
+    #communityGameHub .game-card{text-align:left;min-height:90px;background:#1e293b;border:1px solid #475569;border-radius:12px;padding:16px;font-size:16px}
+    #communityGameHub .game-card small{display:block;font-size:11px;color:#cbd5e1;margin-top:8px}
+    #communityGameHub #gamePlayFrame{width:100%;flex:1;border:0;background:#fff;min-height:0}
+    #communityGameHub .game-note{padding:8px 16px;background:#111827;color:#cbd5e1;font-size:12px}
 </style>
 </head>
 <body>
@@ -678,6 +691,7 @@
     <header>
       <div><div style="display:flex;align-items:center;gap:8px"><h1>Community Chat</h1><button type="button" class="settings-btn" id="settingsBtn" aria-label="Chat settings" title="Chat settings" hidden>⚙️</button></div><p>General Chat · Messages and group calls</p></div>
       <div class="header-right">
+        <button type="button" id="gameHubToggle" class="fullscreen-toggle" title="Open Game Hub" aria-label="Open Game Hub" style="font-weight:800;text-decoration:none">🎮 Games</button>
         <button type="button" id="browserSidebarToggle" class="fullscreen-toggle browser-launch" aria-label="Open Community Browser sidebar" aria-controls="browserSidebar" aria-expanded="false" title="Open Community Browser sidebar">🌐 Browser</button>
         <button type="button" id="announcementsToggle" class="fullscreen-toggle" aria-label="Open announcements" aria-haspopup="dialog" title="What’s new">📢</button>
         <button type="button" id="friendsToggle" class="fullscreen-toggle" title="Show or hide Direct Messages" aria-controls="dmSidebar" aria-expanded="false">💬 DMs ☰</button>
@@ -4916,6 +4930,69 @@
         expand.setAttribute("aria-label",maximized?"Restore browser sidebar":"Expand browser to full screen");
       });
       document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!panel.hidden)setOpen(false);});
+    })();
+  </script>
+
+  <section id="communityGameHub" hidden role="dialog" aria-modal="true" aria-label="Community Game Hub">
+    <div class="game-top">
+      <strong>🎮 Community Game Hub</strong>
+      <button type="button" id="gameBack" hidden>← All games</button>
+      <a id="gameExternal" href="https://cbgamesdev.github.io/chilibowlflash/" target="_blank" rel="noopener noreferrer" hidden>↗ Open game</a>
+      <button type="button" id="gameClose">✕ Exit</button>
+    </div>
+    <div id="gameBrowse">
+      <div class="game-search"><input id="gameSearch" type="search" placeholder="Search games… (or type /game name in chat)" aria-label="Search games"></div>
+      <div id="gameGrid" class="game-grid"></div>
+    </div>
+    <iframe id="gamePlayFrame" title="Game player" hidden allow="fullscreen; gamepad" referrerpolicy="no-referrer"></iframe>
+    <div class="game-note">Games provided by CBGamesdev/chilibowlflash and their original creators. Some games may not allow embedding. Use Open game if needed.</div>
+  </section>
+  <script>
+    (() => {
+      const base="https://cbgamesdev.github.io/chilibowlflash/";
+      const games=[
+        ["2048","2048/index.html"],["Cookie Clicker","cookie/index.html"],["Google Dino","googdino/index.html"],
+        ["Google Snake","googsnake/index.html"],["Retro Bowl","retrobowl/index.html"],["Slope","slope/index.html"],
+        ["Run 3","run3/index.html"],["Minesweeper","minesweep/index.html"],["Blackjack","blackjack/index.html"],
+        ["Moto X3M","motox3m/index.html"],["Block Blast","blockblast/index.html"]
+      ];
+      const hub=document.getElementById("communityGameHub"),browse=document.getElementById("gameBrowse");
+      const search=document.getElementById("gameSearch"),grid=document.getElementById("gameGrid");
+      const frame=document.getElementById("gamePlayFrame"),back=document.getElementById("gameBack");
+      const external=document.getElementById("gameExternal"),close=document.getElementById("gameClose");
+      const launch=document.getElementById("gameHubToggle");
+      if(!hub||!launch)return;
+      function showList(query=""){
+        frame.hidden=true;frame.removeAttribute("src");browse.hidden=false;back.hidden=true;external.hidden=true;
+        search.value=query;grid.replaceChildren();
+        const found=games.filter(g=>g[0].toLowerCase().includes(query.toLowerCase().trim()));
+        for(const [name,path] of found){
+          const btn=document.createElement("button");btn.type="button";btn.className="game-card";
+          btn.textContent="🎮 "+name;const sub=document.createElement("small");sub.textContent="Play full screen";btn.appendChild(sub);
+          btn.addEventListener("click",()=>play(name,path));grid.appendChild(btn);
+        }
+        if(!found.length){const msg=document.createElement("p");msg.textContent="No matching games found.";grid.appendChild(msg);}
+      }
+      function play(name,path){
+        browse.hidden=true;frame.hidden=false;back.hidden=false;external.hidden=false;
+        const url=base+path;frame.src=url;frame.title=name+" game";external.href=url;
+      }
+      function open(query=""){hub.hidden=false;showList(query);search.focus();}
+      function shut(){hub.hidden=true;frame.removeAttribute("src");}
+      launch.addEventListener("click",()=>open());
+      close.addEventListener("click",shut);
+      back.addEventListener("click",()=>{showList();search.focus();});
+      search.addEventListener("input",()=>showList(search.value));
+      document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!hub.hidden)shut();});
+      const sendForm=document.getElementById("sendForm"),input=document.getElementById("message");
+      if(sendForm&&input){
+        sendForm.addEventListener("submit",e=>{
+          const value=input.value.trim();
+          if(!/^\/game(?:\s|$)/i.test(value))return;
+          e.preventDefault();e.stopImmediatePropagation();
+          input.value="";open(value.replace(/^\/game\s*/i,""));
+        },true);
+      }
     })();
   </script>
 </body>
