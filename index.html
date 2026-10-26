@@ -2028,6 +2028,24 @@
     };
     // Only changes pending the next announcement belong here.
     // Historical notes remain in the version-specific registry above.
+    // Game Hub and browser additions for the active 0.8 announcement draft.
+    // These are suggestions only; publishing remains an explicit admin action.
+    const GAME_HUB_CHANGELOG={
+      featured:"🎮 Community Game Hub and browser improvements!",
+      added:[
+        "🎮 Games button and searchable in-chat game library!",
+        "⌨️ /game and /game game_name commands to find games without posting a chat message!",
+        "🖥️ Full-screen game player with Back, Exit and Open game fallback!",
+        "🕹️ Games including 2048, Cookie Clicker, Slope, Retro Bowl, Run 3, Minesweeper and more!",
+        "🦍 Gorilla Tag and 🏃 Twerk Race 3D added to the game library!",
+        "🌐 Community Browser sidebar with expand, close, new-tab fallback and URL bar!",
+        "🔗 Gorilla Tag now points directly to boolonx.com/gtag/ instead of the GN Maths homepage!"
+      ],
+      fixed:[
+        "🐛 Game Hub supports full external game URLs as well as hosted game paths!"
+      ],
+      removed:[]
+    };
     const RECENT_SITE_CHANGES={
       featured:"🔔 Community Chat update: mentions and password recovery!",
       added:[
@@ -2053,11 +2071,12 @@
       const publishedText=new Set(publishedNotes.flatMap(parts=>[
         parts.featured,...parts.added,...parts.fixed,...parts.removed
       ]).filter(Boolean).map(text=>text.trim()));
+      const sources=[RECENT_SITE_CHANGES,GAME_HUB_CHANGELOG];
       const notes={
-        featured:publishedText.has(RECENT_SITE_CHANGES.featured)?"":RECENT_SITE_CHANGES.featured,
-        added:RECENT_SITE_CHANGES.added.filter(text=>!publishedText.has(text.trim())),
-        fixed:RECENT_SITE_CHANGES.fixed.filter(text=>!publishedText.has(text.trim())),
-        removed:RECENT_SITE_CHANGES.removed.filter(text=>!publishedText.has(text.trim()))
+        featured:sources.map(source=>source.featured).find(value=>value&&!publishedText.has(value.trim()))||"",
+        added:sources.flatMap(source=>source.added).filter(value=>!publishedText.has(value.trim())),
+        fixed:sources.flatMap(source=>source.fixed).filter(value=>!publishedText.has(value.trim())),
+        removed:sources.flatMap(source=>source.removed).filter(value=>!publishedText.has(value.trim()))
       };
       let count=0;
       const featured=$("announcementDraftFeatured");
