@@ -4954,7 +4954,8 @@
         ["2048","2048/index.html"],["Cookie Clicker","cookie/index.html"],["Google Dino","googdino/index.html"],
         ["Google Snake","googsnake/index.html"],["Retro Bowl","retrobowl/index.html"],["Slope","slope/index.html"],
         ["Run 3","run3/index.html"],["Minesweeper","minesweep/index.html"],["Blackjack","blackjack/index.html"],
-        ["Moto X3M","motox3m/index.html"],["Block Blast","blockblast/index.html"]
+        ["Moto X3M","motox3m/index.html"],["Block Blast","blockblast/index.html"],
+        ["Gorilla Tag","https://chicken.fshaw.net/?id=668"],["Twerk Race 3D","https://chicken.fshaw.net/?id=414"]
       ];
       const hub=document.getElementById("communityGameHub"),browse=document.getElementById("gameBrowse");
       const search=document.getElementById("gameSearch"),grid=document.getElementById("gameGrid");
@@ -4975,7 +4976,7 @@
       }
       function play(name,path){
         browse.hidden=true;frame.hidden=false;back.hidden=false;external.hidden=false;
-        const url=base+path;frame.src=url;frame.title=name+" game";external.href=url;
+        const url=/^https?:\/\//i.test(path)?path:base+path;frame.src=url;frame.title=name+" game";external.href=url;
       }
       function open(query=""){hub.hidden=false;showList(query);search.focus();}
       function shut(){hub.hidden=true;frame.removeAttribute("src");}
