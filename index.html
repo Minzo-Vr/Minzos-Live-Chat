@@ -2051,6 +2051,7 @@
       added:[
         "🌙 NEW! Do Not Disturb in notification settings silences mention, announcement and role alerts, remembers your choice and syncs across tabs in this browser!",
         "🔔 NEW! Type @username to mention someone, with username suggestions and highlighted messages for the recipient!",
+        "📣 NEW! @everyone pings all chat members currently viewing the room; @here pings members currently online, with notification settings and Do Not Disturb respected!",
         "🔔 Mention alerts follow notification preferences while the recipient has the room open; browser alerts require permission!",
         "🔑 NEW! Forgot password? on the email login sends a Firebase password reset link using the entered email address!",
         "✉️ Password recovery works without entering the old password, with an inbox and spam-folder reminder!",
@@ -3386,10 +3387,11 @@
       if (stopConnection) stopConnection();
       stopPresenceList = onValue(ref(db, "chatPresence"), snapshot => {
         const names = [];
-        snapshot.forEach(account => account.forEach(connection => {
+        onlineMentionUids=new Set();
+        snapshot.forEach(account => { if(account.hasChildren())onlineMentionUids.add(account.key); account.forEach(connection => {
           const name = connection.child("name").val();
           if (typeof name === "string" && name.trim()){names.push(name);mentionNames.add(name);}
-        }));
+        }); });
         names.sort((a,b) => a.localeCompare(b));
         presenceButton.textContent = `${names.length} online ▾`;
         presenceNames.replaceChildren();
@@ -3617,7 +3619,7 @@
       wrap.append(actions);
     }
     // Mentions use names visible in the current room and online list.
-    let mentionNames=new Set(),mentionListeningSince=Date.now();
+    let mentionNames=new Set(),onlineMentionUids=new Set(),mentionListeningSince=Date.now();
     const mentionPicker=document.createElement("div");
     mentionPicker.hidden=true;mentionPicker.className="mention-picker";
     mentionPicker.setAttribute("aria-label","Mention suggestions");sendForm.before(mentionPicker);
@@ -3626,6 +3628,11 @@
       const escaped=Array.from(name,ch=>"\\^$.*+?()[]{}|".includes(ch)?"\\"+ch:ch).join("");
       return new RegExp("(^|[^\\p{L}\\p{N}_@])@"+escaped+"(?=$|[^\\p{L}\\p{N}_])","iu").test(text);
     }
+    function isMentionedByMessage(data){
+      if(!user||!data||typeof data.text!=="string")return false;
+      if(containsMention(data.text,username)||containsMention(data.text,"everyone"))return true;
+      return onlineMentionUids.has(user.uid)&&containsMention(data.text,"here");
+    }
     function drawMentionPicker(){
       mentionPicker.replaceChildren();mentionPicker.hidden=true;
       if(!joined||messageInput.disabled)return;
@@ -3633,7 +3640,7 @@
       const match=messageInput.value.slice(0,cursor).match(/(?:^|\s)@([^@\n]{0,24})$/u);
       if(!match)return;
       const term=match[1],start=cursor-term.length-1;
-      const candidates=[...mentionNames].filter(name=>name.toLocaleLowerCase().startsWith(term.toLocaleLowerCase())&&!name.startsWith(INCOGNITO_PREFIX)).sort((a,b)=>a.localeCompare(b)).slice(0,8);
+      const candidates=["everyone","here",...[...mentionNames].filter(name=>!["everyone","here"].includes(name.toLocaleLowerCase()))].filter(name=>name.toLocaleLowerCase().startsWith(term.toLocaleLowerCase())&&!name.startsWith(INCOGNITO_PREFIX)).sort((a,b)=>["everyone","here"].indexOf(a)-["everyone","here"].indexOf(b)).slice(0,8);
       for(const name of candidates){
         const button=document.createElement("button");button.type="button";button.textContent="@"+name;
         button.addEventListener("click",()=>{
@@ -3665,13 +3672,14 @@
     function handleMentionMessage(data,key){
       if(!data||typeof data.text!=="string"||typeof data.name!=="string")return;
       if(typeof data.name==="string"&&!data.name.startsWith(INCOGNITO_PREFIX))mentionNames.add(data.name);
-      if(!joined||!user||data.uid===user.uid||!containsMention(data.text,username))return;
+      if(!joined||!user||data.uid===user.uid||!isMentionedByMessage(data))return;
       if(typeof data.createdAt!=="number"||data.createdAt<=mentionListeningSince)return;
       const notificationKey=roomMessagePath()+"/"+key;
       if(notifiedMentionIds.has(notificationKey))return;
       notifiedMentionIds.add(notificationKey);
       if(notifiedMentionIds.size>300)notifiedMentionIds.delete(notifiedMentionIds.values().next().value);
-      notifyChat("🔔 @"+username+" — you were mentioned",data.name+": "+data.text.slice(0,180));
+      const kind=containsMention(data.text,"everyone")?"@everyone":containsMention(data.text,"here")?"@here":"@"+username;
+      notifyChat("🔔 "+kind+" — you were pinged",data.name+": "+data.text.slice(0,180));
     }
 
     function addMessage(data, key) {
@@ -3712,7 +3720,7 @@
       meta.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openUserProfile(data.uid,data.name,incognitoMessage);}});
       const bubble = document.createElement("div");
       bubble.className = "bubble";
-      if(user&&containsMention(data.text,username)){bubble.classList.add("mentioned-message");wrap.setAttribute("aria-label","Message mentioning you");}
+      if(user&&isMentionedByMessage(data)){bubble.classList.add("mentioned-message");wrap.setAttribute("aria-label","Message mentioning you");}
       const imageUrl = imageFromMessage(data.text);
       const sticker = stickerFromMessage(data.text);
       const customEmoji = customEmojiFromMessage(data.text);
