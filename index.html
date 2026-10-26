@@ -3660,12 +3660,18 @@
       if(event.key==="Escape"){mentionPicker.hidden=true;messageInput.focus();}
     });
     document.addEventListener("click",event=>{if(event.target!==messageInput&&!mentionPicker.contains(event.target))mentionPicker.hidden=true;});
-    function handleMentionMessage(data){
+    // Only notify once per newly received mention; never replay old messages on room load.
+    const notifiedMentionIds=new Set();
+    function handleMentionMessage(data,key){
       if(!data||typeof data.text!=="string"||typeof data.name!=="string")return;
-      if(typeof data?.name==="string"&&!data.name.startsWith(INCOGNITO_PREFIX))mentionNames.add(data.name);
-      if(!joined||!user||data?.uid===user.uid||!containsMention(data?.text,username))return;
+      if(typeof data.name==="string"&&!data.name.startsWith(INCOGNITO_PREFIX))mentionNames.add(data.name);
+      if(!joined||!user||data.uid===user.uid||!containsMention(data.text,username))return;
       if(typeof data.createdAt!=="number"||data.createdAt<=mentionListeningSince)return;
-      notifyChat("🔔 You were mentioned",data.name+": "+data.text.slice(0,180));
+      const notificationKey=roomMessagePath()+"/"+key;
+      if(notifiedMentionIds.has(notificationKey))return;
+      notifiedMentionIds.add(notificationKey);
+      if(notifiedMentionIds.size>300)notifiedMentionIds.delete(notifiedMentionIds.values().next().value);
+      notifyChat("🔔 @"+username+" — you were mentioned",data.name+": "+data.text.slice(0,180));
     }
 
     function addMessage(data, key) {
@@ -3856,7 +3862,7 @@
       filterChatMessages();
       mentionListeningSince=Date.now();mentionNames=new Set();mentionPicker.hidden=true;
       const recentMessages = query(ref(db, roomMessagePath()), limitToLast(80));
-      stopMessages = onChildAdded(recentMessages, snapshot => {handleMentionMessage(snapshot.val());addMessage(snapshot.val(), snapshot.key);}, err => {
+      stopMessages = onChildAdded(recentMessages, snapshot => {handleMentionMessage(snapshot.val(), snapshot.key);addMessage(snapshot.val(), snapshot.key);}, err => {
         showError("Could not load chat messages. Check your Firebase database rules.");
         status.textContent = "Connection error";
         console.error(err);
