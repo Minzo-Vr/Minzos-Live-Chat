@@ -641,6 +641,20 @@
     #auditCollapsible summary{cursor:pointer;font-weight:700}
 
     .friend-code-box{padding:14px;border-radius:12px;background:rgba(127,127,127,.09);border:1px solid rgba(127,127,127,.2);margin:12px 0}.friend-code-box #myFriendCode{font-size:28px;font-weight:800;letter-spacing:5px;margin:10px 0}.friend-code-row{display:flex;gap:8px;margin-top:8px}.friend-code-row input{min-width:0;flex:1;font-size:20px;letter-spacing:4px}
+
+    /* Independent right-side browser; existing chat components remain unchanged. */
+    .browser-launch{font-weight:800!important;text-decoration:none!important}
+    #browserSidebar[hidden]{display:none!important}
+    #browserSidebar{position:fixed;right:0;top:0;bottom:0;width:min(50vw,900px);min-width:320px;z-index:10000;display:flex;flex-direction:column;background:#111827;color:white;border-left:2px solid #64748b;box-shadow:-12px 0 30px #0003}
+    .browser-side-head{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#1f2937;flex-wrap:wrap}
+    .browser-side-head strong{margin-right:auto;font-size:14px}
+    .browser-side-head button,.browser-side-head a{border:1px solid #64748b;border-radius:8px;background:#374151;color:white;padding:7px 9px;font:700 12px system-ui;text-decoration:none;cursor:pointer}
+    #browserSidebar iframe{flex:1;width:100%;min-height:0;border:0;background:white}
+    .browser-side-foot{padding:6px 12px;background:#1f2937;font-size:11px;color:#d1d5db}
+    body.browser-side-open .chat{margin-left:0;margin-right:max(320px,min(50vw,900px));max-width:calc(100% - min(50vw,900px));}
+    #browserSidebar.browser-maximized{inset:0;width:100vw;min-width:0;z-index:2147483000}
+    body.browser-side-open:has(#browserSidebar.browser-maximized) .chat{margin:0 auto;max-width:760px}
+    @media(max-width:850px){#browserSidebar{width:min(92vw,620px);min-width:0}body.browser-side-open .chat{margin:0 auto;max-width:760px}}
 </style>
 </head>
 <body>
@@ -660,7 +674,7 @@
     <header>
       <div><div style="display:flex;align-items:center;gap:8px"><h1>Community Chat</h1><button type="button" class="settings-btn" id="settingsBtn" aria-label="Chat settings" title="Chat settings" hidden>⚙️</button></div><p>General Chat · Messages and group calls</p></div>
       <div class="header-right">
-        <a class="fullscreen-toggle" href="https://community-scramjet-browser.onrender.com" target="_blank" rel="noopener noreferrer" aria-label="Open Community Browser in a new tab" title="Open Community Browser">🌐 Browser</a>
+        <button type="button" id="browserSidebarToggle" class="fullscreen-toggle browser-launch" aria-label="Open Community Browser sidebar" aria-controls="browserSidebar" aria-expanded="false" title="Open Community Browser sidebar">🌐 Browser</button>
         <button type="button" id="announcementsToggle" class="fullscreen-toggle" aria-label="Open announcements" aria-haspopup="dialog" title="What’s new">📢</button>
         <button type="button" id="friendsToggle" class="fullscreen-toggle" title="Show or hide Direct Messages" aria-controls="dmSidebar" aria-expanded="false">💬 DMs ☰</button>
         <button type="button" id="consoleToggle" class="fullscreen-toggle" aria-label="Open command console" title="Command console">⌨️ Console</button>
@@ -4835,6 +4849,43 @@
       musicUpdateUI();
     });
     start();
+  </script>
+
+  <aside id="browserSidebar" hidden aria-label="Community Browser sidebar">
+    <div class="browser-side-head">
+      <strong>🌐 Community Browser</strong>
+      <button type="button" id="browserSidebarMax" aria-label="Expand browser to full screen">⛶ Expand</button>
+      <a href="https://community-scramjet-browser.onrender.com" target="_blank" rel="noopener noreferrer" title="Open browser in a new tab">↗ New tab</a>
+      <button type="button" id="browserSidebarClose" aria-label="Close browser sidebar">✕ Close</button>
+    </div>
+    <iframe id="browserSidebarFrame" title="Scramjet Community Browser" loading="lazy" referrerpolicy="no-referrer" allow="fullscreen"></iframe>
+    <div class="browser-side-foot">If the browser cannot load here, choose “New tab”.</div>
+  </aside>
+  <script>
+    (() => {
+      const panel=document.getElementById("browserSidebar");
+      const launch=document.getElementById("browserSidebarToggle");
+      const frame=document.getElementById("browserSidebarFrame");
+      const expand=document.getElementById("browserSidebarMax");
+      const close=document.getElementById("browserSidebarClose");
+      if(!panel||!launch||!frame||!expand||!close)return;
+      const url="https://community-scramjet-browser.onrender.com";
+      function setOpen(open){
+        panel.hidden=!open;
+        document.body.classList.toggle("browser-side-open",open);
+        launch.setAttribute("aria-expanded",String(open));
+        if(open&&!frame.src)frame.src=url;
+        if(!open){panel.classList.remove("browser-maximized");expand.textContent="⛶ Expand";expand.setAttribute("aria-label","Expand browser to full screen");}
+      }
+      launch.addEventListener("click",()=>setOpen(panel.hidden));
+      close.addEventListener("click",()=>setOpen(false));
+      expand.addEventListener("click",()=>{
+        const maximized=panel.classList.toggle("browser-maximized");
+        expand.textContent=maximized?"⤢ Restore":"⛶ Expand";
+        expand.setAttribute("aria-label",maximized?"Restore browser sidebar":"Expand browser to full screen");
+      });
+      document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!panel.hidden)setOpen(false);});
+    })();
   </script>
 </body>
 </html>
