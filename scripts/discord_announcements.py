@@ -28,7 +28,14 @@ def authenticate():
         with urllib.request.urlopen(request, timeout=25) as response:
             return json.load(response)["idToken"]
     except urllib.error.HTTPError as exc:
-        raise RuntimeError("Firebase bot sign-in failed (HTTP " + str(exc.code) + "). Verify credentials and Email/Password provider.") from None
+        try:
+            error_code = json.loads(exc.read().decode("utf-8")).get("error", {}).get("message", "UNKNOWN_ERROR")
+        except (ValueError, UnicodeDecodeError, AttributeError):
+            error_code = "UNKNOWN_ERROR"
+        safe_codes = {"EMAIL_NOT_FOUND", "INVALID_PASSWORD", "INVALID_LOGIN_CREDENTIALS", "USER_DISABLED", "OPERATION_NOT_ALLOWED", "API_KEY_INVALID", "INVALID_API_KEY", "TOO_MANY_ATTEMPTS_TRY_LATER", "PROJECT_NOT_FOUND", "PASSWORD_LOGIN_DISABLED", "EMAIL_EXISTS", "INVALID_EMAIL"}
+        if error_code not in safe_codes:
+            error_code = "OTHER_FIREBASE_AUTH_ERROR"
+        raise RuntimeError("Firebase bot sign-in failed (HTTP " + str(exc.code) + ", reason: " + error_code + "). Check the bot account and GitHub secrets.") from None
 
 
 def read_json(url, token):
