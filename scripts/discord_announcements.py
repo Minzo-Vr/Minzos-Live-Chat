@@ -39,7 +39,11 @@ def authenticate():
 
 
 def read_json(url, token):
-    request = urllib.request.Request(url, headers={"User-Agent": "CommunityChat-Announcements/1.0", "Authorization": "Bearer " + token})
+    from urllib.parse import urlencode, urlsplit, urlunsplit
+    parts = urlsplit(url)
+    query = parts.query + ("&" if parts.query else "") + urlencode({"auth": token})
+    authenticated_url = urlunsplit((parts.scheme, parts.netloc, parts.path, query, parts.fragment))
+    request = urllib.request.Request(authenticated_url, headers={"User-Agent": "CommunityChat-Announcements/1.0"})
     with urllib.request.urlopen(request, timeout=25) as response:
         return json.load(response)
 
