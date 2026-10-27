@@ -1,0 +1,37 @@
+name: Discord official announcements
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: discord-official-announcements
+  cancel-in-progress: false
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve previously posted announcement IDs
+        id: sent
+        uses: actions/cache/restore@v4
+        with:
+          path: .discord-announcements-sent.json
+          key: discord-announcements-state-${{ github.run_id }}
+          restore-keys: |
+            discord-announcements-state-
+      - name: Check published releases and post new announcements
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_ANNOUNCEMENTS_WEBHOOK }}
+          DATABASE_URL: https://website-chat-80038-default-rtdb.firebaseio.com/chatAnnouncementPublished.json
+        run: python3 scripts/discord_announcements.py
+      - name: Save announcement IDs
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: .discord-announcements-sent.json
+          key: discord-announcements-state-${{ github.run_id }}
