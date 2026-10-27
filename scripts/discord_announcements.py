@@ -66,12 +66,17 @@ def main():
         saved = json.loads(STATE.read_text(encoding="utf-8"))
         if isinstance(saved, list):
             seen = set(str(value) for value in saved)
+    print("Published release records:", len(releases))
+    print("Previously sent release IDs:", len(seen))
     candidates = []
+    skipped_old = 0
+    skipped_seen = 0
     for key, release in releases.items():
         if not isinstance(release, dict):
             continue
         published = release.get("publishedAt")
         if not isinstance(published, (int, float)) or not (0 < NOW - published < FRESH_WINDOW_MS):
+            skipped_old += 1
             continue
         features = release.get("features")
         if not isinstance(features, list):
@@ -79,6 +84,11 @@ def main():
         unique = str(key) + ":" + str(int(published))
         if unique not in seen:
             candidates.append((published, unique, release))
+        else:
+            skipped_seen += 1
+    print("Skipped outside 48-hour window:", skipped_old)
+    print("Skipped already sent:", skipped_seen)
+    print("New announcements eligible for Discord:", len(candidates))
     candidates.sort()
     for _, unique, release in candidates:
         version = str(release.get("version", "Unknown"))[:60]
