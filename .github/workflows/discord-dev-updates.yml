@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: Post commit to Discord
         env:
-          WEBHOOK: ${{ secrets.DISCORD_DEV_WEBHOOK }}
+          WEBHOOK: ${{ secrets.https://discord.com/api/webhooks/1564532418575212595/3deuKV0HqVIH05qEgtt-jkLrl6LIeX0J9Ao4dIch6pFrT1CRvFHi3DbqrQ-BqND0tIZr }}
           REPOSITORY: ${{ github.repository }}
           SHA: ${{ github.sha }}
           ACTOR: ${{ github.actor }}
