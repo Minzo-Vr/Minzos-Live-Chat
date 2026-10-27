@@ -1,0 +1,36 @@
+name: Discord development updates
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post commit to Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_DEV_WEBHOOK }}
+          REPOSITORY: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+          EVENT: ${{ github.event_name }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "DISCORD_DEV_WEBHOOK not configured; skipping."
+            exit 0
+          fi
+          python3 - <<'PY'
+          import os,json,urllib.request
+          repo=os.environ["REPOSITORY"]
+          sha=os.environ["SHA"]
+          msg=os.environ.get("COMMIT_MESSAGE") or "Manual workflow run"
+          msg=msg.splitlines()[0][:250]
+          payload={"username":"Community Chat Dev Updates","allowed_mentions":{"parse":[]},"embeds":[{"title":"🛠️ Community Chat — GitHub update","description":msg,"url":f"https://github.com/{repo}/commit/{sha}","color":3447003,"fields":[{"name":"Author","value":os.environ["ACTOR"],"inline":True},{"name":"Commit","value":sha[:7],"inline":True}]}]}
+          req=urllib.request.Request(os.environ["WEBHOOK"],data=json.dumps(payload).encode(),headers={"Content-Type":"application/json","User-Agent":"CommunityChat-GitHubActions"},method="POST")
+          with urllib.request.urlopen(req,timeout=20) as res: print("Discord response",res.status)
+          PY
