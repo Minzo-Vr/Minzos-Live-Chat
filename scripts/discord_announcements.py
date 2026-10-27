@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+"""Post newly published Community Chat releases to Discord, without exposing secrets."""
+import json
+import os
+import pathlib
+import time
+import urllib.error
+import urllib.request
+
+STATE = pathlib.Path(".discord-announcements-sent.json")
+WEBHOOK = os.getenv("WEBHOOK", "")
+URL = os.getenv("DATABASE_URL", "")
+NOW = int(time.time() * 1000)
+# On first setup, avoid blasting old releases into Discord.
+FRESH_WINDOW_MS = 48 * 60 * 60 * 1000
+
+
+def read_json(url):
+    request = urllib.request.Request(url, headers={"User-Agent": "CommunityChat-Announcements/1.0"})
+    with urllib.request.urlopen(request, timeout=25) as response:
+        return json.load(response)
+
+
+def send(payload):
+    request = urllib.request.Request(
+        WEBHOOK,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json", "User-Agent": "CommunityChat-Announcements/1.0"},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=25) as response:
+        if response.status not in (200, 204):
+            raise RuntimeError(f"Discord returned {response.status}")
+
+
+def main():
+    if not WEBHOOK:
+        raise RuntimeError("Set DISCORD_ANNOUNCEMENTS_WEBHOOK in GitHub Actions repository secrets first.")
+    try:
+        releases = read_json(URL)
+    except urllib.error.HTTPError as exc:
+        if exc.code == 401:
+            raise RuntimeError("Firebase rules block reading published announcements. A server-side reader is required.") from exc
+        raise
+    if not isinstance(releases, dict):
+        print("No published announcements found.")
+        return
+    seen = set()
+    if STATE.exists():
+        saved = json.loads(STATE.read_text(encoding="utf-8"))
+        if isinstance(saved, list):
+            seen = set(str(value) for value in saved)
+    candidates = []
+    for key, release in releases.items():
+        if not isinstance(release, dict):
+            continue
+        published = release.get("publishedAt")
+        if not isinstance(published, (int, float)) or not (0 < NOW - published < FRESH_WINDOW_MS):
+            continue
+        features = release.get("features")
+        if not isinstance(features, list):
+            continue
+        unique = str(key) + ":" + str(int(published))
+        if unique not in seen:
+            candidates.append((published, unique, release))
+    candidates.sort()
+    for _, unique, release in candidates:
+        version = str(release.get("version", "Unknown"))[:60]
+        features = [str(x) for x in release["features"] if isinstance(x, str)]
+        description = "\n".join(features)[:3900] or "New update published."
+        payload = {
+            "username": "Community Chat Announcements",
+            "allowed_mentions": {"parse": []},
+            "embeds": [{
+                "title": "📢 Community Chat — Update " + version,
+                "description": description,
+                "color": 5793266,
+                "footer": {"text": "Official Community Chat announcement"},
+            }],
+        }
+        send(payload)
+        seen.add(unique)
+        STATE.write_text(json.dumps(sorted(seen)), encoding="utf-8")
+        print("Posted version", version)
+    STATE.write_text(json.dumps(sorted(seen)), encoding="utf-8")
+    print("Finished; new announcements:", len(candidates))
+
+
+if __name__ == "__main__":
+    main()
