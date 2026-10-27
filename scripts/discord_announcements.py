@@ -10,13 +10,29 @@ import urllib.request
 STATE = pathlib.Path(".discord-announcements-sent.json")
 WEBHOOK = os.getenv("WEBHOOK", "")
 URL = os.getenv("DATABASE_URL", "")
+API_KEY = os.getenv("FIREBASE_WEB_API_KEY", "")
+BOT_EMAIL = os.getenv("FIREBASE_BOT_EMAIL", "")
+BOT_PASSWORD = os.getenv("FIREBASE_BOT_PASSWORD", "")
 NOW = int(time.time() * 1000)
 # On first setup, avoid blasting old releases into Discord.
 FRESH_WINDOW_MS = 48 * 60 * 60 * 1000
 
 
-def read_json(url):
-    request = urllib.request.Request(url, headers={"User-Agent": "CommunityChat-Announcements/1.0"})
+def authenticate():
+    if not all((API_KEY, BOT_EMAIL, BOT_PASSWORD)):
+        raise RuntimeError("Missing Firebase bot email, password, or web API key.")
+    endpoint = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + API_KEY
+    payload = json.dumps({"email": BOT_EMAIL, "password": BOT_PASSWORD, "returnSecureToken": True}).encode("utf-8")
+    request = urllib.request.Request(endpoint, data=payload, headers={"Content-Type": "application/json"}, method="POST")
+    try:
+        with urllib.request.urlopen(request, timeout=25) as response:
+            return json.load(response)["idToken"]
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError("Firebase bot sign-in failed (HTTP " + str(exc.code) + "). Verify credentials and Email/Password provider.") from None
+
+
+def read_json(url, token):
+    request = urllib.request.Request(url, headers={"User-Agent": "CommunityChat-Announcements/1.0", "Authorization": "Bearer " + token})
     with urllib.request.urlopen(request, timeout=25) as response:
         return json.load(response)
 
@@ -37,10 +53,10 @@ def main():
     if not WEBHOOK:
         raise RuntimeError("Set DISCORD_ANNOUNCEMENTS_WEBHOOK in GitHub Actions repository secrets first.")
     try:
-        releases = read_json(URL)
+        releases = read_json(URL, authenticate())
     except urllib.error.HTTPError as exc:
         if exc.code == 401:
-            raise RuntimeError("Firebase rules block reading published announcements. A server-side reader is required.") from exc
+            raise RuntimeError("The authenticated bot cannot read published announcements. Allow its Firebase UID read-only access to chatAnnouncementPublished.") from exc
         raise
     if not isinstance(releases, dict):
         print("No published announcements found.")
