@@ -27,6 +27,9 @@ jobs:
       - name: Check published releases and post new announcements
         env:
           WEBHOOK: ${{ secrets.DISCORD_ANNOUNCEMENTS_WEBHOOK }}
+          FIREBASE_BOT_EMAIL: ${{ secrets.FIREBASE_BOT_EMAIL }}
+          FIREBASE_BOT_PASSWORD: ${{ secrets.FIREBASE_BOT_PASSWORD }}
+          FIREBASE_WEB_API_KEY: AIzaSyB4wOgGUTR-fgweHtsJiK9XyykU_PND0GE
           DATABASE_URL: https://website-chat-80038-default-rtdb.firebaseio.com/chatAnnouncementPublished.json
         run: python3 scripts/discord_announcements.py
       - name: Save announcement IDs
