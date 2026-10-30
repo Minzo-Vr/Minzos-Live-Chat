@@ -5004,67 +5004,126 @@
     start();
   </script>
 
+  <style>
+    #browserTabs{display:flex;align-items:center;gap:5px;padding:7px;background:#101827;overflow-x:auto;flex-shrink:0;scrollbar-width:thin}
+    #browserTabs .browser-tab{display:flex;align-items:center;gap:5px;max-width:180px;min-width:95px;padding:5px 7px;border:1px solid #475569;border-radius:9px 9px 3px 3px;background:#253047;color:#e5e7eb;font:12px system-ui;cursor:pointer;flex-shrink:0}
+    #browserTabs .browser-tab[aria-selected="true"]{background:#5865f2;color:white;border-color:#9ca3ff}
+    #browserTabs .browser-tab-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+    #browserTabs .browser-tab-close{background:transparent;color:inherit;border:0;padding:0 3px;cursor:pointer;font-size:15px}
+    #browserAddTab{border:1px solid #475569;background:#374151;color:white;border-radius:8px;padding:5px 10px;cursor:pointer;flex-shrink:0}
+    #browserSidebar .browser-tab-frame{width:100%;height:100%;border:0;flex:1;min-height:0;background:white}
+    #browserSidebar .browser-tab-frame[hidden]{display:none!important}
+    #browserTabFrames{display:flex;flex:1;min-height:0;flex-direction:column}
+  </style>
   <aside id="browserSidebar" hidden aria-label="Community Browser sidebar">
     <div class="browser-side-head">
       <strong>🌐 Community Browser</strong>
       <button type="button" id="browserSidebarMax" aria-label="Expand browser to full screen">⛶ Expand</button>
-      <a href="https://community-scramjet-browser.onrender.com" target="_blank" rel="noopener noreferrer" title="Open browser in a new tab">↗ New tab</a>
+      <a href="https://community-scramjet-browser.onrender.com" target="_blank" rel="noopener noreferrer" title="Open Scramjet in a separate window">↗ Scramjet</a>
       <button type="button" id="browserSidebarClose" aria-label="Close browser sidebar">✕ Close</button>
     </div>
+    <div id="browserTabs" role="tablist" aria-label="Browser tabs"><button type="button" id="browserAddTab" title="New tab">＋ New Tab</button></div>
     <form id="browserAddressForm" class="browser-address-bar" autocomplete="off">
       <label for="browserAddressInput">URL</label>
-      <input id="browserAddressInput" type="url" inputmode="url" spellcheck="false" aria-label="Browser URL" value="https://community-scramjet-browser.onrender.com" placeholder="https://example.com">
+      <input id="browserAddressInput" type="text" inputmode="url" spellcheck="false" aria-label="Browser URL or search" placeholder="Search or enter a website">
       <button type="submit" aria-label="Go to URL">Go →</button>
       <button type="button" id="browserAddressHome" aria-label="Browser home">⌂</button>
     </form>
-    <iframe id="browserSidebarFrame" title="Scramjet Community Browser" loading="lazy" referrerpolicy="no-referrer" allow="fullscreen"></iframe>
-    <div class="browser-side-foot">Some sites block embedded viewing; external URLs entered here open directly, not through Scramjet. For proxy browsing, use the Scramjet page.</div>
+    <div id="browserTabFrames"></div>
+    <div class="browser-side-foot">Each tab opens Scramjet by default. Search inside Scramjet for proxy browsing. Availability depends on your network; some sites block embedding.</div>
   </aside>
   <script>
     (() => {
       const panel=document.getElementById("browserSidebar");
       const launch=document.getElementById("browserSidebarToggle");
-      const frame=document.getElementById("browserSidebarFrame");
       const expand=document.getElementById("browserSidebarMax");
       const close=document.getElementById("browserSidebarClose");
-      if(!panel||!launch||!frame||!expand||!close)return;
-      const url="https://community-scramjet-browser.onrender.com";
+      const tabsBar=document.getElementById("browserTabs");
+      const frames=document.getElementById("browserTabFrames");
+      const add=document.getElementById("browserAddTab");
       const addressForm=document.getElementById("browserAddressForm");
       const addressInput=document.getElementById("browserAddressInput");
       const homeButton=document.getElementById("browserAddressHome");
+      if(!panel||!launch||!expand||!close||!tabsBar||!frames||!add)return;
+      const home="https://community-scramjet-browser.onrender.com/";
+      let tabs=[],active=null,nextId=0;
+      function render(){
+        tabsBar.querySelectorAll(".browser-tab").forEach(el=>el.remove());
+        tabs.forEach(tab=>{
+          const button=document.createElement("button");
+          button.type="button";button.className="browser-tab";button.setAttribute("role","tab");button.setAttribute("aria-selected",String(active===tab.id));
+          const title=document.createElement("span");title.className="browser-tab-title";title.textContent=tab.title;
+          const x=document.createElement("button");x.type="button";x.className="browser-tab-close";x.textContent="×";x.title="Close tab";
+          x.addEventListener("click",event=>{event.stopPropagation();removeTab(tab.id)});
+          button.append(title,x);button.addEventListener("click",()=>selectTab(tab.id));
+          tabsBar.insertBefore(button,add);
+          tab.frame.hidden=tab.id!==active;
+        });
+        const current=tabs.find(t=>t.id===active);
+        addressInput.value=current?.url||home;
+      }
+      function selectTab(id){active=id;render()}
+      function newTab(url=home,title="Scramjet"){
+        const frame=document.createElement("iframe");
+        frame.className="browser-tab-frame";frame.title=title;frame.loading="lazy";frame.referrerPolicy="no-referrer";frame.allow="fullscreen";
+        frame.src=url;frames.appendChild(frame);
+        const tab={id:++nextId,title,url,frame};tabs.push(tab);selectTab(tab.id);return tab;
+      }
+      function removeTab(id){
+        const index=tabs.findIndex(t=>t.id===id);if(index<0)return;
+        const [tab]=tabs.splice(index,1);tab.frame.remove();
+        if(active===id)active=tabs[Math.min(index,tabs.length-1)]?.id||null;
+        if(!tabs.length)newTab();else render();
+      }
       function navigate(raw){
+        const tab=tabs.find(t=>t.id===active);if(!tab)return;
+        const value=raw.trim();if(!value)return;
         let target;
         try{
-          target=new URL(raw.trim());
-          if(!["https:","http:"].includes(target.protocol))throw new Error("Invalid scheme");
-        }catch(e){
-          addressInput.setCustomValidity("Enter a complete http:// or https:// URL.");
-          addressInput.reportValidity();
+          target=new URL(value.includes("://")?value:"https://"+value);
+          if(!["http:","https:"].includes(target.protocol))throw Error("Invalid scheme");
+        }catch{
+          // Search terms are handled inside Scramjet, not sent to a third-party search engine.
+          tab.frame.src=home;tab.url=home;tab.title="Scramjet Search";
+          render();addressInput.value=value;
+          document.getElementById("browserSearchHint").hidden=false;
           return;
         }
-        addressInput.setCustomValidity("");
-        addressInput.value=target.href;
-        frame.src=target.href;
-        setOpen(true);
+        // The embedded Scramjet page handles its own proxied navigation.
+        // Do not pretend direct iframe URLs are Scramjet-proxied.
+        if(target.origin!==new URL(home).origin){
+          tab.frame.src=home;tab.url=home;tab.title="Scramjet";
+          render();
+          document.getElementById("browserSearchHint").hidden=false;
+          addressInput.value=target.href;
+          return;
+        }
+        tab.frame.src=target.href;tab.url=target.href;tab.title="Scramjet";render();
       }
-      addressInput.addEventListener("input",()=>addressInput.setCustomValidity(""));
-      addressForm.addEventListener("submit",event=>{event.preventDefault();navigate(addressInput.value);});
-      homeButton.addEventListener("click",()=>navigate(url));
+      const hint=document.createElement("div");hint.id="browserSearchHint";hint.hidden=true;hint.textContent="Enter this address or search inside the Scramjet page below. The parent page cannot control Scramjet's cross-origin search field.";hint.style.cssText="padding:7px 12px;background:#293854;color:#fff;font-size:12px";
+      addressForm.insertAdjacentElement("afterend",hint);
+      addressInput.addEventListener("input",()=>{hint.hidden=true});
+      addressForm.addEventListener("submit",event=>{event.preventDefault();navigate(addressInput.value)});
+      homeButton.addEventListener("click",()=>{hint.hidden=true;navigate(home)});
+      add.addEventListener("click",()=>{hint.hidden=true;newTab()});
       function setOpen(open){
-        panel.hidden=!open;
-        document.body.classList.toggle("browser-side-open",open);
+        panel.hidden=!open;document.body.classList.toggle("browser-side-open",open);
         launch.setAttribute("aria-expanded",String(open));
-        if(open&&!frame.src)frame.src=url;
-        if(!open){panel.classList.remove("browser-maximized");expand.textContent="⛶ Expand";expand.setAttribute("aria-label","Expand browser to full screen");}
+        if(open&&!tabs.length)newTab();
+        if(!open){panel.classList.remove("browser-maximized");expand.textContent="⛶ Expand";}
       }
       launch.addEventListener("click",()=>setOpen(panel.hidden));
       close.addEventListener("click",()=>setOpen(false));
       expand.addEventListener("click",()=>{
         const maximized=panel.classList.toggle("browser-maximized");
         expand.textContent=maximized?"⤢ Restore":"⛶ Expand";
-        expand.setAttribute("aria-label",maximized?"Restore browser sidebar":"Expand browser to full screen");
       });
-      document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!panel.hidden)setOpen(false);});
+      document.addEventListener("keydown",event=>{
+        if(panel.hidden)return;
+        if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="t"){event.preventDefault();newTab()}
+        if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="w"){event.preventDefault();removeTab(active)}
+        if(event.key==="Escape")setOpen(false);
+      });
     })();
   </script>
 
