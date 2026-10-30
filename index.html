@@ -977,6 +977,7 @@
       <p>Sign in with Google or use a guest account when the Admin enables anonymous sign-in. Both have a Firebase UID.</p>
       <div class="auth-buttons">
         <button type="button" id="googleSignIn">Continue with Google</button>
+        <button type="button" id="discordSignIn" style="background:#5865f2;color:#fff;font-weight:700">🎮 Continue with Discord</button>
         <button type="button" id="anonymousSignIn" disabled title="Anonymous accounts are disabled by the Admin">🕵️ Continue anonymously</button>
       </div>
       <details class="email-auth-details">
@@ -998,7 +999,7 @@
       <p id="authFeedback" role="status">Not signed in.</p>
       <p>Already an admin? Use the Admin login at the bottom.</p>
     </section>
-    <div id="accountBar" class="signed-account" hidden><span id="accountLabel">Signed in</span><button type="button" id="googleSignOut">Sign out</button></div>
+    <div id="accountBar" class="signed-account" hidden><span id="accountLabel">Signed in</span><button type="button" id="discordLinkAccount" title="Link your Discord account to this Firebase account">🔗 Link Discord</button><button type="button" id="googleSignOut">Sign out</button></div>
     <div id="chatProtected" hidden>
     <div id="xpStatus" class="xp-status" hidden>⭐ Level <strong id="xpLevel">1</strong> · <span id="xpPoints">0</span> XP <button type="button" id="shopOpen" title="Open shop">🛍️ Shop</button></div>
     <div id="shopOverlay" class="settings-overlay" hidden>
@@ -1213,7 +1214,7 @@
     */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, EmailAuthProvider, linkWithCredential, linkWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, EmailAuthProvider, linkWithCredential, linkWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
     import {
       getDatabase, ref, push, query, limitToLast, limitToFirst, orderByKey, orderByChild, equalTo, get, update, onChildAdded, onChildChanged, onChildRemoved, onValue, set, remove, serverTimestamp, runTransaction, onDisconnect
     } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
@@ -4041,6 +4042,60 @@
             :"Deletion failed or was interrupted: "+(err.message||err.code||"unknown error")+". Contact the site admin before retrying.";
       }finally{button.disabled=false;}
     });
+
+    // Discord OAuth popup: the backend validates Firebase ID tokens for linking.
+    // Never put Firebase ID tokens, Discord tokens, or service account credentials in URLs.
+    const DISCORD_AUTH_WORKER="https://community-chat-discord-bot.kobefalzon8.workers.dev";
+    async function discordOAuth(mode){
+      const button=$(mode==="link"?"discordLinkAccount":"discordSignIn");
+      const feedback=$("authFeedback");
+      if(mode==="link"&&!auth?.currentUser)throw Error("Sign in to your existing account first.");
+      const nonce=Array.from(crypto.getRandomValues(new Uint8Array(24)),x=>x.toString(16).padStart(2,"0")).join("");
+      const popup=window.open("about:blank","communityDiscordOAuth","width=540,height=740");
+      if(!popup)throw Error("Allow popups for Community Chat and try again.");
+      button.disabled=true;
+      let onMessage,timeout;
+      try{
+        const headers={"content-type":"application/json"};
+        if(mode==="link")headers.authorization="Bearer "+await auth.currentUser.getIdToken();
+        const response=await fetch(DISCORD_AUTH_WORKER+"/auth/discord/start",{method:"POST",headers,body:JSON.stringify({nonce,mode})});
+        const result=await response.json();
+        if(!response.ok||!result.url)throw Error(result.error||"Could not start Discord login.");
+        const outcome=new Promise((resolve,reject)=>{
+          onMessage=event=>{
+            if(event.origin!==new URL(DISCORD_AUTH_WORKER).origin||event.source!==popup)return;
+            const data=event.data;
+            if(data?.source!=="community-chat-discord-oauth"||data.nonce!==nonce)return;
+            if(data.error)reject(new Error(data.error));
+            else if(mode==="link"&&data.linked)resolve(data);
+            else if(mode==="login"&&data.token)resolve(data);
+            else reject(new Error("Unexpected Discord login response."));
+          };
+          window.addEventListener("message",onMessage);
+          timeout=setTimeout(()=>reject(new Error("Discord authorization timed out. Try again.")),300000);
+        });
+        popup.location.href=result.url;
+        const data=await outcome;
+        if(mode==="login"){
+          await signInWithCustomToken(auth,data.token);
+          feedback.textContent="Signed in with Discord!";
+        }else{
+          feedback.textContent="Discord linked successfully to your existing account!";
+          alert("Discord linked! Your existing Community Chat profile is preserved.");
+        }
+      }catch(err){
+        feedback.textContent="Discord: "+(err.message||"Authorization failed");
+        throw err;
+      }finally{
+        if(timeout)clearTimeout(timeout);
+        if(onMessage)window.removeEventListener("message",onMessage);
+        if(popup&&!popup.closed)popup.close();
+        button.disabled=false;
+      }
+    }
+    $("discordSignIn").addEventListener("click",()=>discordOAuth("login").catch(console.error));
+    $("discordLinkAccount").addEventListener("click",()=>discordOAuth("link").catch(console.error));
+
     $("googleSignIn").addEventListener("click",async()=>{
       const btn=$("googleSignIn");btn.disabled=true;
       $("authFeedback").textContent="Opening Google sign-in…";
