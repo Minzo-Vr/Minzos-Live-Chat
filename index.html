@@ -5067,7 +5067,7 @@
         const frame=document.createElement("iframe");
         frame.className="browser-tab-frame";frame.title=title;frame.loading="lazy";frame.referrerPolicy="no-referrer";frame.allow="fullscreen";
         frame.src=url;frames.appendChild(frame);
-        const tab={id:++nextId,title,url,frame};tabs.push(tab);selectTab(tab.id);return tab;
+        frame.addEventListener("load",()=>{frame.dataset.ready="yes"});const tab={id:++nextId,title,url,frame};tabs.push(tab);selectTab(tab.id);return tab;
       }
       function removeTab(id){
         const index=tabs.findIndex(t=>t.id===id);if(index<0)return;
@@ -5078,27 +5078,19 @@
       function navigate(raw){
         const tab=tabs.find(t=>t.id===active);if(!tab)return;
         const value=raw.trim();if(!value)return;
-        let target;
-        try{
-          target=new URL(value.includes("://")?value:"https://"+value);
-          if(!["http:","https:"].includes(target.protocol))throw Error("Invalid scheme");
-        }catch{
-          // Search terms are handled inside Scramjet, not sent to a third-party search engine.
-          tab.frame.src=home;tab.url=home;tab.title="Scramjet Search";
-          render();addressInput.value=value;
-          document.getElementById("browserSearchHint").hidden=false;
-          return;
-        }
-        // The embedded Scramjet page handles its own proxied navigation.
-        // Do not pretend direct iframe URLs are Scramjet-proxied.
-        if(target.origin!==new URL(home).origin){
-          tab.frame.src=home;tab.url=home;tab.title="Scramjet";
-          render();
-          document.getElementById("browserSearchHint").hidden=false;
-          addressInput.value=target.href;
-          return;
-        }
-        tab.frame.src=target.href;tab.url=target.href;tab.title="Scramjet";render();
+        // Scramjet's own search() function distinguishes a URL from a search query.
+        // Send input to the trusted Render origin rather than directly loading an external iframe.
+        tab.title=value.length>22?value.slice(0,22)+"…":value;
+        tab.url=value;
+        render();
+        addressInput.value=value;
+        const hint=document.getElementById("browserSearchHint");
+        hint.hidden=true;
+        const send=()=>tab.frame.contentWindow?.postMessage({type:"community-browser-navigate",query:value},new URL(home).origin);
+        if(!tab.frame.dataset.ready){
+          tab.frame.addEventListener("load",()=>{tab.frame.dataset.ready="yes";send()},{once:true});
+          tab.frame.src=home;
+        }else send();
       }
       const hint=document.createElement("div");hint.id="browserSearchHint";hint.hidden=true;hint.textContent="Enter this address or search inside the Scramjet page below. The parent page cannot control Scramjet's cross-origin search field.";hint.style.cssText="padding:7px 12px;background:#293854;color:#fff;font-size:12px";
       addressForm.insertAdjacentElement("afterend",hint);
