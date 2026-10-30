@@ -619,6 +619,20 @@
     .setting-feature-fold>summary{cursor:pointer;font-weight:700;list-style:revert;padding:3px 0}
     .setting-feature-fold[open]>summary{margin-bottom:10px}
 
+    /* App-style vertical layout: only message history scrolls, not the whole page. */
+    html,body{height:100%;overflow-x:hidden}
+    body>main.chat{height:100dvh;min-height:0!important;max-height:100dvh;overflow:hidden}
+    main.chat>header{flex:0 0 auto;max-height:32dvh;overflow-y:auto}
+    main.chat #chatProtected:not([hidden]){flex:1 1 auto;min-height:0;overflow:hidden}
+    main.chat #messages{flex:1 1 auto!important;min-height:0!important;height:0!important;overflow-y:auto!important;overscroll-behavior:contain}
+    main.chat #chatProtected>.compose,main.chat #chatProtected>form,main.chat #chatProtected>.typing-indicator{flex-shrink:0}
+    main.chat #roomsDrawer:not([hidden]){max-height:28dvh;overflow-y:auto;flex-shrink:0}
+    main.chat #roomTools:not([hidden]){max-height:18dvh;overflow-y:auto;flex-shrink:0}
+    @media(max-width:700px){
+      body>main.chat{height:100dvh;max-height:100dvh}
+      main.chat>header{max-height:25dvh}
+    }
+
     /* Keep the message feed visible without horizontal page scrolling. */
     html,body,main.chat,#chatProtected,#messages{max-width:100%;min-width:0}
     main.chat,#chatProtected,#messages{overflow-x:hidden}
