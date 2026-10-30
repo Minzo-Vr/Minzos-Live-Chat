@@ -1,0 +1,19 @@
+{
+  "id": "/Minzos-Live-Chat/",
+  "name": "Community Chat",
+  "short_name": "Community Chat",
+  "description": "Chat, connect with friends, and share Community Chat updates.",
+  "start_url": "/Minzos-Live-Chat/",
+  "scope": "/Minzos-Live-Chat/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#5865f2",
+  "icons": [
+    {
+      "src": "./app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
