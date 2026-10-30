@@ -618,6 +618,20 @@
     .setting-feature-fold{border:1px solid #dce1ee;border-radius:10px;margin:9px 0;padding:9px 12px;background:rgba(255,255,255,.55)}
     .setting-feature-fold>summary{cursor:pointer;font-weight:700;list-style:revert;padding:3px 0}
     .setting-feature-fold[open]>summary{margin-bottom:10px}
+
+    /* Keep the message feed visible without horizontal page scrolling. */
+    html,body,main.chat,#chatProtected,#messages{max-width:100%;min-width:0}
+    main.chat,#chatProtected,#messages{overflow-x:hidden}
+    #messages{width:100%;min-width:0;overflow-y:auto;overflow-wrap:anywhere;word-break:normal}
+    #messages > *,#messages .message-main{max-width:100%;min-width:0}
+    #messages img,#messages video,#messages iframe{max-width:100%;height:auto}
+    #messages pre,#messages code{max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere}
+    @media(max-width:700px){
+      main.chat.dm-sidebar-layout{padding-left:0!important}
+      #messages{padding:10px!important}
+      #messages .message-main{overflow-wrap:anywhere}
+    }
+
     /* Use the entire browser viewport in normal mode, not only fullscreen mode. */
     html,body{width:100%;min-height:100%;margin:0}
     body{padding:0!important;overflow-x:hidden}
