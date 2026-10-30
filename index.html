@@ -5077,10 +5077,10 @@
         const origin=new URL(home).origin;
         const info={activeTab:tab?.title||null,address:tab?.url||null,history:tab?.history||[],historyIndex:tab?.historyIndex??null,openTabs:tabs.length,closedTabs:closedTabs.length,scramjetOrigin:origin};
         const views={
-          Elements:()=>document.getElementById("browserSidebar").outerHTML.replace(/<script[\\s\\S]*?<\\/script>/g,"[script omitted]").slice(0,30000),
-          Console:()=>devEvents.map(e=>"["+e.time+"] "+e.kind+": "+e.detail).join("\\n")||"No Community Browser events yet.",
-          Network:()=>devEvents.filter(e=>e.kind==="Navigation"||e.kind==="Tab").map(e=>"["+e.time+"] "+e.kind+"  "+e.detail).join("\\n")||"No navigation events recorded. Scramjet network requests are not visible here.",
-          Sources:()=>Array.from(document.querySelectorAll("script[src],link[rel=stylesheet]")).map(el=>el.src||el.href).filter(Boolean).join("\\n")||"No linked sources found.",
+          Elements:()=>document.getElementById("browserSidebar").outerHTML.slice(0,30000),
+          Console:()=>devEvents.map(e=>"["+e.time+"] "+e.kind+": "+e.detail).join("\n")||"No Community Browser events yet.",
+          Network:()=>devEvents.filter(e=>e.kind==="Navigation"||e.kind==="Tab").map(e=>"["+e.time+"] "+e.kind+"  "+e.detail).join("\n")||"No navigation events recorded. Scramjet network requests are not visible here.",
+          Sources:()=>Array.from(document.querySelectorAll("script[src],link[rel=stylesheet]")).map(el=>el.src||el.href).filter(Boolean).join("\n")||"No linked sources found.",
           Application:()=>JSON.stringify(info,null,2),
           Performance:()=>JSON.stringify({communityBrowserUptimeSeconds:Math.round((performance.now()-startedAt)/1000),recordedEvents:devEvents.length,openTabs:tabs.length},null,2),
           Security:()=>JSON.stringify({pageOrigin:location.origin,proxyOrigin:origin,embeddedProxyIsCrossOrigin:location.origin!==origin,proxyDomInspectable:false,https:location.protocol==="https:"},null,2)
