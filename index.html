@@ -5127,7 +5127,7 @@
       });
       document.addEventListener("keydown",event=>{
         if(panel.hidden)return;
-        if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="t"){event.preventDefault();newTab()}
+        if((event.ctrlKey||event.metaKey)&&!event.shiftKey&&event.key.toLowerCase()==="t"){event.preventDefault();newTab()}
         if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="w"){event.preventDefault();removeTab(active)}
         if((event.ctrlKey||event.metaKey)&&event.shiftKey&&event.key.toLowerCase()==="t"){event.preventDefault();undoButton.click()}
         if(event.altKey&&event.key==="ArrowLeft"){event.preventDefault();backButton.click()}
