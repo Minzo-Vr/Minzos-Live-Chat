@@ -11,9 +11,9 @@ function treeFor(doc){
   function walk(el,depth){
     if(rows.length>=1500||depth>22)return;
     const key=String(++id);nodes.set(key,el);
-    const attrs=Array.from(el.attributes).slice(0,8).map(a=>" "+a.name+'="'+a.value.slice(0,90)+'"').join("");
-    const directText=Array.from(el.childNodes).filter(n=>n.nodeType===3).map(n=>n.textContent).join(" ").trim().slice(0,110);
-    rows.push({id:key,depth,tag:el.tagName.toLowerCase(),attrs,text:directText,children:el.children.length});
+    const attrs=Array.from(el.attributes).slice(0,8).map(a=>" "+a.name+'="'+String(a.value??"").slice(0,90)+'"').join("");
+    const directText=Array.from(el.childNodes).filter(n=>n.nodeType===3).map(n=>n.textContent??"").join(" ").trim().slice(0,110);
+    rows.push({id:key,depth,tag:String(el.tagName??"unknown").toLowerCase(),attrs,text:directText,children:el.children.length});
     for(const child of el.children)walk(child,depth+1);
   }
   walk(root,0);window.__communityInspectedNodes=nodes;return rows;
@@ -39,7 +39,7 @@ window.addEventListener("message",async event=>{
     const replacement=template.content.firstElementChild;
     if(replacement.querySelector("script,iframe,object,embed")||replacement.matches("script,iframe,object,embed"))throw Error("Executable or embedded content is not supported.");
     for(const node of [replacement,...replacement.querySelectorAll("*")]){
-      for(const attr of [...node.attributes])if(/^on/i.test(attr.name)||["srcdoc","javascript:"].some(x=>attr.name==="srcdoc"||attr.value.trim().toLowerCase().startsWith(x)))node.removeAttribute(attr.name);
+      for(const attr of [...node.attributes])if(/^on/i.test(attr.name)||["srcdoc","javascript:"].some(x=>attr.name==="srcdoc"||String(attr.value??"").trim().toLowerCase().startsWith(x)))node.removeAttribute(attr.name);
     }
     el.replaceWith(replacement);reply({success:true,rows:treeFor(doc)});
   }catch(error){reply({error:String(error.message||error)})}
