@@ -5050,12 +5050,12 @@
       function render(){
         tabsBar.querySelectorAll(".browser-tab").forEach(el=>el.remove());
         tabs.forEach(tab=>{
-          const button=document.createElement("button");
-          button.type="button";button.className="browser-tab";button.setAttribute("role","tab");button.setAttribute("aria-selected",String(active===tab.id));
+          const button=document.createElement("div");
+          button.tabIndex=0;button.className="browser-tab";button.setAttribute("role","tab");button.setAttribute("aria-selected",String(active===tab.id));
           const title=document.createElement("span");title.className="browser-tab-title";title.textContent=tab.title;
           const x=document.createElement("button");x.type="button";x.className="browser-tab-close";x.textContent="×";x.title="Close tab";
           x.addEventListener("click",event=>{event.stopPropagation();removeTab(tab.id)});
-          button.append(title,x);button.addEventListener("click",()=>selectTab(tab.id));
+          button.append(title,x);button.addEventListener("click",()=>selectTab(tab.id));button.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();selectTab(tab.id)}});
           tabsBar.insertBefore(button,add);
           tab.frame.hidden=tab.id!==active;
         });
