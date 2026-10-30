@@ -140,22 +140,29 @@ export default {async fetch(request,env){
  if(data.type!==2)return reply("Unsupported interaction.",true);
  const name=data.data?.name;
  if(name==="ping")return reply("🏓 Pong! Community Chat bot is online.");
- if(name==="help")return reply("**Community Chat commands**\n/ping — bot health\n/help — commands\n/latest — latest published update\n/updates — three recent updates\n/status — website link\n/announce — admin-only Discord announcement\n/applications — admin-only application opening");
+ if(name==="help")return reply("**Community Chat commands**\n/ping — bot health\n/help — commands\n/latest — latest published update\n/updates — three recent updates\n/status — website link\n/announce — admin-only Discord announcement\n/applications — admin-only application open/closed announcements");
  if(name==="status")return reply("Community Chat: https://minzo-vr.github.io/Minzos-Live-Chat/ (open to check availability)");
 
  if(name==="applications"){
    const admin=(BigInt(data.member?.permissions||"0")&8n)!==0n;
    if(!admin||data.guild_id!==env.DISCORD_GUILD_ID)return reply("Only server administrators can post applications.",true);
    const o=Object.fromEntries((data.data?.options||[]).map(x=>[x.name,x.value]));
-   const validUrl=x=>{try{return x.length<=500&&new URL(x).protocol==="https:"}catch{return false}};
-   if(!["moderator","test_subjects"].includes(o.type)||!/^\d{15,22}$/.test(String(o.role))||!validUrl(o.apply_url)||!validUrl(o.info_url))return reply("Choose a valid role and HTTPS links.",true);
+   const validUrl=x=>{try{return typeof x==="string"&&x.length<=500&&new URL(x).protocol==="https:"}catch{return false}};
+   if(!["moderator","test_subjects"].includes(o.type)||!["open","closed"].includes(o.status)||!/^\d{15,22}$/.test(String(o.role)))return reply("Choose a valid status, category and Discord role.",true);
+   if(o.status==="open"&&(!validUrl(o.apply_url)||!validUrl(o.info_url)))return reply("Opening applications requires both HTTPS links.",true);
    const lab=o.type==="test_subjects";
-   const notes=lab?"• Test subjects test features early; they do NOT receive free items or extra rewards.\n• Applying does NOT guarantee acceptance.\n• **Do NOT apply if rejection would cause physical or mental stress.**":"• Applying does NOT guarantee acceptance.\n• Moderators must follow server rules and treat members fairly.\n• **Do NOT apply if rejection would cause physical or mental stress.**";
-   const timeline=[o.starts&&"• Applications open: "+o.starts,o.closes&&"• Applications close: "+o.closes,o.results&&"• Results announced: "+o.results].filter(Boolean);
-   const content=["# "+(lab?"🧪 Test Subject / Lab Rat":"🛡️ Moderator")+" Applications are now OPEN","<@&"+o.role+">","Check "+o.info_url+" for info.","## Important Notes",notes,...(timeline.length?["## Timeline",...timeline]:[]),"Apply at: "+o.apply_url].join("\n");
+   const category=lab?"🧪 Test Subject / Lab Rat":"🛡️ Moderator";
+   let content;
+   if(o.status==="closed"){
+     content=["# "+category+" Applications are now CLOSED","<@&"+o.role+">","Thank you to everyone who applied!","Applications are no longer being accepted.",o.results?"**Results announced:** "+String(o.results).slice(0,100):"Keep an eye on announcements for updates."].join("\n");
+   }else{
+     const notes=lab?"• Test subjects test features early; they do NOT receive free items or extra rewards.\n• Applying does NOT guarantee acceptance.\n• **Do NOT apply if rejection would cause physical or mental stress.**":"• Applying does NOT guarantee acceptance.\n• Moderators must follow server rules and treat members fairly.\n• **Do NOT apply if rejection would cause physical or mental stress.**";
+     const timeline=[o.starts&&"• Applications open: "+String(o.starts).slice(0,100),o.closes&&"• Applications close: "+String(o.closes).slice(0,100),o.results&&"• Results announced: "+String(o.results).slice(0,100)].filter(Boolean);
+     content=["# "+category+" Applications are now OPEN","<@&"+o.role+">","Check "+o.info_url+" for info.","## Important Notes",notes,...(timeline.length?["## Timeline",...timeline]:[]),"Apply at: "+o.apply_url].join("\n");
+   }
    if(content.length>2000)return reply("Announcement too long.",true);
    const sent=await fetch("https://discord.com/api/v10/channels/"+env.DISCORD_CHANNEL_ID+"/messages",{method:"POST",headers:{"Authorization":"Bot "+env.DISCORD_BOT_TOKEN,"content-type":"application/json"},body:JSON.stringify({content,allowed_mentions:{parse:["roles"]}})});
-   return sent.ok?reply("Application announcement posted!",true):reply("Could not post applications. Check bot channel permissions.",true);
+   return sent.ok?reply("Application "+o.status+" announcement posted!",true):reply("Could not post applications. Check bot channel permissions.",true);
  }
  if(name==="announce"){
    const admin=(BigInt(data.member?.permissions||"0") & 8n)!==0n;
