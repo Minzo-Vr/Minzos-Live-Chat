@@ -2,6 +2,11 @@ name: Register Discord Slash Commands
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "discord-bot/register-commands.mjs"
+      - ".github/workflows/register-discord-commands.yml"
 
 permissions:
   contents: read
