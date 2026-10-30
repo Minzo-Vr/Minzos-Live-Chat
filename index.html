@@ -5006,6 +5006,9 @@
 
   <style>
     #browserTabs{display:flex;align-items:center;gap:5px;padding:7px;background:#101827;overflow-x:auto;flex-shrink:0;scrollbar-width:thin}
+    #browserUndoTab{border:1px solid #475569;background:#374151;color:white;border-radius:8px;padding:5px 9px;cursor:pointer;flex-shrink:0}
+    #browserUndoTab:disabled{opacity:.45;cursor:default}
+    #browserDevPanel[hidden]{display:none!important}
     #browserTabs .browser-tab{display:flex;align-items:center;gap:5px;max-width:180px;min-width:95px;padding:5px 7px;border:1px solid #475569;border-radius:9px 9px 3px 3px;background:#253047;color:#e5e7eb;font:12px system-ui;cursor:pointer;flex-shrink:0}
     #browserTabs .browser-tab[aria-selected="true"]{background:#5865f2;color:white;border-color:#9ca3ff}
     #browserTabs .browser-tab-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
@@ -5022,14 +5025,14 @@
       <a href="https://community-scramjet-browser.onrender.com" target="_blank" rel="noopener noreferrer" title="Open Scramjet in a separate window">↗ Scramjet</a>
       <button type="button" id="browserSidebarClose" aria-label="Close browser sidebar">✕ Close</button>
     </div>
-    <div id="browserTabs" role="tablist" aria-label="Browser tabs"><button type="button" id="browserAddTab" title="New tab">＋ New Tab</button></div>
+    <div id="browserTabs" role="tablist" aria-label="Browser tabs"><button type="button" id="browserAddTab" title="New tab">＋ New Tab</button><button type="button" id="browserUndoTab" title="Reopen last closed tab" disabled>↶ Undo Tab</button></div>
     <form id="browserAddressForm" class="browser-address-bar" autocomplete="off">
-      <label for="browserAddressInput">URL</label>
+      <button type="button" id="browserBack" title="Back" disabled>←</button><button type="button" id="browserForward" title="Forward" disabled>→</button><label for="browserAddressInput">URL</label>
       <input id="browserAddressInput" type="text" inputmode="url" spellcheck="false" aria-label="Browser URL or search" placeholder="Search or enter a website">
       <button type="submit" aria-label="Go to URL">Go →</button>
-      <button type="button" id="browserAddressHome" aria-label="Browser home">⌂</button>
+      <button type="button" id="browserAddressHome" aria-label="Browser home">⌂</button><button type="button" id="browserDevToggle" title="Browser developer panel">⚙ Dev</button>
     </form>
-    <div id="browserTabFrames"></div>
+    <div id="browserTabFrames"></div><section id="browserDevPanel" hidden style="background:#111827;color:#e5e7eb;padding:12px;max-height:30vh;overflow:auto;font:12px monospace"><strong>Community Browser Developer Panel</strong><pre id="browserDevInfo" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre><button type="button" id="browserDevCopy">Copy diagnostics</button><p>Shows Community Browser state only. It cannot inspect cross-origin Scramjet page DOM or network traffic.</p></section>
     <div class="browser-side-foot">Each tab opens Scramjet by default. Search inside Scramjet for proxy browsing. Availability depends on your network; some sites block embedding.</div>
   </aside>
   <script>
@@ -5046,7 +5049,9 @@
       const homeButton=document.getElementById("browserAddressHome");
       if(!panel||!launch||!expand||!close||!tabsBar||!frames||!add)return;
       const home="https://community-scramjet-browser.onrender.com/";
-      let tabs=[],active=null,nextId=0;
+      let tabs=[],active=null,nextId=0,closedTabs=[];
+      const backButton=document.getElementById("browserBack"),forwardButton=document.getElementById("browserForward"),undoButton=document.getElementById("browserUndoTab"),devToggle=document.getElementById("browserDevToggle"),devPanel=document.getElementById("browserDevPanel"),devInfo=document.getElementById("browserDevInfo");
+      function updateDev(){const tab=tabs.find(t=>t.id===active);devInfo.textContent=JSON.stringify({activeTab:tab?.title||null,address:tab?.url||null,history:tab?.history||[],historyIndex:tab?.historyIndex??null,openTabs:tabs.length,closedTabs:closedTabs.length,scramjetOrigin:new URL(home).origin},null,2)}
       function render(){
         tabsBar.querySelectorAll(".browser-tab").forEach(el=>el.remove());
         tabs.forEach(tab=>{
@@ -5061,27 +5066,32 @@
         });
         const current=tabs.find(t=>t.id===active);
         addressInput.value=current?.url||home;
+        backButton.disabled=!current||current.historyIndex<=0;
+        forwardButton.disabled=!current||current.historyIndex>=current.history.length-1;
+        undoButton.disabled=!closedTabs.length;
+        updateDev();
       }
       function selectTab(id){active=id;render()}
       function newTab(url=home,title="Scramjet"){
         const frame=document.createElement("iframe");
         frame.className="browser-tab-frame";frame.title=title;frame.loading="lazy";frame.referrerPolicy="no-referrer";frame.allow="fullscreen";
         frame.src=url;frames.appendChild(frame);
-        frame.addEventListener("load",()=>{frame.dataset.ready="yes"});const tab={id:++nextId,title,url,frame};tabs.push(tab);selectTab(tab.id);return tab;
+        frame.addEventListener("load",()=>{frame.dataset.ready="yes"});const tab={id:++nextId,title,url,frame,history:[url],historyIndex:0};tabs.push(tab);selectTab(tab.id);return tab;
       }
       function removeTab(id){
         const index=tabs.findIndex(t=>t.id===id);if(index<0)return;
-        const [tab]=tabs.splice(index,1);tab.frame.remove();
+        const [tab]=tabs.splice(index,1);closedTabs.push({title:tab.title,url:tab.url,history:[...tab.history],historyIndex:tab.historyIndex});if(closedTabs.length>20)closedTabs.shift();tab.frame.remove();
         if(active===id)active=tabs[Math.min(index,tabs.length-1)]?.id||null;
         if(!tabs.length)newTab();else render();
       }
-      function navigate(raw){
+      function navigate(raw,fromHistory=false){
         const tab=tabs.find(t=>t.id===active);if(!tab)return;
         const value=raw.trim();if(!value)return;
         // Scramjet's own search() function distinguishes a URL from a search query.
         // Send input to the trusted Render origin rather than directly loading an external iframe.
         tab.title=value.length>22?value.slice(0,22)+"…":value;
         tab.url=value;
+        if(!fromHistory){tab.history=tab.history.slice(0,tab.historyIndex+1);tab.history.push(value);tab.historyIndex=tab.history.length-1;}
         render();
         addressInput.value=value;
         const hint=document.getElementById("browserSearchHint");
@@ -5097,6 +5107,11 @@
       addressInput.addEventListener("input",()=>{hint.hidden=true});
       addressForm.addEventListener("submit",event=>{event.preventDefault();navigate(addressInput.value)});
       homeButton.addEventListener("click",()=>{hint.hidden=true;navigate(home)});
+      backButton.addEventListener("click",()=>{const tab=tabs.find(t=>t.id===active);if(tab&&tab.historyIndex>0){tab.historyIndex--;navigate(tab.history[tab.historyIndex],true)}});
+      forwardButton.addEventListener("click",()=>{const tab=tabs.find(t=>t.id===active);if(tab&&tab.historyIndex<tab.history.length-1){tab.historyIndex++;navigate(tab.history[tab.historyIndex],true)}});
+      undoButton.addEventListener("click",()=>{const saved=closedTabs.pop();if(!saved)return;const tab=newTab(home,saved.title);tab.history=saved.history;tab.historyIndex=saved.historyIndex;navigate(saved.url,true)});
+      devToggle.addEventListener("click",()=>{devPanel.hidden=!devPanel.hidden;updateDev()});
+      document.getElementById("browserDevCopy").addEventListener("click",()=>navigator.clipboard?.writeText(devInfo.textContent));
       add.addEventListener("click",()=>{hint.hidden=true;newTab()});
       function setOpen(open){
         panel.hidden=!open;document.body.classList.toggle("browser-side-open",open);
@@ -5114,6 +5129,9 @@
         if(panel.hidden)return;
         if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="t"){event.preventDefault();newTab()}
         if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="w"){event.preventDefault();removeTab(active)}
+        if((event.ctrlKey||event.metaKey)&&event.shiftKey&&event.key.toLowerCase()==="t"){event.preventDefault();undoButton.click()}
+        if(event.altKey&&event.key==="ArrowLeft"){event.preventDefault();backButton.click()}
+        if(event.altKey&&event.key==="ArrowRight"){event.preventDefault();forwardButton.click()}
         if(event.key==="Escape")setOpen(false);
       });
     })();
