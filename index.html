@@ -694,6 +694,25 @@
     .browser-address-bar input{flex:1;min-width:0;padding:9px 10px;border:1px solid #94a3b8;border-radius:8px;font:13px system-ui;background:white;color:#111827}
     .browser-address-bar button{padding:9px 10px;border:1px solid #64748b;border-radius:8px;background:#374151;color:white;font-weight:800;cursor:pointer}
 
+
+    /* Chrome-inspired docked developer tools (Community Browser diagnostics only). */
+    #browserWorkspace{display:flex;flex:1;min-height:0;min-width:0;overflow:hidden}
+    #browserTabFrames{flex:1;min-width:0;min-height:0;display:flex;position:relative}
+    #browserTabFrames .browser-tab-frame{flex:1;min-width:0;min-height:0}
+    #browserDevPanel[hidden],#browserDevSplitter[hidden]{display:none!important}
+    #browserDevPanel{width:var(--browser-dev-width,45%);min-width:230px;max-width:75%;display:flex;flex-direction:column;min-height:0;background:#202124;color:#e8eaed;font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;border-left:1px solid #5f6368}
+    #browserDevSplitter{width:6px;flex-shrink:0;cursor:col-resize;background:#3c4043;touch-action:none}
+    #browserDevSplitter:hover{background:#8ab4f8}
+    .browser-dev-header{display:flex;align-items:center;gap:7px;padding:6px 9px;background:#292a2d;border-bottom:1px solid #3c4043}
+    .browser-dev-header strong{margin-right:auto}
+    .browser-dev-header button,#browserDevTabs button,.browser-dev-console button{border:0;background:transparent;color:#e8eaed;cursor:pointer;padding:5px 8px;font:inherit}
+    #browserDevTabs{display:flex;overflow-x:auto;border-bottom:1px solid #3c4043;flex-shrink:0}
+    #browserDevTabs button[aria-selected="true"]{border-bottom:2px solid #8ab4f8;color:#8ab4f8}
+    #browserDevInfo{flex:1;min-height:0;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;margin:0;padding:12px;font:12px/1.6 ui-monospace,Consolas,monospace;color:#c9d1d9}
+    .browser-dev-console{display:flex;align-items:center;gap:5px;padding:7px;border-top:1px solid #3c4043;flex-wrap:wrap}
+    .browser-dev-console input{flex:1;min-width:80px;background:#303134;color:white;border:1px solid #5f6368;border-radius:3px;padding:6px}
+    .browser-dev-note{margin:0;padding:7px;color:#9aa0a6;font-size:10px;border-top:1px solid #3c4043}
+    @media(max-width:650px){#browserDevPanel{min-width:170px;max-width:80%}}
     #communityGameHub[hidden]{display:none!important}
     #communityGameHub{position:fixed;inset:0;z-index:2147483001;background:#0b1020;color:#f8fafc;display:flex;flex-direction:column;font:14px system-ui,sans-serif}
     #communityGameHub .game-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px;background:#1e293b}
@@ -5032,7 +5051,7 @@
       <button type="submit" aria-label="Go to URL">Go →</button>
       <button type="button" id="browserAddressHome" aria-label="Browser home">⌂</button><button type="button" id="browserDevToggle" title="Browser developer panel">⚙ Dev</button>
     </form>
-    <div id="browserTabFrames"></div><section id="browserDevPanel" hidden style="background:#111827;color:#e5e7eb;padding:12px;max-height:30vh;overflow:auto;font:12px monospace"><strong>Community Browser Developer Panel</strong><pre id="browserDevInfo" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre><button type="button" id="browserDevCopy">Copy diagnostics</button><p>Shows Community Browser state only. It cannot inspect cross-origin Scramjet page DOM or network traffic.</p></section>
+    <div id="browserWorkspace"><div id="browserTabFrames"></div><div id="browserDevSplitter" hidden role="separator" aria-label="Resize developer tools" aria-orientation="vertical" tabindex="0"></div><section id="browserDevPanel" hidden aria-label="Developer tools"><div class="browser-dev-header"><strong>Developer Tools</strong><button type="button" id="browserDevCopy" title="Copy active panel">Copy</button><button type="button" id="browserDevClose" aria-label="Close developer tools">×</button></div><div id="browserDevTabs" role="tablist" aria-label="Developer tools panels"><button type="button" data-dev-tab="Elements">Elements</button><button type="button" data-dev-tab="Console">Console</button><button type="button" data-dev-tab="Network">Network</button><button type="button" data-dev-tab="Sources">Sources</button><button type="button" data-dev-tab="Application">Application</button><button type="button" data-dev-tab="Performance">Performance</button><button type="button" data-dev-tab="Security">Security</button></div><pre id="browserDevInfo" tabindex="0"></pre><div class="browser-dev-console" id="browserDevConsole"><label for="browserDevCommand">Console command</label><input id="browserDevCommand" type="text" placeholder="help, tabs, history, clear" autocomplete="off"><button type="button" id="browserDevRun">Run</button></div><p class="browser-dev-note">Inspecting Community Browser only. Cross-origin Scramjet content is protected by browser security.</p></section></div>
     <div class="browser-side-foot">Each tab opens Scramjet by default. Search inside Scramjet for proxy browsing. Availability depends on your network; some sites block embedding.</div>
   </aside>
   <script>
@@ -5049,9 +5068,27 @@
       const homeButton=document.getElementById("browserAddressHome");
       if(!panel||!launch||!expand||!close||!tabsBar||!frames||!add)return;
       const home="https://community-scramjet-browser.onrender.com/";
-      let tabs=[],active=null,nextId=0,closedTabs=[];
-      const backButton=document.getElementById("browserBack"),forwardButton=document.getElementById("browserForward"),undoButton=document.getElementById("browserUndoTab"),devToggle=document.getElementById("browserDevToggle"),devPanel=document.getElementById("browserDevPanel"),devInfo=document.getElementById("browserDevInfo");
-      function updateDev(){const tab=tabs.find(t=>t.id===active);devInfo.textContent=JSON.stringify({activeTab:tab?.title||null,address:tab?.url||null,history:tab?.history||[],historyIndex:tab?.historyIndex??null,openTabs:tabs.length,closedTabs:closedTabs.length,scramjetOrigin:new URL(home).origin},null,2)}
+      let tabs=[],active=null,nextId=0,closedTabs=[],devTab="Elements";
+      const backButton=document.getElementById("browserBack"),forwardButton=document.getElementById("browserForward"),undoButton=document.getElementById("browserUndoTab"),devToggle=document.getElementById("browserDevToggle"),devPanel=document.getElementById("browserDevPanel"),devInfo=document.getElementById("browserDevInfo"),devSplitter=document.getElementById("browserDevSplitter");
+      const devEvents=[];const startedAt=performance.now();
+      function devLog(kind,detail){devEvents.push({time:new Date().toLocaleTimeString(),kind,detail:String(detail)});if(devEvents.length>150)devEvents.shift();if(!devPanel.hidden)updateDev()}
+      function updateDev(){
+        const tab=tabs.find(t=>t.id===active);
+        const origin=new URL(home).origin;
+        const info={activeTab:tab?.title||null,address:tab?.url||null,history:tab?.history||[],historyIndex:tab?.historyIndex??null,openTabs:tabs.length,closedTabs:closedTabs.length,scramjetOrigin:origin};
+        const views={
+          Elements:()=>document.getElementById("browserSidebar").outerHTML.replace(/<script[\\s\\S]*?<\\/script>/g,"[script omitted]").slice(0,30000),
+          Console:()=>devEvents.map(e=>"["+e.time+"] "+e.kind+": "+e.detail).join("\\n")||"No Community Browser events yet.",
+          Network:()=>devEvents.filter(e=>e.kind==="Navigation"||e.kind==="Tab").map(e=>"["+e.time+"] "+e.kind+"  "+e.detail).join("\\n")||"No navigation events recorded. Scramjet network requests are not visible here.",
+          Sources:()=>Array.from(document.querySelectorAll("script[src],link[rel=stylesheet]")).map(el=>el.src||el.href).filter(Boolean).join("\\n")||"No linked sources found.",
+          Application:()=>JSON.stringify(info,null,2),
+          Performance:()=>JSON.stringify({communityBrowserUptimeSeconds:Math.round((performance.now()-startedAt)/1000),recordedEvents:devEvents.length,openTabs:tabs.length},null,2),
+          Security:()=>JSON.stringify({pageOrigin:location.origin,proxyOrigin:origin,embeddedProxyIsCrossOrigin:location.origin!==origin,proxyDomInspectable:false,https:location.protocol==="https:"},null,2)
+        };
+        devInfo.textContent=views[devTab]();
+        document.querySelectorAll("#browserDevTabs [data-dev-tab]").forEach(el=>el.setAttribute("aria-selected",String(el.dataset.devTab===devTab)));
+        document.getElementById("browserDevConsole").hidden=devTab!=="Console";
+      }
       function render(){
         tabsBar.querySelectorAll(".browser-tab").forEach(el=>el.remove());
         tabs.forEach(tab=>{
@@ -5071,22 +5108,22 @@
         undoButton.disabled=!closedTabs.length;
         updateDev();
       }
-      function selectTab(id){active=id;render()}
+      function selectTab(id){active=id;devLog("Tab","Selected "+id);render()}
       function newTab(url=home,title="Scramjet"){
         const frame=document.createElement("iframe");
         frame.className="browser-tab-frame";frame.title=title;frame.loading="lazy";frame.referrerPolicy="no-referrer";frame.allow="fullscreen";
-        frame.src=url;frames.appendChild(frame);
+        frame.src=url;frames.appendChild(frame);devLog("Tab","Created "+title);
         frame.addEventListener("load",()=>{frame.dataset.ready="yes"});const tab={id:++nextId,title,url,frame,history:[url],historyIndex:0};tabs.push(tab);selectTab(tab.id);return tab;
       }
       function removeTab(id){
         const index=tabs.findIndex(t=>t.id===id);if(index<0)return;
-        const [tab]=tabs.splice(index,1);closedTabs.push({title:tab.title,url:tab.url,history:[...tab.history],historyIndex:tab.historyIndex});if(closedTabs.length>20)closedTabs.shift();tab.frame.remove();
+        devLog("Tab","Closed "+tabs[index].title);const [tab]=tabs.splice(index,1);closedTabs.push({title:tab.title,url:tab.url,history:[...tab.history],historyIndex:tab.historyIndex});if(closedTabs.length>20)closedTabs.shift();tab.frame.remove();
         if(active===id)active=tabs[Math.min(index,tabs.length-1)]?.id||null;
         if(!tabs.length)newTab();else render();
       }
       function navigate(raw,fromHistory=false){
         const tab=tabs.find(t=>t.id===active);if(!tab)return;
-        const value=raw.trim();if(!value)return;
+        const value=raw.trim();if(!value)return;devLog("Navigation",value);
         // Scramjet's own search() function distinguishes a URL from a search query.
         // Send input to the trusted Render origin rather than directly loading an external iframe.
         tab.title=value.length>22?value.slice(0,22)+"…":value;
@@ -5110,7 +5147,20 @@
       backButton.addEventListener("click",()=>{const tab=tabs.find(t=>t.id===active);if(tab&&tab.historyIndex>0){tab.historyIndex--;navigate(tab.history[tab.historyIndex],true)}});
       forwardButton.addEventListener("click",()=>{const tab=tabs.find(t=>t.id===active);if(tab&&tab.historyIndex<tab.history.length-1){tab.historyIndex++;navigate(tab.history[tab.historyIndex],true)}});
       undoButton.addEventListener("click",()=>{const saved=closedTabs.pop();if(!saved)return;const tab=newTab(home,saved.title);tab.history=saved.history;tab.historyIndex=saved.historyIndex;navigate(saved.url,true)});
-      devToggle.addEventListener("click",()=>{devPanel.hidden=!devPanel.hidden;updateDev()});
+      function toggleDev(force){const open=typeof force==="boolean"?force:devPanel.hidden;devPanel.hidden=!open;devSplitter.hidden=!open;devToggle.setAttribute("aria-pressed",String(open));if(open)updateDev()}
+      devToggle.addEventListener("click",()=>toggleDev());
+      document.getElementById("browserDevClose").addEventListener("click",()=>toggleDev(false));
+      document.querySelectorAll("#browserDevTabs [data-dev-tab]").forEach(btn=>btn.addEventListener("click",()=>{devTab=btn.dataset.devTab;updateDev()}));
+      const command=document.getElementById("browserDevCommand");
+      function runCommand(){const cmd=command.value.trim().toLowerCase();if(!cmd)return;command.value="";if(cmd==="clear"){devEvents.length=0;updateDev();return}if(cmd==="help")devLog("Console","Commands: help, tabs, history, clear");else if(cmd==="tabs")devLog("Console",JSON.stringify(tabs.map(t=>({id:t.id,title:t.title,address:t.url}))));else if(cmd==="history")devLog("Console",JSON.stringify(tabs.find(t=>t.id===active)?.history||[]));else devLog("Console","Unknown command. Type help. Arbitrary JavaScript execution is not supported.")}
+      document.getElementById("browserDevRun").addEventListener("click",runCommand);
+      command.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();runCommand()}});
+      let dragStart=null;
+      devSplitter.addEventListener("pointerdown",e=>{dragStart=true;devSplitter.setPointerCapture(e.pointerId)});
+      devSplitter.addEventListener("pointermove",e=>{if(!dragStart)return;const rect=document.getElementById("browserWorkspace").getBoundingClientRect();const pct=Math.min(75,Math.max(25,(rect.right-e.clientX)/rect.width*100));devPanel.style.setProperty("--browser-dev-width",pct+"%")});
+      devSplitter.addEventListener("pointerup",()=>{dragStart=false});
+      devSplitter.addEventListener("pointercancel",()=>{dragStart=false});
+      devSplitter.addEventListener("keydown",e=>{if(e.key==="ArrowLeft"||e.key==="ArrowRight"){e.preventDefault();const pct=parseFloat(devPanel.style.getPropertyValue("--browser-dev-width"))||45;devPanel.style.setProperty("--browser-dev-width",Math.min(75,Math.max(25,pct+(e.key==="ArrowLeft"?5:-5)))+"%")}});
       document.getElementById("browserDevCopy").addEventListener("click",()=>navigator.clipboard?.writeText(devInfo.textContent));
       add.addEventListener("click",()=>{hint.hidden=true;newTab()});
       function setOpen(open){
@@ -5127,6 +5177,7 @@
       });
       document.addEventListener("keydown",event=>{
         if(panel.hidden)return;
+        if(event.key==="~"||event.code==="Backquote"&&!event.shiftKey){if(!/^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName)&&!document.activeElement?.isContentEditable){event.preventDefault();toggleDev();return}}
         if((event.ctrlKey||event.metaKey)&&!event.shiftKey&&event.key.toLowerCase()==="t"){event.preventDefault();newTab()}
         if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="w"){event.preventDefault();removeTab(active)}
         if((event.ctrlKey||event.metaKey)&&event.shiftKey&&event.key.toLowerCase()==="t"){event.preventDefault();undoButton.click()}
