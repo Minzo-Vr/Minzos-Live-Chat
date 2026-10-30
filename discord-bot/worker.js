@@ -31,7 +31,7 @@ const SITE_ORIGIN="https://minzo-vr.github.io";
 const WORKER_ORIGIN="https://community-chat-discord-bot.kobefalzon8.workers.dev";
 const OAUTH_REDIRECT=WORKER_ORIGIN+"/auth/discord/callback";
 const decoder=new TextDecoder();
-function b64(bytes){let s="";for(const b of bytes)s+=String.fromCharCode(b);return btoa(s).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"");}
+function b64(bytes){let s="";for(const b of bytes)s+=String.fromCharCode(b);return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");}
 function unb64(s){const t=s.replace(/-/g,"+").replace(/_/g,"/");return Uint8Array.from(atob(t+"=".repeat((4-t.length%4)%4)),c=>c.charCodeAt(0));}
 async function signState(payload,env){const key=await crypto.subtle.importKey("raw",enc.encode(env.DISCORD_CLIENT_SECRET),{name:"HMAC",hash:"SHA-256"},false,["sign"]);const data=b64(enc.encode(JSON.stringify(payload)));return data+"."+b64(new Uint8Array(await crypto.subtle.sign("HMAC",key,enc.encode(data))));}
 async function readState(s,env){const parts=(s||"").split(".");if(parts.length!==2)return null;try{const key=await crypto.subtle.importKey("raw",enc.encode(env.DISCORD_CLIENT_SECRET),{name:"HMAC",hash:"SHA-256"},false,["verify"]);if(!await crypto.subtle.verify("HMAC",key,unb64(parts[1]),enc.encode(parts[0])))return null;const p=JSON.parse(decoder.decode(unb64(parts[0])));return p.exp>Date.now()&&p.exp<Date.now()+600000&&p.origin===SITE_ORIGIN&&/^[a-zA-Z0-9_-]{20,100}$/.test(p.nonce)?p:null;}catch{return null;}}
@@ -106,7 +106,7 @@ async function handleOAuth(request,env){
      const who=await fetch("https://discord.com/api/v10/users/@me",{headers:{authorization:"Bearer "+discordToken}});
      if(!who.ok)throw Error("Discord identity lookup failed");
      const discord=await who.json();
-     if(!/^\\d{15,22}$/.test(discord.id))throw Error("Invalid Discord identity");
+     if(!/^\d{15,22}$/.test(discord.id))throw Error("Invalid Discord identity");
      const access=await googleAccess(env);
      const dbBase="https://website-chat-80038-default-rtdb.firebaseio.com/discordAuthLinks/"+discord.id+".json";
      const current=await fetch(dbBase,{headers:{authorization:"Bearer "+access,"X-Firebase-ETag":"true"}});
