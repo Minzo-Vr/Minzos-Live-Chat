@@ -709,6 +709,13 @@
     #browserDevTabs{display:flex;overflow-x:auto;border-bottom:1px solid #3c4043;flex-shrink:0}
     #browserDevTabs button[aria-selected="true"]{border-bottom:2px solid #8ab4f8;color:#8ab4f8}
     #browserDevInfo{flex:1;min-height:0;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;margin:0;padding:12px;font:12px/1.6 ui-monospace,Consolas,monospace;color:#c9d1d9}
+    #scramjetElements{display:flex;flex-direction:column;gap:7px;min-height:0;flex:1;padding:8px;overflow:auto}
+    #scramjetElements[hidden],#scramjetEditHtml[hidden],#scramjetApplyHtml[hidden]{display:none!important}
+    #scramjetHtmlTree{font:12px/1.5 ui-monospace,Consolas,monospace;overflow:auto;flex:1;min-height:80px}
+    .scramjet-tree-row{display:block;white-space:nowrap;cursor:pointer;padding:2px 4px;color:#c9d1d9}
+    .scramjet-tree-row[aria-selected="true"]{background:#264f78;color:white}
+    #scramjetEditHtml{width:100%;box-sizing:border-box;background:#303134;color:#fff;border:1px solid #5f6368;font:12px monospace}
+    #scramjetElements button{background:#3c4043;color:white;border:1px solid #5f6368;border-radius:4px;padding:5px;cursor:pointer}
     #browserElementsEditor{padding:10px;display:flex;flex-direction:column;gap:7px;max-height:62%;overflow:auto;border-bottom:1px solid #3c4043}
     #browserElementsEditor[hidden]{display:none!important}
     #browserElementsEditor input,#browserElementsEditor textarea{background:#303134;color:#e8eaed;border:1px solid #5f6368;border-radius:4px;padding:7px;font:12px ui-monospace,Consolas,monospace;max-width:100%;width:100%;box-sizing:border-box}
@@ -5058,7 +5065,7 @@
       <button type="submit" aria-label="Go to URL">Go →</button>
       <button type="button" id="browserAddressHome" aria-label="Browser home">⌂</button><button type="button" id="browserDevToggle" title="Browser developer panel">⚙ Dev</button>
     </form>
-    <div id="browserWorkspace"><div id="browserTabFrames"></div><div id="browserDevSplitter" hidden role="separator" aria-label="Resize developer tools" aria-orientation="vertical" tabindex="0"></div><section id="browserDevPanel" hidden aria-label="Developer tools"><div class="browser-dev-header"><strong>Developer Tools</strong><button type="button" id="browserDevCopy" title="Copy active panel">Copy</button><button type="button" id="browserDevClose" aria-label="Close developer tools">×</button></div><div id="browserDevTabs" role="tablist" aria-label="Developer tools panels"><button type="button" data-dev-tab="Elements">Elements</button><button type="button" data-dev-tab="Console">Console</button><button type="button" data-dev-tab="Network">Network</button><button type="button" data-dev-tab="Sources">Sources</button><button type="button" data-dev-tab="Application">Application</button><button type="button" data-dev-tab="Performance">Performance</button><button type="button" data-dev-tab="Security">Security</button></div><div id="browserElementsEditor" hidden><label for="browserElementSelector">CSS selector (Community Browser only)</label><input id="browserElementSelector" value=".browser-side-foot" spellcheck="false"><button type="button" id="browserElementLoad">Inspect</button><label for="browserElementHtml">Edit selected element HTML</label><textarea id="browserElementHtml" rows="9" spellcheck="false"></textarea><div class="browser-element-actions"><button type="button" id="browserElementApply">Apply changes</button><button type="button" id="browserElementReset">Undo changes</button></div><output id="browserElementStatus" aria-live="polite"></output><small>Edits affect this page only and disappear after refresh. Scripts and unsafe attributes are removed. Editing browser controls may break them.</small></div><pre id="browserDevInfo" tabindex="0"></pre><div class="browser-dev-console" id="browserDevConsole"><label for="browserDevCommand">Console command</label><input id="browserDevCommand" type="text" placeholder="help, tabs, history, clear" autocomplete="off"><button type="button" id="browserDevRun">Run</button></div><p class="browser-dev-note">Inspecting Community Browser only. Cross-origin Scramjet content is protected by browser security.</p></section></div>
+    <div id="browserWorkspace"><div id="browserTabFrames"></div><div id="browserDevSplitter" hidden role="separator" aria-label="Resize developer tools" aria-orientation="vertical" tabindex="0"></div><section id="browserDevPanel" hidden aria-label="Developer tools"><div class="browser-dev-header"><strong>Developer Tools</strong><button type="button" id="browserDevCopy" title="Copy active panel">Copy</button><button type="button" id="browserDevClose" aria-label="Close developer tools">×</button></div><div id="browserDevTabs" role="tablist" aria-label="Developer tools panels"><button type="button" data-dev-tab="Elements">Elements</button><button type="button" data-dev-tab="Console">Console</button><button type="button" data-dev-tab="Network">Network</button><button type="button" data-dev-tab="Sources">Sources</button><button type="button" data-dev-tab="Application">Application</button><button type="button" data-dev-tab="Performance">Performance</button><button type="button" data-dev-tab="Security">Security</button></div><div id="scramjetElements" hidden><div class="browser-element-actions"><button type="button" id="scramjetRefreshTree">↻ Refresh tree</button><button type="button" id="scramjetPencil" title="Edit selected HTML">✏️ Edit</button></div><div id="scramjetTreeStatus" aria-live="polite">Open a site in Scramjet, then refresh the tree.</div><div id="scramjetHtmlTree" role="tree" aria-label="Scramjet page HTML"></div><textarea id="scramjetEditHtml" hidden rows="7" spellcheck="false" aria-label="Edit selected HTML"></textarea><button type="button" id="scramjetApplyHtml" hidden>Apply HTML</button></div><div id="browserElementsEditor" hidden><label for="browserElementSelector">CSS selector (Community Browser only)</label><input id="browserElementSelector" value=".browser-side-foot" spellcheck="false"><button type="button" id="browserElementLoad">Inspect</button><label for="browserElementHtml">Edit selected element HTML</label><textarea id="browserElementHtml" rows="9" spellcheck="false"></textarea><div class="browser-element-actions"><button type="button" id="browserElementApply">Apply changes</button><button type="button" id="browserElementReset">Undo changes</button></div><output id="browserElementStatus" aria-live="polite"></output><small>Edits affect this page only and disappear after refresh. Scripts and unsafe attributes are removed. Editing browser controls may break them.</small></div><pre id="browserDevInfo" tabindex="0"></pre><div class="browser-dev-console" id="browserDevConsole"><label for="browserDevCommand">Console command</label><input id="browserDevCommand" type="text" placeholder="help, tabs, history, clear" autocomplete="off"><button type="button" id="browserDevRun">Run</button></div><p class="browser-dev-note">Inspecting Community Browser only. Cross-origin Scramjet content is protected by browser security.</p></section></div>
     <div class="browser-side-foot">Each tab opens Scramjet by default. Search inside Scramjet for proxy browsing. Availability depends on your network; some sites block embedding.</div>
   </aside>
   <script>
@@ -5084,7 +5091,7 @@
         const origin=new URL(home).origin;
         const info={activeTab:tab?.title||null,address:tab?.url||null,history:tab?.history||[],historyIndex:tab?.historyIndex??null,openTabs:tabs.length,closedTabs:closedTabs.length,scramjetOrigin:origin};
         const views={
-          Elements:()=>document.getElementById("browserSidebar").outerHTML.slice(0,30000),
+          Elements:()=>"Select a node in the Scramjet HTML tree.",
           Console:()=>devEvents.map(e=>"["+e.time+"] "+e.kind+": "+e.detail).join("\n")||"No Community Browser events yet.",
           Network:()=>devEvents.filter(e=>e.kind==="Navigation"||e.kind==="Tab").map(e=>"["+e.time+"] "+e.kind+"  "+e.detail).join("\n")||"No navigation events recorded. Scramjet network requests are not visible here.",
           Sources:()=>Array.from(document.querySelectorAll("script[src],link[rel=stylesheet]")).map(el=>el.src||el.href).filter(Boolean).join("\n")||"No linked sources found.",
@@ -5095,7 +5102,9 @@
         devInfo.textContent=views[devTab]();
         document.querySelectorAll("#browserDevTabs [data-dev-tab]").forEach(el=>el.setAttribute("aria-selected",String(el.dataset.devTab===devTab)));
         document.getElementById("browserDevConsole").hidden=devTab!=="Console";
-        document.getElementById("browserElementsEditor").hidden=devTab!=="Elements";
+        document.getElementById("browserElementsEditor").hidden=true;
+        document.getElementById("scramjetElements").hidden=devTab!=="Elements";
+        devInfo.hidden=devTab==="Elements";
       }
       function render(){
         tabsBar.querySelectorAll(".browser-tab").forEach(el=>el.remove());
@@ -5155,10 +5164,40 @@
       backButton.addEventListener("click",()=>{const tab=tabs.find(t=>t.id===active);if(tab&&tab.historyIndex>0){tab.historyIndex--;navigate(tab.history[tab.historyIndex],true)}});
       forwardButton.addEventListener("click",()=>{const tab=tabs.find(t=>t.id===active);if(tab&&tab.historyIndex<tab.history.length-1){tab.historyIndex++;navigate(tab.history[tab.historyIndex],true)}});
       undoButton.addEventListener("click",()=>{const saved=closedTabs.pop();if(!saved)return;const tab=newTab(home,saved.title);tab.history=saved.history;tab.historyIndex=saved.historyIndex;navigate(saved.url,true)});
-      function toggleDev(force){const open=typeof force==="boolean"?force:devPanel.hidden;devPanel.hidden=!open;devSplitter.hidden=!open;devToggle.setAttribute("aria-pressed",String(open));if(open)updateDev()}
+      function toggleDev(force){const open=typeof force==="boolean"?force:devPanel.hidden;devPanel.hidden=!open;devSplitter.hidden=!open;devToggle.setAttribute("aria-pressed",String(open));if(open){updateDev();if(devTab==="Elements")sendElements("community-elements-tree")}}
       devToggle.addEventListener("click",()=>toggleDev());
       document.getElementById("browserDevClose").addEventListener("click",()=>toggleDev(false));
-      document.querySelectorAll("#browserDevTabs [data-dev-tab]").forEach(btn=>btn.addEventListener("click",()=>{devTab=btn.dataset.devTab;updateDev()}));
+      document.querySelectorAll("#browserDevTabs [data-dev-tab]").forEach(btn=>btn.addEventListener("click",()=>{devTab=btn.dataset.devTab;updateDev();if(devTab==="Elements")sendElements("community-elements-tree")}));
+      const treeStatus=document.getElementById("scramjetTreeStatus"),treeRoot=document.getElementById("scramjetHtmlTree"),editArea=document.getElementById("scramjetEditHtml"),applyEdit=document.getElementById("scramjetApplyHtml");
+      let selectedScramjetNode=null,scramjetRows=[],treeRequest=0;
+      function sendElements(type,extra={}){
+        const tab=tabs.find(t=>t.id===active);
+        if(!tab){treeStatus.textContent="No active tab.";return}
+        treeStatus.textContent="Requesting HTML from Scramjet…";
+        tab.frame.contentWindow?.postMessage({type,requestId:++treeRequest,...extra},new URL(home).origin);
+      }
+      function renderScramjetTree(){
+        treeRoot.replaceChildren();const fragment=document.createDocumentFragment();
+        for(const node of scramjetRows){
+          const line=document.createElement("div");line.className="scramjet-tree-row";line.setAttribute("role","treeitem");line.setAttribute("aria-selected",String(selectedScramjetNode===node.id));line.style.paddingLeft=(node.depth*12+5)+"px";line.textContent="<"+node.tag+node.attrs+">"+(node.text?" "+node.text:"");line.title="Select element to edit";
+          line.addEventListener("click",()=>{selectedScramjetNode=node.id;renderScramjetTree()});fragment.appendChild(line);
+        }
+        treeRoot.appendChild(fragment);
+      }
+      window.addEventListener("message",event=>{
+        if(event.origin!==new URL(home).origin||event.data?.type!=="community-elements-response")return;
+        if(event.data.requestId!==treeRequest)return;
+        if(event.data.error){treeStatus.textContent=event.data.error;return}
+        if(Array.isArray(event.data.rows)){scramjetRows=event.data.rows;selectedScramjetNode=null;renderScramjetTree();treeStatus.textContent=(event.data.pageTitle||"Page")+" — "+scramjetRows.length+" HTML elements";editArea.hidden=true;applyEdit.hidden=true}
+      });
+      document.getElementById("scramjetRefreshTree").addEventListener("click",()=>sendElements("community-elements-tree"));
+      document.getElementById("scramjetPencil").addEventListener("click",()=>{
+        const node=scramjetRows.find(n=>n.id===selectedScramjetNode);
+        if(!node){treeStatus.textContent="Select an HTML element first.";return}
+        editArea.value="<"+node.tag+node.attrs+">"+(node.text||"")+"</"+node.tag+">";editArea.hidden=false;applyEdit.hidden=false;editArea.focus();
+        treeStatus.textContent="Editing selected element. This editor reconstructs the selected tag and direct text; nested children are not included. Applying replaces the element.";
+      });
+      applyEdit.addEventListener("click",()=>{if(selectedScramjetNode)sendElements("community-elements-edit",{id:selectedScramjetNode,html:editArea.value})});
       const elementSelector=document.getElementById("browserElementSelector"),elementHtml=document.getElementById("browserElementHtml"),elementStatus=document.getElementById("browserElementStatus");
       let inspectedElement=null,originalElement=null;
       function inspectElement(){
