@@ -10,7 +10,18 @@
   <meta name="apple-mobile-web-app-title" content="Community Chat">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="./app-icon.svg">
+  <!-- Lilita One: bold, rounded display font for the Community Chat interface. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap" rel="stylesheet">
   <style>
+    /* Apply Lilita One throughout Community Chat, including dialogs and browser tools.
+       Keep code editors and icon glyph fonts readable and functional. */
+    html, body, button, input, select, textarea, option, label, summary,
+    [role="button"], [contenteditable="true"] {font-family:"Lilita One",system-ui,sans-serif!important}
+    body *:not(code):not(pre):not(kbd):not(samp):not(.material-icons):not(.material-symbols-outlined):not([class*="fa-"]):not([class*="lucide"]):not([class*="icon-"]) {font-family:"Lilita One",system-ui,sans-serif}
+    code, pre, kbd, samp, #browserDevInfo, #browserElementHtml, #scramjetEditHtml,
+    #browserDevCommand, #scramjetHtmlTree {font-family:ui-monospace,SFMono-Regular,Consolas,monospace!important}
     :root { color-scheme: light; --accent:#5865f2; --bg:#f4f6fb; --ink:#202437; --muted:#697087; }
     * { box-sizing: border-box; }
     body { margin:0; padding:12px; background:transparent; color:var(--ink); font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
