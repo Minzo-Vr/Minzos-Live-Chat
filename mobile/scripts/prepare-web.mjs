@@ -10,3 +10,9 @@ const index=join(dest,"index.html");let html=readFileSync(index,"utf8");
 html=html.replace(/<link rel="manifest" href="\.\/manifest\.webmanifest">/, '<link rel="manifest" href="./manifest.webmanifest">');
 writeFileSync(index,html);
 console.log("Prepared Community Chat web assets in mobile/www");
+
+// Inject mobile-only download UI without editing the website's original index.html.
+copyFileSync(resolve(import.meta.dirname,"../sideload-tool.js"),join(dest,"sideload-tool.js"));
+let bundled=readFileSync(index,"utf8");
+bundled=bundled.replace("</body>",'<script src="./sideload-tool.js"></script>\\n</body>');
+writeFileSync(index,bundled);
