@@ -1,6 +1,8 @@
 name: Build Community Chat mobile apps
 on:
   workflow_dispatch:
+  release:
+    types: [published]
   push:
     branches: [main]
     paths:
@@ -12,7 +14,7 @@ on:
       - 'music/**'
       - '.github/workflows/build-mobile.yml'
 permissions:
-  contents: read
+  contents: write
 jobs:
   android:
     runs-on: ubuntu-latest
@@ -94,3 +96,35 @@ jobs:
           name: community-chat-ios-device-ipa-unsigned
           path: mobile/ios/App/community-chat-unsigned.ipa
           if-no-files-found: error
+
+  publish-release-assets:
+    name: Attach APK and unsigned IPA to GitHub Release
+    if: github.event_name == 'release'
+    needs: [android, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Android build
+        uses: actions/download-artifact@v4
+        with:
+          name: community-chat-android-debug-apk
+          path: dist/android
+      - name: Download iOS device build
+        uses: actions/download-artifact@v4
+        with:
+          name: community-chat-ios-device-ipa-unsigned
+          path: dist/ios
+      - name: Rename files for release
+        run: |
+          set -euo pipefail
+          mv dist/android/app-debug.apk dist/android/community-chat-android-debug.apk
+          test -s dist/android/community-chat-android-debug.apk
+          test -s dist/ios/community-chat-unsigned.ipa
+      - name: Upload to the published GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          gh release upload "$RELEASE_TAG" \
+            dist/android/community-chat-android-debug.apk \
+            dist/ios/community-chat-unsigned.ipa --clobber
