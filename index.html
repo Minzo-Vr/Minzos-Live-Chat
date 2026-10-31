@@ -843,6 +843,12 @@
         <details id="userSettingsSection" class="user-options" data-setting-label="user settings private profile privacy everyone friends only no one profile picture username bio biography username effects role visibility notifications announcement red circle button alerts">
           <summary>👤 User Settings ▾</summary>
           <div class="user-options-inner">
+          <div class="user-switch-account-setting" data-setting-label="switch accounts change account login sign out">
+            <strong>🔄 Switch Accounts</strong>
+            <p>Sign out of this account and choose another account on the sign-in screen. Your messages and profile will remain saved.</p>
+            <button type="button" id="switchAccountBtn">🔄 Switch account</button>
+            <p id="switchAccountStatus" role="status"></p>
+          </div>
           <div class="user-auto-logout-setting" data-setting-label="auto logout inactivity timeout session sign out">
             <strong>⏱️ Auto logout</strong>
             <p>Choose when this browser signs you out after inactivity. Off keeps you signed in.</p>
@@ -1578,6 +1584,24 @@
       addSystem("An admin cleared the online members list. Re-enter your username to rejoin.");
     }
     setInterval(()=>{expireChatForInactivity().catch(console.error);},5000);
+    $("switchAccountBtn").addEventListener("click",async()=>{
+      if(!auth?.currentUser)return;
+      if(!confirm("Switch accounts? You will be signed out and can choose another account."))return;
+      const btn=$("switchAccountBtn");
+      btn.disabled=true;
+      $("switchAccountStatus").textContent="Signing out…";
+      try{
+        await clearMyTyping().catch(console.warn);
+        await signOut(auth);
+        $("settingsOverlay").hidden=true;
+        $("switchAccountStatus").textContent="";
+        $("authFeedback").textContent="Signed out. Choose an account to continue.";
+        window.scrollTo({top:0,behavior:"smooth"});
+      }catch(err){
+        console.error("Switch account failed:",err);
+        $("switchAccountStatus").textContent="Could not switch accounts: "+(err.code||err.message);
+      }finally{btn.disabled=false;}
+    });
     $("settingsBtn").addEventListener("click",()=>{
       $("settingsName").value=savedUsername||username;
       $("settingsAvatarPreview").src=avatarUrls.get(user?.uid)||avatarFallback;
