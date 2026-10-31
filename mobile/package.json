@@ -1,0 +1,20 @@
+{
+  "name": "community-chat-mobile",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "prepare:web": "node scripts/prepare-web.mjs",
+    "native:android": "npm run prepare:web && npx cap add android && npx cap sync android",
+    "native:ios": "npm run prepare:web && npx cap add ios && npx cap sync ios",
+    "sync": "npm run prepare:web && npx cap sync"
+  },
+  "dependencies": {
+    "@capacitor/core": "^7.4.0",
+    "@capacitor/android": "^7.4.0",
+    "@capacitor/ios": "^7.4.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.4.0"
+  }
+}
