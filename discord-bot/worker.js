@@ -148,7 +148,7 @@ export default {
      cursor=page.list_complete?null:page.cursor;
    }while(cursor);
  },
- async fetch(request,env){
+ async fetch(request,env,ctx){
  const oauth=await handleOAuth(request,env);if(oauth)return oauth;
  if(request.method!=="POST")return new Response("Community Chat bot endpoint", {status:200});
  const raw=await request.text();
@@ -159,12 +159,12 @@ export default {
  const name=data.data?.name;
  if(name==="sad"){
    const options=Object.fromEntries((data.data?.options||[]).map(o=>[o.name,o.value]));
-   const duration=/^(\d+)([mhd])$/i.exec(String(options.time||"").trim());
-   const factors={m:60000,h:3600000,d:86400000};
+   const duration=/^(\d+)([smhd])$/i.exec(String(options.time||"").trim());
+   const factors={s:1000,m:60000,h:3600000,d:86400000};
    const ms=duration?Number(duration[1])*factors[duration[2].toLowerCase()]:0;
    const message=String(options.message||"").trim();
-   if(!duration||!Number.isSafeInteger(ms)||ms<60000||ms>86400000||!message||message.length>1500)
-     return reply("Use a duration from 1m to 1d (e.g. 10m, 1h) and a message.",true);
+   if(!duration||!Number.isSafeInteger(ms)||ms<1000||ms>86400000||!message||message.length>1500)
+     return reply("Use a duration from 1s to 1d (e.g. 1s, 10s, 10m, 1h) and a message.",true);
    if(!env.SAD_MESSAGES)return reply("Timed messages are not configured yet. Ask the bot owner to bind SAD_MESSAGES KV.",true);
    if(!data.channel_id||!data.guild_id)return reply("Use this command in a server text channel.",true);
    const sent=await fetch("https://discord.com/api/v10/channels/"+data.channel_id+"/messages",{
@@ -178,6 +178,18 @@ export default {
    }catch(e){
      await fetch("https://discord.com/api/v10/channels/"+data.channel_id+"/messages/"+posted.id,{method:"DELETE",headers:{authorization:"Bot "+env.DISCORD_BOT_TOKEN}});
      return reply("Could not schedule deletion; the message was withdrawn.",true);
+   }
+   // Short timers use the request's background lifetime; KV + cron remains a fallback.
+   if(ms<=20000){
+     ctx.waitUntil((async()=>{
+       await new Promise(resolve=>setTimeout(resolve,ms));
+       try{
+         const deleted=await fetch("https://discord.com/api/v10/channels/"+data.channel_id+"/messages/"+posted.id,{
+           method:"DELETE",headers:{authorization:"Bot "+env.DISCORD_BOT_TOKEN}
+         });
+         if(deleted.ok||deleted.status===404)await env.SAD_MESSAGES.delete("sad:"+posted.id);
+       }catch(e){console.warn("Short /sad deletion deferred to scheduled cleanup",e);}
+     })());
    }
    return reply("Message sent. It will be removed after "+options.time+".",true);
  }
