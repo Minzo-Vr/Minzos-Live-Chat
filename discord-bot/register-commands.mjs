@@ -3,6 +3,7 @@ const {DISCORD_BOT_TOKEN:token,DISCORD_APPLICATION_ID:app,DISCORD_GUILD_ID:guild
 if(!token||!app||!guild)throw Error("Set DISCORD_BOT_TOKEN, DISCORD_APPLICATION_ID and DISCORD_GUILD_ID");
 const commands=[
 {name:"ping",description:"Check Community Chat bot"},
+{name:"sad",description:"Send a message that automatically deletes",options:[{type:3,name:"time",description:"Duration: 1m, 10m, 1h, 1d",required:true},{type:3,name:"message",description:"Message to send",required:true,max_length:1500}]},
 {name:"help",description:"List Community Chat bot commands"},
 {name:"latest",description:"Show the latest published Community Chat update"},
 {name:"updates",description:"Show recent Community Chat updates"},
