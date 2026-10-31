@@ -140,9 +140,33 @@ export default {async fetch(request,env){
  if(data.type!==2)return reply("Unsupported interaction.",true);
  const name=data.data?.name;
  if(name==="ping")return reply("🏓 Pong! Community Chat bot is online.");
- if(name==="help")return reply("**Community Chat commands**\n/ping — bot health\n/help — commands\n/latest — latest published update\n/updates — three recent updates\n/status — website link\n/announce — admin-only Discord announcement\n/applications — admin-only application open/closed announcements");
+ if(name==="help")return reply("**Community Chat commands**\n/ping — bot health\n/help — commands\n/latest — latest published update\n/updates — three recent updates\n/status — website link\n/announce — admin-only Discord announcement\n/applications — admin-only application open/closed announcements\n/setup_applications — create private application review channel");
  if(name==="status")return reply("Community Chat: https://minzo-vr.github.io/Minzos-Live-Chat/ (open to check availability)");
 
+ if(name==="setup_applications"){
+   const admin=(BigInt(data.member?.permissions||"0")&8n)!==0n;
+   if(!admin||data.guild_id!==env.DISCORD_GUILD_ID)return reply("Only server administrators can set up application reviews.",true);
+   const base="https://discord.com/api/v10";
+   const headers={"Authorization":"Bot "+env.DISCORD_BOT_TOKEN,"content-type":"application/json"};
+   try{
+     const existing=await fetch(base+"/guilds/"+env.DISCORD_GUILD_ID+"/channels",{headers});
+     if(!existing.ok)return reply("Could not list server channels. Check bot permissions.",true);
+     const channels=await existing.json();
+     const found=channels.find(c=>c.type===0&&c.name==="application-reviews");
+     if(found)return reply("📋 #application-reviews already exists: <#"+found.id+">. Check its permissions before sharing applications.",true);
+     const me=await fetch(base+"/users/@me",{headers});
+     if(!me.ok)return reply("Could not verify bot identity.",true);
+     const bot=await me.json();
+     const payload={name:"application-reviews",type:0,topic:"Private staff review of Discord Moderator, Administrator and Test Subject applications.",permission_overwrites:[
+       {id:env.DISCORD_GUILD_ID,type:0,deny:String(1024n),allow:"0"},
+       {id:bot.id,type:1,allow:String(1024n|2048n|65536n),deny:"0"}
+     ]};
+     const created=await fetch(base+"/guilds/"+env.DISCORD_GUILD_ID+"/channels",{method:"POST",headers,body:JSON.stringify(payload)});
+     if(!created.ok)return reply("Could not create channel (Discord HTTP "+created.status+"). Ensure the bot has Manage Channels and Manage Roles.",true);
+     const channel=await created.json();
+     return reply("✅ Created private <#"+channel.id+">! Server administrators can access it. Grant any additional reviewer roles access in Channel Settings → Permissions.",true);
+   }catch(err){console.error("Setup applications",err);return reply("Could not set up application reviews. Check Worker logs.",true);}
+ }
  if(name==="applications"){
    const admin=(BigInt(data.member?.permissions||"0")&8n)!==0n;
    if(!admin||data.guild_id!==env.DISCORD_GUILD_ID)return reply("Only server administrators can post applications.",true);
