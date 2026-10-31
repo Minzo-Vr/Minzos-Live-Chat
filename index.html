@@ -5541,5 +5541,48 @@
     if(!standalone)window.addEventListener("load",()=>setTimeout(show,1500));
   })();
   </script>
+  <script>
+  (() => {
+    if (document.getElementById("communityWebDownloader")) return;
+    const host=document.createElement("section");
+    host.id="communityWebDownloader";
+    host.innerHTML=`<style>
+      #communityWebDownloader{position:fixed;right:14px;bottom:14px;z-index:2147481000;font:14px system-ui,sans-serif;color:#1e293b}
+      #communityWebDownloader *{box-sizing:border-box}
+      #communityWebDownloader button{cursor:pointer;font:inherit}
+      #communityWebDownloader .dl-open{background:#5865f2;color:white;border:0;border-radius:99px;padding:12px 16px;box-shadow:0 4px 18px #0005}
+      #communityWebDownloader .dl-panel{position:absolute;bottom:56px;right:0;width:min(365px,calc(100vw - 28px));max-height:75vh;overflow:auto;background:white;border:1px solid #d1d5db;border-radius:14px;padding:16px;box-shadow:0 12px 38px #0005}
+      #communityWebDownloader .dl-panel[hidden]{display:none}
+      #communityWebDownloader input{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:10px;font:inherit}
+      #communityWebDownloader label{display:block;margin:12px 0 6px;font-weight:650}
+      #communityWebDownloader p{font-size:12px;line-height:1.5;color:#475569;overflow-wrap:anywhere}
+      #communityWebDownloader .dl-go{background:#5865f2;border:0;color:white;border-radius:8px;padding:10px 14px;margin-top:10px}
+    </style>
+    <div class="dl-panel" hidden role="dialog" aria-label="IPA APK downloader">
+      <div style="display:flex;justify-content:space-between;align-items:center"><strong>📦 IPA / APK Downloader</strong><button class="dl-close" type="button" aria-label="Close" style="background:transparent;border:0;font-size:23px">×</button></div>
+      <p>Paste a direct HTTPS link to an IPA or APK file from a source you trust.</p>
+      <label for="communityDownloadUrl">Direct download URL</label>
+      <input id="communityDownloadUrl" type="url" placeholder="https://example.com/app.ipa" autocomplete="off" spellcheck="false">
+      <button type="button" class="dl-go">Download file</button>
+      <p class="dl-status" role="status" aria-live="polite"></p>
+      <p>iOS: save the IPA and use a separate signing/installer app. Android: open the downloaded APK and approve installation. Browser security or the file host may affect downloads.</p>
+    </div>
+    <button class="dl-open" type="button">📦 Downloads</button>`;
+    document.body.appendChild(host);
+    const panel=host.querySelector(".dl-panel"),input=host.querySelector("input"),status=host.querySelector(".dl-status");
+    host.querySelector(".dl-open").onclick=()=>{panel.hidden=!panel.hidden;if(!panel.hidden)input.focus()};
+    host.querySelector(".dl-close").onclick=()=>panel.hidden=true;
+    host.querySelector(".dl-go").onclick=()=>{
+      let url;
+      try{url=new URL(input.value.trim());if(url.protocol!=="https:")throw Error();}
+      catch{status.textContent="Enter a valid HTTPS URL.";return;}
+      if(!/\.(ipa|apk)$/i.test(url.pathname)){status.textContent="The URL must end in .ipa or .apk.";return;}
+      const link=document.createElement("a");link.href=url.href;link.target="_blank";link.rel="noopener noreferrer";
+      link.download=decodeURIComponent(url.pathname.split("/").pop()||"app");
+      document.body.appendChild(link);link.click();link.remove();
+      status.textContent="Download requested. If your browser opens the file instead, use its Save/Share option.";
+    };
+  })();
+  </script>
 </body>
 </html>
