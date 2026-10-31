@@ -185,7 +185,7 @@ export default {async fetch(request,env){
      content=["# "+category+" Applications are now OPEN","<@&"+o.role+">","Check "+o.info_url+" for info.","## Important Notes",notes,...(timeline.length?["## Timeline",...timeline]:[]),"Apply at: "+o.apply_url].join("\n");
    }
    if(content.length>2000)return reply("Announcement too long.",true);
-   const sent=await fetch("https://discord.com/api/v10/channels/"+env.DISCORD_CHANNEL_ID+"/messages",{method:"POST",headers:{"Authorization":"Bot "+env.DISCORD_BOT_TOKEN,"content-type":"application/json"},body:JSON.stringify({content,allowed_mentions:{parse:["roles"]}})});
+   const sent=await fetch("https://discord.com/api/v10/channels/"+"1564929036243968010"+"/messages",{method:"POST",headers:{"Authorization":"Bot "+env.DISCORD_BOT_TOKEN,"content-type":"application/json"},body:JSON.stringify({content,allowed_mentions:{parse:["roles"]}})});
    return sent.ok?reply("Application "+o.status+" announcement posted!",true):reply("Could not post applications. Check bot channel permissions.",true);
  }
  if(name==="announce"){
