@@ -130,8 +130,38 @@ async function handleOAuth(request,env){
  return oauthError("Not found",404);
 }
 
+
+const GLOBAL_COMMANDS_VERSION="global-user-install-v1";
+async function registerGlobalCommandsOnce(env){
+ if(!env.SAD_MESSAGES||!env.DISCORD_BOT_TOKEN||!env.DISCORD_APPLICATION_ID||!env.DISCORD_GUILD_ID)return;
+ const marker="config:"+GLOBAL_COMMANDS_VERSION;
+ if(await env.SAD_MESSAGES.get(marker))return;
+ const base="https://discord.com/api/v10/applications/"+env.DISCORD_APPLICATION_ID;
+ const headers={authorization:"Bot "+env.DISCORD_BOT_TOKEN,"content-type":"application/json"};
+ const source=await fetch(base+"/guilds/"+env.DISCORD_GUILD_ID+"/commands",{headers});
+ if(!source.ok)throw Error("Cannot read guild commands: HTTP "+source.status);
+ const guildCommands=await source.json();
+ for(const name of ["ping","sad","help","latest","updates","status"]){
+  const command=guildCommands.find(x=>x.name===name&&x.type===1);
+  if(!command)throw Error("Missing guild command /"+name);
+  const payload={type:1,name:command.name,description:command.description,
+   ...(command.options?.length?{options:command.options}:{}),
+   integration_types:[0,1],contexts:[0,1,2]};
+  if(name==="sad"){
+   payload.description="Timed message (requires bot installed in server)";
+   const time=payload.options?.find(x=>x.name==="time");
+   if(time)time.description="Duration: 1s, 10s, 1m, 1h, 1d";
+  }
+  const result=await fetch(base+"/commands",{method:"POST",headers,body:JSON.stringify(payload)});
+  if(!result.ok)throw Error("Global /"+name+" failed: HTTP "+result.status+" "+(await result.text()).slice(0,200));
+ }
+ await env.SAD_MESSAGES.put(marker,new Date().toISOString());
+ console.log("Global Discord commands registered for user and guild installs.");
+}
+
 export default {
  async scheduled(event,env,ctx){
+   try{await registerGlobalCommandsOnce(env);}catch(e){console.error('Global command registration:',e);}
    if(!env.SAD_MESSAGES)return;
    let cursor;
    do{
