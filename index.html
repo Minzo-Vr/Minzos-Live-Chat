@@ -843,6 +843,14 @@
         <details id="userSettingsSection" class="user-options" data-setting-label="user settings private profile privacy everyone friends only no one profile picture username bio biography username effects role visibility notifications announcement red circle button alerts">
           <summary>👤 User Settings ▾</summary>
           <div class="user-options-inner">
+          <div class="user-auto-logout-setting" data-setting-label="auto logout inactivity timeout session sign out">
+            <strong>⏱️ Auto logout</strong>
+            <p>Choose when this browser signs you out after inactivity. Off keeps you signed in.</p>
+            <label for="userAutoLogoutMinutes">Sign out after inactivity:</label>
+            <select id="userAutoLogoutMinutes"><option value="0">Off</option><option value="1">1 minute</option><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option></select>
+            <button type="button" id="userAutoLogoutSave">Save auto logout</button>
+            <p id="userAutoLogoutStatus" role="status"></p>
+          </div>
           <p>Customize your profile. Your photo appears beside messages.</p>
         <div class="avatar-settings">
           <img id="settingsAvatarPreview" class="avatar-circle" alt="Your profile picture">
@@ -1265,10 +1273,6 @@
         <label for="slowSeconds">Delay between messages:</label>
         <select id="slowSeconds"><option value="0">Off</option><option value="5">5 seconds</option><option value="10">10 seconds</option><option value="30">30 seconds</option><option value="60">60 seconds</option></select>
         <button type="button" id="slowSave">Save slowmode</button>
-        <p><strong>Auto logout:</strong> <span id="autoLogoutAdminStatus">Checking…</span></p>
-        <label for="autoLogoutMinutes">Log out after inactivity:</label>
-        <select id="autoLogoutMinutes"><option value="0">Off</option><option value="1">1 minute</option><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option></select>
-        <button type="button" id="autoLogoutSave">Save auto logout</button>
         <p><strong>Community vote:</strong> <span id="voteAdminStatus">Checking…</span></p>
         <button type="button" id="voteStart">Start new vote</button>
         <button type="button" id="voteClose">Close vote</button>
@@ -1333,7 +1337,7 @@
     let db, auth, user, username = "", joined = false, stopMessages;
     let savedUsername = "", lastMessageActivity = 0;
     let lastSeenKickEpoch = null;
-    const INACTIVITY_MS = 5 * 60 * 1000;
+    // Legacy five-minute username expiry disabled; user controls auto logout in Settings.
     const normalizeName = value => value.trim().replace(/\s+/g," ").slice(0,24);
     const profilePath = uid => `chatProfiles/${uid}/name`;
     const avatarPath = uid => `chatProfiles/${uid}/avatar`;
@@ -1550,7 +1554,7 @@
       if(!fromProfile) messageInput.focus();
     }
     async function expireChatForInactivity() {
-      if(!joined || Date.now()-lastMessageActivity < INACTIVITY_MS) return;
+      return; // Legacy forced username expiry is disabled.
       joined=false;
       username="";
       document.body.classList.add("chat-session-expired");$("sessionExpiredNotice").hidden=false;$("dmSidebar").hidden=true;$("friendsOverlay").hidden=true;
@@ -3980,6 +3984,22 @@
     // it does not revoke server tokens or sessions in other browsers.
     const allowedLogoutMinutes=[0,1,5,10,15,30,60];
     let autoLogoutMinutes=0,lastUserActivity=Date.now(),autoLogoutTimer=null,autoLogoutBusy=false;
+    try {
+      const saved=Number(localStorage.getItem("communityChatUserAutoLogoutMinutes")||0);
+      autoLogoutMinutes=allowedLogoutMinutes.includes(saved)?saved:0;
+    }catch(err){console.warn("Could not load auto logout preference",err);}
+    $("userAutoLogoutMinutes").value=String(autoLogoutMinutes);
+    $("userAutoLogoutStatus").textContent=autoLogoutMinutes?"Enabled: "+autoLogoutMinutes+" minute(s) of inactivity.":"Off";
+    $("userAutoLogoutSave").addEventListener("click",()=>{
+      const minutes=Number($("userAutoLogoutMinutes").value);
+      if(!allowedLogoutMinutes.includes(minutes))return;
+      try {
+        localStorage.setItem("communityChatUserAutoLogoutMinutes",String(minutes));
+        autoLogoutMinutes=minutes;
+        lastUserActivity=Date.now();
+        $("userAutoLogoutStatus").textContent=minutes?"Saved: "+minutes+" minute(s) of inactivity.":"Saved: auto logout is off.";
+      }catch(err){$("userAutoLogoutStatus").textContent="Could not save preference in this browser.";console.error(err);}
+    });
     function markUserActivity(){lastUserActivity=Date.now()}
     for(const eventName of ["pointerdown","keydown","touchstart","scroll"]){
       window.addEventListener(eventName,markUserActivity,{passive:true,capture:true});
@@ -4010,16 +4030,6 @@
         }
         lastSeenKickEpoch = value;
       }, err => { console.error("Kick status read failed:",err); }));
-      stopSettings.push(onValue(ref(db,"chatSettings/autoLogoutMinutes"),snap=>{
-        const value=Number(snap.val());
-        autoLogoutMinutes=allowedLogoutMinutes.includes(value)?value:0;
-        $("autoLogoutMinutes").value=String(autoLogoutMinutes);
-        $("autoLogoutAdminStatus").textContent=autoLogoutMinutes?autoLogoutMinutes+" minute(s) of inactivity":"Off";
-        checkAutoLogout();
-      },err=>{
-        console.error("Auto logout setting read failed:",err);
-        $("autoLogoutAdminStatus").textContent="Unavailable (check Firebase rules)";
-      }));
       stopSettings.push(onValue(ref(db, "chatSettings/slowSeconds"), snap => {
         slowSeconds = [0,5,10,30,60].includes(snap.val()) ? snap.val() : 0;
         $("slowSeconds").value = String(slowSeconds);
@@ -4966,18 +4976,6 @@
         $("adminFeedback").textContent = "Could not delete oldest messages. Check Firebase rules and your admin session.";
         console.error(err);
       } finally { button.disabled = false; }
-    });
-    $("autoLogoutSave").addEventListener("click",async()=>{
-      if(!isAdmin)return;
-      const minutes=Number($("autoLogoutMinutes").value);
-      if(!allowedLogoutMinutes.includes(minutes))return;
-      try{
-        await set(ref(db,"chatSettings/autoLogoutMinutes"),minutes);
-        $("adminFeedback").textContent="Auto logout set to "+(minutes?minutes+" minute(s) of inactivity.":"Off.")+" Applies to signed-in users with this page open.";
-      }catch(err){
-        console.error("Could not save auto logout:",err);
-        $("adminFeedback").textContent="Could not save auto logout. Firebase rules may need to allow admin writes to chatSettings/autoLogoutMinutes.";
-      }
     });
     $("slowSave").addEventListener("click", async () => {
       if (!isAdmin) return;
