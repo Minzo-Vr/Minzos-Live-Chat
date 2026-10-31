@@ -130,7 +130,25 @@ async function handleOAuth(request,env){
  return oauthError("Not found",404);
 }
 
-export default {async fetch(request,env){
+export default {
+ async scheduled(event,env,ctx){
+   if(!env.SAD_MESSAGES)return;
+   let cursor;
+   do{
+     const page=await env.SAD_MESSAGES.list({prefix:"sad:",limit:1000,...(cursor?{cursor}:{})});
+     for(const key of page.keys){
+       const record=await env.SAD_MESSAGES.get(key.name,"json");
+       if(!record)continue;
+       if(record.expiresAt>Date.now())continue;
+       const result=await fetch("https://discord.com/api/v10/channels/"+record.channelId+"/messages/"+record.messageId,{
+         method:"DELETE",headers:{authorization:"Bot "+env.DISCORD_BOT_TOKEN}
+       });
+       if(result.ok||result.status===404)await env.SAD_MESSAGES.delete(key.name);
+     }
+     cursor=page.list_complete?null:page.cursor;
+   }while(cursor);
+ },
+ async fetch(request,env){
  const oauth=await handleOAuth(request,env);if(oauth)return oauth;
  if(request.method!=="POST")return new Response("Community Chat bot endpoint", {status:200});
  const raw=await request.text();
@@ -139,8 +157,32 @@ export default {async fetch(request,env){
  if(data.type===1)return json({type:1});
  if(data.type!==2)return reply("Unsupported interaction.",true);
  const name=data.data?.name;
+ if(name==="sad"){
+   const options=Object.fromEntries((data.data?.options||[]).map(o=>[o.name,o.value]));
+   const duration=/^(\d+)([mhd])$/i.exec(String(options.time||"").trim());
+   const factors={m:60000,h:3600000,d:86400000};
+   const ms=duration?Number(duration[1])*factors[duration[2].toLowerCase()]:0;
+   const message=String(options.message||"").trim();
+   if(!duration||!Number.isSafeInteger(ms)||ms<60000||ms>86400000||!message||message.length>1500)
+     return reply("Use a duration from 1m to 1d (e.g. 10m, 1h) and a message.",true);
+   if(!env.SAD_MESSAGES)return reply("Timed messages are not configured yet. Ask the bot owner to bind SAD_MESSAGES KV.",true);
+   if(!data.channel_id||!data.guild_id)return reply("Use this command in a server text channel.",true);
+   const sent=await fetch("https://discord.com/api/v10/channels/"+data.channel_id+"/messages",{
+     method:"POST",headers:{authorization:"Bot "+env.DISCORD_BOT_TOKEN,"content-type":"application/json"},
+     body:JSON.stringify({content:message,allowed_mentions:{parse:[]}})
+   });
+   if(!sent.ok)return reply("Couldn't post the message. Check bot Send Messages permissions.",true);
+   const posted=await sent.json();
+   try {
+     await env.SAD_MESSAGES.put("sad:"+posted.id,JSON.stringify({channelId:data.channel_id,messageId:posted.id,expiresAt:Date.now()+ms}),{expirationTtl:Math.ceil(ms/1000)+86400});
+   }catch(e){
+     await fetch("https://discord.com/api/v10/channels/"+data.channel_id+"/messages/"+posted.id,{method:"DELETE",headers:{authorization:"Bot "+env.DISCORD_BOT_TOKEN}});
+     return reply("Could not schedule deletion; the message was withdrawn.",true);
+   }
+   return reply("Message sent. It will be removed after "+options.time+".",true);
+ }
  if(name==="ping")return reply("🏓 Pong! Community Chat bot is online.");
- if(name==="help")return reply("**Community Chat commands**\n/ping — bot health\n/help — commands\n/latest — latest published update\n/updates — three recent updates\n/status — website link\n/announce — admin-only Discord announcement\n/applications — admin-only application open/closed announcements\n/setup_applications — create private application review channel");
+ if(name==="help")return reply("**Community Chat commands**\n/ping — bot health\n/sad — timed self-deleting message\n/help — commands\n/latest — latest published update\n/updates — three recent updates\n/status — website link\n/announce — admin-only Discord announcement\n/applications — admin-only application open/closed announcements\n/setup_applications — create private application review channel");
  if(name==="status")return reply("Community Chat: https://minzo-vr.github.io/Minzos-Live-Chat/ (open to check availability)");
 
  if(name==="setup_applications"){
