@@ -5589,7 +5589,7 @@
   #escapeWorld[hidden]{display:none!important}
   #escapeWorld{position:fixed;inset:0;z-index:2147482500;background:#030611;color:#d9faff;font:14px system-ui,sans-serif;overflow:hidden;touch-action:none}
   #escapeWorld .ew-scene{position:absolute;inset:0;perspective:650px;overflow:hidden;background:radial-gradient(ellipse at 50% 55%,#122c39 0%,#050913 60%,#010208 100%)}
-  #escapeWorld .ew-space{position:absolute;left:50%;top:52%;width:0;height:0;transform-style:preserve-3d;transform:rotateX(var(--pitch,0deg)) rotateY(var(--yaw,0deg))}
+  #escapeWorld .ew-space{position:absolute;left:50%;top:52%;width:0;height:0;transform-style:preserve-3d;transform:translateZ(var(--zoom,0px)) rotateX(var(--pitch,0deg)) rotateY(var(--yaw,0deg))}
   #escapeWorld .ew-wall{position:absolute;width:1100px;height:1100px;left:-550px;top:-550px;backface-visibility:visible;border:2px solid #1df0dc77;background:repeating-linear-gradient(0deg,transparent 0 66px,#19dccc29 67px 69px),repeating-linear-gradient(90deg,transparent 0 66px,#19dccc29 67px 69px),linear-gradient(#031321,#041a25)}
   #escapeWorld .ew-back{transform:translateZ(-550px)}
   #escapeWorld .ew-front{transform:rotateY(180deg) translateZ(-550px)}
@@ -5614,7 +5614,7 @@
     <div class="ew-scene"><div class="ew-space">
       <div class="ew-wall ew-back"></div><div class="ew-wall ew-front"></div><div class="ew-wall ew-left"></div><div class="ew-wall ew-right"></div><div class="ew-wall ew-floor"></div><div class="ew-wall ew-ceil"></div><div class="ew-core"></div>
     </div></div>
-    <div class="ew-hud"><div><strong>◈ OUTSIDE THE SIMULATION</strong><div style="font-size:12px;margin-top:6px">Drag to look around · Arrow keys / WASD to turn</div></div><div class="ew-controls"><span>REALITY STATUS: UNKNOWN</span><button type="button" id="escapeReturn">↩ Return to Chat</button></div></div>
+    <div class="ew-hud"><div><strong>◈ OUTSIDE THE SIMULATION</strong><div style="font-size:12px;margin-top:6px">Drag to look around · Scroll / pinch to zoom · WASD to turn</div></div><div class="ew-controls"><span>REALITY STATUS: UNKNOWN</span><button type="button" id="escapeReturn">↩ Return to Chat</button></div></div>
     <div class="ew-intro"><strong>REALITY UNLOADING</strong><div class="ew-headset"></div><div>VR DISCONNECTING · ESCAPE INITIATED</div></div>
   </div>
   <script>
@@ -5622,15 +5622,15 @@
     const form=document.getElementById("consoleForm"),input=document.getElementById("consoleInput"),world=document.getElementById("escapeWorld");
     if(!form||!input||!world)return;
     const space=world.querySelector(".ew-space");
-    let yaw=0,pitch=0,drag=null,previousFocus=null;
-    const update=()=>{space.style.setProperty("--yaw",yaw+"deg");space.style.setProperty("--pitch",pitch+"deg")};
+    let yaw=0,pitch=0,zoom=0,drag=null,previousFocus=null,pinchDistance=null;
+    const update=()=>{space.style.setProperty("--yaw",yaw+"deg");space.style.setProperty("--pitch",pitch+"deg");space.style.setProperty("--zoom",zoom+"px")};
     const close=()=>{world.hidden=true;document.body.style.overflow="";if(previousFocus?.isConnected)previousFocus.focus()};
     const open=()=>{
       previousFocus=document.activeElement;
       const overlay=document.getElementById("consoleOverlay");if(overlay)overlay.hidden=true;
       world.hidden=false;document.body.style.overflow="hidden";
       const intro=world.querySelector(".ew-intro");intro.style.animation="none";void intro.offsetWidth;intro.style.animation="";
-      yaw=0;pitch=0;update();world.querySelector("#escapeReturn").focus();
+      yaw=0;pitch=0;zoom=0;update();world.querySelector("#escapeReturn").focus();
     };
     form.addEventListener("submit",e=>{
       if(input.value.trim().toLowerCase()!=="execute: escape" && input.value.trim().toLowerCase()!=="execute: return")return;
@@ -5642,6 +5642,18 @@
     world.addEventListener("pointerdown",e=>{if(e.target.closest("button"))return;drag={x:e.clientX,y:e.clientY};world.setPointerCapture?.(e.pointerId)});
     world.addEventListener("pointermove",e=>{if(!drag)return;yaw+=(e.clientX-drag.x)*.22;pitch=Math.max(-75,Math.min(75,pitch-(e.clientY-drag.y)*.18));drag={x:e.clientX,y:e.clientY};update()});
     world.addEventListener("pointerup",()=>drag=null);
+    world.addEventListener("pointercancel",()=>drag=null);
+    // Zoom remains bounded so the viewer cannot move beyond the room walls.
+    const setZoom=delta=>{zoom=Math.max(-220,Math.min(220,zoom+delta));update()};
+    world.addEventListener("wheel",e=>{if(e.target.closest("button"))return;e.preventDefault();setZoom(-e.deltaY*.3)},{passive:false});
+    world.addEventListener("touchmove",e=>{
+      if(e.touches.length!==2){pinchDistance=null;return;}
+      e.preventDefault();drag=null;
+      const a=e.touches[0],b=e.touches[1],distance=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
+      if(pinchDistance!==null)setZoom((distance-pinchDistance)*.8);
+      pinchDistance=distance;
+    },{passive:false});
+    world.addEventListener("touchend",()=>pinchDistance=null);
     document.addEventListener("keydown",e=>{
       if(world.hidden)return;
       if(e.key==="Escape"){close();return}
