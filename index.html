@@ -385,6 +385,9 @@
     .admin input {flex:1 1 170px}
     .admin p {font-size:12px}
     .admin-controls {padding:10px;border:1px solid #ddd;border-radius:10px}
+    /* Give the admin controls their own scroll area instead of clipping lower settings. */
+    #adminPanel {max-height:min(72dvh,720px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable;}
+    #adminPanel:focus-within {scroll-behavior:auto;}
     .admin-controls button {margin:3px;background:#6b7280}
     .lockdown-banner { margin:0; padding:10px 14px; background:#fff2d9; color:#713d00; font-size:13px; }
     .attach-wrap {position:relative;display:flex;align-items:center}
