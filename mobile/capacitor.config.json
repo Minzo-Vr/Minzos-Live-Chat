@@ -1,0 +1,16 @@
+{
+  "appId": "com.minzovr.communitychat",
+  "appName": "Community Chat",
+  "webDir": "www",
+  "backgroundColor": "#5865f2",
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "capacitor"
+  },
+  "ios": {
+    "contentInset": "automatic"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}
