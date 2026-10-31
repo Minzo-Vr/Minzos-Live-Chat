@@ -166,7 +166,7 @@ export default {
    if(!duration||!Number.isSafeInteger(ms)||ms<1000||ms>86400000||!message||message.length>1500)
      return reply("Use a duration from 1s to 1d (e.g. 1s, 10s, 10m, 1h) and a message.",true);
    if(!env.SAD_MESSAGES)return reply("Timed messages are not configured yet. Ask the bot owner to bind SAD_MESSAGES KV.",true);
-   if(!data.guild_id||!data.channel_id||!data.authorizing_integration_owners?.["0"])return reply("This /sad command needs the bot installed in this server with Send Messages and Manage Messages permissions. Other commands work with Add App Everywhere.",true);
+   if(!data.guild_id||!data.channel_id)return reply("This /sad command needs the bot installed in this server with Send Messages and Manage Messages permissions. Other commands work with Add App Everywhere.",true);
    const sent=await fetch("https://discord.com/api/v10/channels/"+data.channel_id+"/messages",{
      method:"POST",headers:{authorization:"Bot "+env.DISCORD_BOT_TOKEN,"content-type":"application/json"},
      body:JSON.stringify({content:message,allowed_mentions:{parse:[]}})
