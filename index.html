@@ -2344,6 +2344,26 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
       ],
       removed:[]
     };
+    // Recent verified site and mobile-release changes, available to the
+    // admin-only "Log recent changes" button. Never auto-publish a draft.
+    const MOBILE_RELEASE_CHANGELOG={
+      featured:"📱 Fullscreen interface selection and automated mobile release builds!",
+      added:[
+        "🚀 Added a startup loading screen before choosing the Community Chat interface!",
+        "🖥️ Added a fullscreen Select User Interface page with a Chats entry!",
+        "🔒 Added scrollable Coming Soon interface placeholders!",
+        "📂 Added an expandable Roles & Access sidebar on the left of the interface selector!",
+        "👤 Added Member, Plus, Moderator, Test Subject and Admin role previews in the sidebar!",
+        "📱 Mobile build workflow generates Android debug APK and unsigned iOS device IPA!",
+        "📦 Publishing a GitHub Release now triggers a workflow designed to attach the APK and unsigned IPA to that release!",
+        "🧪 Verified manual GitHub Actions run 41212818688: Android and iOS builds succeeded and produced downloadable workflow artifacts!"
+      ],
+      fixed:[
+        "📐 Expanded the startup interface selector to fill the browser viewport!",
+        "🧭 Added collapsible role navigation for narrow screens, including iPad and phone layouts!"
+      ],
+      removed:[]
+    };
     function logChangesForVersion(){
       if(!isAdmin)return 0;
       const version=$("announcementDraftVersion").value.trim();
@@ -2353,7 +2373,7 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
       const publishedText=new Set(publishedNotes.flatMap(parts=>[
         parts.featured,...parts.added,...parts.fixed,...parts.removed
       ]).filter(Boolean).map(text=>text.trim()));
-      const sources=[RECENT_SITE_CHANGES,GAME_HUB_CHANGELOG];
+      const sources=[MOBILE_RELEASE_CHANGELOG,RECENT_SITE_CHANGES,GAME_HUB_CHANGELOG];
       const notes={
         featured:sources.map(source=>source.featured).find(value=>value&&!publishedText.has(value.trim()))||"",
         added:sources.flatMap(source=>source.added).filter(value=>!publishedText.has(value.trim())),
