@@ -843,10 +843,13 @@
         <details id="userSettingsSection" class="user-options" data-setting-label="user settings private profile privacy everyone friends only no one profile picture username bio biography username effects role visibility notifications announcement red circle button alerts">
           <summary>👤 User Settings ▾</summary>
           <div class="user-options-inner">
-          <div class="user-switch-account-setting" data-setting-label="switch accounts change account login sign out">
-            <strong>🔄 Switch Accounts</strong>
-            <p>Sign out of this account and choose another account on the sign-in screen. Your messages and profile will remain saved.</p>
-            <button type="button" id="switchAccountBtn">🔄 Switch account</button>
+          <div class="user-switch-account-setting" data-setting-label="switch accounts quick change account login">
+            <strong>🔄 Quick Account Switcher</strong>
+            <p>Tap a saved account to switch without signing in again while its Firebase session is valid. Sessions are stored only in this browser.</p>
+            <div id="savedAccountsList"></div>
+            <button type="button" id="addGoogleAccount">➕ Add Google account</button>
+            <button type="button" id="addEmailAccount">➕ Add email account</button>
+            <button type="button" id="switchAccountBtn">Sign out current account</button>
             <p id="switchAccountStatus" role="status"></p>
           </div>
           <div class="user-auto-logout-setting" data-setting-label="auto logout inactivity timeout session sign out">
@@ -1308,8 +1311,9 @@
       5. Apply the database rules supplied with the setup instructions.
     */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { initializeApp as initializeAccountApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, EmailAuthProvider, linkWithCredential, linkWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { getAuth, initializeAuth, indexedDBLocalPersistence, browserLocalPersistence, updateCurrentUser, GoogleAuthProvider, signInWithPopup, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, EmailAuthProvider, linkWithCredential, linkWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
     import {
       getDatabase, ref, push, query, limitToLast, limitToFirst, orderByKey, orderByChild, equalTo, get, update, onChildAdded, onChildChanged, onChildRemoved, onValue, set, remove, serverTimestamp, runTransaction, onDisconnect
     } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
@@ -1584,25 +1588,99 @@
       addSystem("An admin cleared the online members list. Re-enter your username to rejoin.");
     }
     setInterval(()=>{expireChatForInactivity().catch(console.error);},5000);
-    $("switchAccountBtn").addEventListener("click",async()=>{
+
+    // Each saved account has an isolated Firebase Auth persistence namespace.
+    // No passwords, refresh tokens or credentials are copied into our own storage.
+    const accountVaultKey="communityChatSavedAccountIdsV1";
+    let accountVaultIds=[];
+    try{accountVaultIds=JSON.parse(localStorage.getItem(accountVaultKey)||"[]").filter(x=>typeof x==="string"&&/^[A-Za-z0-9_-]{1,128}$/.test(x)).slice(0,12);}catch(e){}
+    const accountVault=new Map();
+    function persistAccountVault(){localStorage.setItem(accountVaultKey,JSON.stringify(accountVaultIds));}
+    function vaultAuth(uid){
+      if(accountVault.has(uid))return accountVault.get(uid);
+      const app=initializeAccountApp(firebaseConfig,"community-chat-account-"+uid);
+      const instance=initializeAuth(app,{persistence:[indexedDBLocalPersistence,browserLocalPersistence]});
+      accountVault.set(uid,instance);
+      return instance;
+    }
+    async function saveActiveAccount(){
       if(!auth?.currentUser)return;
-      if(!confirm("Switch accounts? You will be signed out and can choose another account."))return;
-      const btn=$("switchAccountBtn");
-      btn.disabled=true;
-      $("switchAccountStatus").textContent="Signing out…";
+      const account=auth.currentUser,uid=account.uid;
+      await updateCurrentUser(vaultAuth(uid),account);
+      if(!accountVaultIds.includes(uid)){accountVaultIds.push(uid);persistAccountVault();}
+    }
+    async function renderSavedAccounts(){
+      const list=$("savedAccountsList");list.replaceChildren();
+      if(!auth)return;
+      for(const uid of accountVaultIds.slice()){
+        const instance=vaultAuth(uid);
+        await instance.authStateReady();
+        const account=instance.currentUser;
+        const row=document.createElement("div");row.style.cssText="display:flex;align-items:center;gap:8px;margin:8px 0;flex-wrap:wrap";
+        const label=document.createElement("span");label.style.flex="1";
+        label.textContent=account?(account.displayName||account.email||"Account "+uid.slice(0,6)):"Session expired";
+        const current=auth.currentUser?.uid===uid;
+        const button=document.createElement("button");button.type="button";button.textContent=current?"✓ Current":"Switch";button.disabled=current||!account;
+        button.addEventListener("click",async()=>{
+          button.disabled=true;$("switchAccountStatus").textContent="Switching account…";
+          try{
+            await saveActiveAccount();
+            await updateCurrentUser(auth,instance.currentUser);
+            $("settingsOverlay").hidden=true;
+            $("switchAccountStatus").textContent="";
+          }catch(err){$("switchAccountStatus").textContent="Switch failed: "+(err.code||err.message);}
+          finally{renderSavedAccounts().catch(console.warn);}
+        });
+        const remove=document.createElement("button");remove.type="button";remove.textContent="Forget";remove.title="Forget this saved session";remove.disabled=current;
+        remove.addEventListener("click",async()=>{
+          if(!confirm("Forget this saved account on this browser?"))return;
+          await signOut(instance).catch(console.warn);
+          accountVaultIds=accountVaultIds.filter(x=>x!==uid);persistAccountVault();renderSavedAccounts().catch(console.warn);
+        });
+        row.append(label,button,remove);list.append(row);
+      }
+      if(!accountVaultIds.length)list.textContent="No saved accounts yet.";
+    }
+    $("addGoogleAccount").addEventListener("click",async()=>{
+      const btn=$("addGoogleAccount");btn.disabled=true;
       try{
-        await clearMyTyping().catch(console.warn);
-        await signOut(auth);
+        await saveActiveAccount();
+        const temporary=initializeAccountApp(firebaseConfig,"community-chat-add-"+Date.now());
+        const secondary=initializeAuth(temporary,{persistence:[]});
+        const provider=new GoogleAuthProvider();provider.setCustomParameters({prompt:"select_account"});
+        const result=await signInWithPopup(secondary,provider);
+        await updateCurrentUser(vaultAuth(result.user.uid),result.user);
+        if(!accountVaultIds.includes(result.user.uid)){accountVaultIds.push(result.user.uid);persistAccountVault();}
+        await updateCurrentUser(auth,result.user);
+        await signOut(secondary).catch(console.warn);
         $("settingsOverlay").hidden=true;
-        $("switchAccountStatus").textContent="";
-        $("authFeedback").textContent="Signed out. Choose an account to continue.";
-        window.scrollTo({top:0,behavior:"smooth"});
-      }catch(err){
-        console.error("Switch account failed:",err);
-        $("switchAccountStatus").textContent="Could not switch accounts: "+(err.code||err.message);
-      }finally{btn.disabled=false;}
+      }catch(err){$("switchAccountStatus").textContent="Add account failed: "+(err.code||err.message);}
+      finally{btn.disabled=false;renderSavedAccounts().catch(console.warn);}
+    });
+    $("addEmailAccount").addEventListener("click",async()=>{
+      const email=prompt("Email address for the account to add:");if(!email)return;
+      const password=prompt("Password (used only to sign in through Firebase; not saved by Community Chat):");if(password===null)return;
+      const btn=$("addEmailAccount");btn.disabled=true;
+      try{
+        await saveActiveAccount();
+        const temporary=initializeAccountApp(firebaseConfig,"community-chat-email-add-"+Date.now());
+        const secondary=initializeAuth(temporary,{persistence:[]});
+        const result=await signInWithEmailAndPassword(secondary,email.trim(),password);
+        await updateCurrentUser(vaultAuth(result.user.uid),result.user);
+        if(!accountVaultIds.includes(result.user.uid)){accountVaultIds.push(result.user.uid);persistAccountVault();}
+        await updateCurrentUser(auth,result.user);
+        await signOut(secondary).catch(console.warn);
+        $("settingsOverlay").hidden=true;
+      }catch(err){$("switchAccountStatus").textContent="Add account failed: "+(err.code||err.message);}
+      finally{btn.disabled=false;renderSavedAccounts().catch(console.warn);}
+    });
+    $("switchAccountBtn").addEventListener("click",async()=>{
+      if(!confirm("Sign out of the current account? Saved accounts will remain available."))return;
+      try{await saveActiveAccount();await signOut(auth);$("settingsOverlay").hidden=true;}
+      catch(err){$("switchAccountStatus").textContent="Sign-out failed: "+(err.code||err.message);}
     });
     $("settingsBtn").addEventListener("click",()=>{
+      saveActiveAccount().then(renderSavedAccounts).catch(err=>{console.warn(err);$("switchAccountStatus").textContent="Saved account sessions unavailable in this browser.";});
       $("settingsName").value=savedUsername||username;
       $("settingsAvatarPreview").src=avatarUrls.get(user?.uid)||avatarFallback;
       $("avatarFeedback").textContent="";
