@@ -5249,12 +5249,34 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
 
     // MUSIC: Upload licensed MP3s to the GitHub repository's music/ folder.
     // Browsers block autoplay with sound; visitors start playback with ▶ or unmute.
-    const MUSIC_TRACKS = [
-      {name:"Jazzy Juice", url:"music/jazzy-juice.mp3"},
-      {name:"Yeeps Sleepover", url:"music/yeeps-sleepover.mp3"},
-      {name:"Yeeps C-Foam", url:"music/yeeps-c-foam.mp3"},
-      {name:"Forge Ahead", url:"music/forge-ahead.mp3"}
-    ];
+    // Discover music files directly from the public GitHub music/ folder.
+    // No hardcoded track list: new supported audio files appear after GitHub Pages publishes them.
+    const MUSIC_TRACKS = [{name:"Loading music…",url:""}];
+    const MUSIC_FOLDER_API = "https://api.github.com/repos/Minzo-Vr/Minzos-Live-Chat/contents/music";
+    const MUSIC_EXTENSIONS = /\.(mp3|m4a|ogg|wav|aac|flac)$/i;
+    function musicTitle(filename){
+      return filename.replace(MUSIC_EXTENSIONS,"").replace(/[-_]+/g," ").replace(/\s+/g," ").trim().replace(/\b\w/g,ch=>ch.toUpperCase());
+    }
+    async function discoverMusic(){
+      try{
+        const response=await fetch(MUSIC_FOLDER_API,{headers:{Accept:"application/vnd.github+json"},cache:"no-store"});
+        if(!response.ok)throw Error("GitHub music folder HTTP "+response.status);
+        const entries=await response.json();
+        if(!Array.isArray(entries))throw Error("Unexpected music folder response");
+        const tracks=entries.filter(entry=>entry.type==="file"&&MUSIC_EXTENSIONS.test(entry.name))
+          .sort((a,b)=>a.name.localeCompare(b.name))
+          .map(entry=>({name:musicTitle(entry.name),url:"music/"+encodeURIComponent(entry.name)}));
+        if(!tracks.length){musicTrackLabel.textContent="No music files found";return;}
+        const current=MUSIC_TRACKS[musicIndex]?.url;
+        MUSIC_TRACKS.splice(0,MUSIC_TRACKS.length,...tracks);
+        const existing=MUSIC_TRACKS.findIndex(track=>track.url===current);
+        if(existing>=0){musicIndex=existing;musicUpdateUI();}
+        else musicSelect(0,false);
+      }catch(error){
+        console.warn("Could not discover music folder",error);
+        musicTrackLabel.textContent="Music list unavailable · Reload to retry";
+      }
+    }
     const musicAudio = document.getElementById("backgroundMusic");
     const musicTrackLabel = document.getElementById("musicTrack");
     const musicToggle = document.getElementById("musicToggle");
@@ -5274,14 +5296,16 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
       document.getElementById("musicVolumeValue").textContent = Math.round(musicAudio.volume*100)+"%";
     }
     function musicSelect(index, play){
+      if(!MUSIC_TRACKS[0]?.url)return;
       musicIndex = (index + MUSIC_TRACKS.length) % MUSIC_TRACKS.length;
       musicAudio.src = MUSIC_TRACKS[musicIndex].url;
       musicAudio.load();
       if(play) musicAudio.play().catch(()=>{musicTrackLabel.textContent = MUSIC_TRACKS[musicIndex].name + " · Tap ▶ to play";});
       musicUpdateUI();
     }
-    musicSelect(0,false);
+    discoverMusic();
     musicToggle.addEventListener("click",()=>{
+      if(!MUSIC_TRACKS[0]?.url){discoverMusic();return;}
       if(musicAudio.paused) musicAudio.play().catch(()=>{musicTrackLabel.textContent="Can't play song · Check music file";});
       else musicAudio.pause();
     });
