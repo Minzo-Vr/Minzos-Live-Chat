@@ -131,6 +131,57 @@ async function handleOAuth(request,env){
 }
 
 
+
+const ROLE_LABELS={admin:"Admin",moderator:"Moderator",plus:"Plus",testsubject:"Test Subject"};
+const ROLE_DB="https://website-chat-80038-default-rtdb.firebaseio.com";
+async function serviceRead(path,token,etag=false){
+ const response=await fetch(ROLE_DB+"/"+path+".json",{headers:{authorization:"Bearer "+token,...(etag?{"X-Firebase-ETag":"true"}:{})}});
+ if(!response.ok)throw Error("Firebase read failed ("+response.status+")");
+ return {value:await response.json(),etag:response.headers.get("etag")};
+}
+async function assignLinkedRole(discordId,role,env){
+ const access=await googleAccess(env);
+ const link=(await serviceRead("discordAuthLinks/"+discordId,access)).value;
+ if(!link?.uid)return {linked:false};
+ const uid=String(link.uid);
+ if(!/^[a-zA-Z0-9:_-]{1,128}$/.test(uid))throw Error("Invalid linked account");
+ const rolePath="chatRoles/"+encodeURIComponent(uid);
+ for(let attempt=0;attempt<3;attempt++){
+  const current=await serviceRead(rolePath,access,true);
+  const old=current.value;
+  const roles=old&&typeof old==="object"&&!Array.isArray(old)?{...old}:typeof old==="string"?{[old]:true}:{};
+  if(roles[role]===true)return {linked:true,already:true};
+  roles[role]=true;
+  const saved=await fetch(ROLE_DB+"/"+rolePath+".json",{method:"PUT",headers:{authorization:"Bearer "+access,"content-type":"application/json","if-match":current.etag||"null_etag"},body:JSON.stringify(roles)});
+  if(saved.status===412)continue;
+  if(!saved.ok)throw Error("Firebase role update failed ("+saved.status+")");
+  return {linked:true,already:false};
+ }
+ throw Error("Concurrent role update; please retry");
+}
+async function discordDM(userId,content,env,components){
+ const headers={authorization:"Bot "+env.DISCORD_BOT_TOKEN,"content-type":"application/json"};
+ const channel=await fetch("https://discord.com/api/v10/users/@me/channels",{method:"POST",headers,body:JSON.stringify({recipient_id:userId})});
+ if(!channel.ok)return false;
+ const dm=await channel.json();
+ const sent=await fetch("https://discord.com/api/v10/channels/"+dm.id+"/messages",{method:"POST",headers,body:JSON.stringify({content,allowed_mentions:{parse:[]},...(components?{components}:{})})});
+ return sent.ok;
+}
+async function retryRoleRequest(data,env){
+ const userId=data.user?.id||data.member?.user?.id;
+ const key=String(data.data?.custom_id||"").slice("role-retry:".length);
+ if(!/^\d{15,22}$/.test(userId||"")||!/^[a-f0-9-]{36}$/.test(key)||!env.SAD_MESSAGES)return reply("Invalid or expired request.",true);
+ const record=await env.SAD_MESSAGES.get("role-request:"+key,"json");
+ if(!record||record.userId!==userId||record.expiresAt<Date.now())return reply("This request has expired. Ask an administrator to assign the role again.",true);
+ const link=(await serviceRead("discordAuthLinks/"+userId,await googleAccess(env))).value;
+ if(!link?.uid)return reply("Your Discord account still isn't linked. Link it on Community Chat, then press Retry.",true);
+ const channel=env.DISCORD_CHANNEL_ID;
+ if(!channel)return reply("Admin review channel is not configured.",true);
+ const posted=await fetch("https://discord.com/api/v10/channels/"+channel+"/messages",{method:"POST",headers:{authorization:"Bot "+env.DISCORD_BOT_TOKEN,"content-type":"application/json"},body:JSON.stringify({content:"📋 **Role request ready for admin review**\nDiscord user: <@"+userId+">\nRequested Community Chat role: **"+ROLE_LABELS[record.role]+"**\nA server administrator must use `/add-role-to-user` to approve and assign this role.\nRequest ID: `"+key+"`",allowed_mentions:{parse:[]}})});
+ if(!posted.ok)return reply("Could not notify administrators. Please try again later.",true);
+ await env.SAD_MESSAGES.delete("role-request:"+key);
+ return reply("✅ Your linked account was found! Your role request has been sent to administrators for approval.",true);
+}
 const GLOBAL_COMMANDS_VERSION="global-user-install-v1";
 async function registerGlobalCommandsOnce(env){
  if(!env.SAD_MESSAGES||!env.DISCORD_BOT_TOKEN||!env.DISCORD_APPLICATION_ID||!env.DISCORD_GUILD_ID)return;
@@ -185,6 +236,7 @@ export default {
  if(!await verify(request,raw,env.DISCORD_PUBLIC_KEY))return new Response("Invalid signature",{status:401});
  let data;try{data=JSON.parse(raw);}catch{return new Response("Bad request",{status:400});}
  if(data.type===1)return json({type:1});
+ if(data.type===3&&String(data.data?.custom_id||"").startsWith("role-retry:")){try{return await retryRoleRequest(data,env);}catch(e){console.error("Role retry",e);return reply("Could not retry right now. Please try later.",true);}}
  if(data.type!==2)return reply("Unsupported interaction.",true);
  const name=data.data?.name;
  if(name==="sad"){
@@ -223,8 +275,25 @@ export default {
    }
    return reply("Message sent. It will be removed after "+options.time+".",true);
  }
+ if(name==="add-role-to-user"){
+  const admin=data.guild_id===env.DISCORD_GUILD_ID&&(BigInt(data.member?.permissions||"0")&8n)!==0n;
+  if(!admin)return reply("Only administrators of the configured Discord server can assign Community Chat roles.",true);
+  const options=Object.fromEntries((data.data?.options||[]).map(x=>[x.name,x.value]));
+  const userId=String(options.user||"");
+  const role=String(options.role||"");
+  if(!/^\d{15,22}$/.test(userId)||!ROLE_LABELS[role])return reply("Select a valid Discord user and Community Chat role.",true);
+  try{
+   const result=await assignLinkedRole(userId,role,env);
+   if(result.linked)return reply(result.already?"That user already has the "+ROLE_LABELS[role]+" role.":"✅ Assigned "+ROLE_LABELS[role]+" to the linked Community Chat account.",true);
+   if(!env.SAD_MESSAGES)return reply("The account isn't linked. Retry requests require the SAD_MESSAGES KV binding.",true);
+   const id=crypto.randomUUID();
+   await env.SAD_MESSAGES.put("role-request:"+id,JSON.stringify({userId,role,expiresAt:Date.now()+604800000}),{expirationTtl:604800});
+   const dm=await discordDM(userId,"👋 You were selected for a Community Chat role, but your Discord account isn't linked.\n\n**You missed out on: *"+ROLE_LABELS[role]+"***\n\nLink your account at https://minzo-vr.github.io/Minzos-Live-Chat/ then press **Retry** to ask administrators to approve your role again.",env,[{type:1,components:[{type:2,style:1,label:"Retry",custom_id:"role-retry:"+id}]}]);
+   return reply(dm?"The user isn't linked. I sent them a DM with the missed role and a Retry button.":"The user isn't linked, but I couldn't DM them (their DMs may be closed). No role was assigned.",true);
+  }catch(e){console.error("Assign Community Chat role",e);return reply("Couldn't check or assign the Community Chat role. Check Worker logs and Firebase permissions.",true);}
+ }
  if(name==="ping")return reply("🏓 Pong! Community Chat bot is online.");
- if(name==="help")return reply("**Community Chat commands**\n/ping — bot health\n/sad — timed self-deleting message\n/help — commands\n/latest — latest published update\n/updates — three recent updates\n/status — website link\n/announce — admin-only Discord announcement\n/applications — admin-only application open/closed announcements\n/setup_applications — create private application review channel");
+ if(name==="help")return reply("**Community Chat commands**\n/ping — bot health\n/sad — timed self-deleting message\n/help — commands\n/latest — latest published update\n/updates — three recent updates\n/status — website link\n/announce — admin-only Discord announcement\n/applications — admin-only application open/closed announcements\n/setup_applications — create private application review channel\n/add-role-to-user — server-admin-only linked Community Chat role assignment");
  if(name==="status")return reply("Community Chat: https://minzo-vr.github.io/Minzos-Live-Chat/ (open to check availability)");
 
  if(name==="setup_applications"){
