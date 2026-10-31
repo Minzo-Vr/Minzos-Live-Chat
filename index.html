@@ -755,9 +755,9 @@
     #communityGameHub .game-note{padding:8px 16px;background:#111827;color:#cbd5e1;font-size:12px}
 </style>
 <style id="interface-gateway-style">
-#interfaceGateway{position:fixed;inset:0;z-index:2147483000;background:radial-gradient(circle at 50% 10%,#253b7c 0%,#12172d 48%,#090d19 100%);color:#fff;display:grid;place-items:center;padding:20px;font-family:"Lilita One",system-ui,sans-serif;transition:opacity .35s ease,visibility .35s}
+#interfaceGateway{position:fixed;inset:0;width:100vw;height:100dvh;z-index:2147483000;background:radial-gradient(circle at 50% 10%,#253b7c 0%,#12172d 48%,#090d19 100%);color:#fff;display:grid;place-items:center;padding:20px;font-family:"Lilita One",system-ui,sans-serif;transition:opacity .35s ease,visibility .35s}
 #interfaceGateway.gateway-hidden{opacity:0;visibility:hidden;pointer-events:none}
-.gateway-panel{width:min(100%,510px);text-align:center}
+.gateway-panel{width:100%;max-width:none;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:clamp(18px,5vw,70px)}.gateway-panel[hidden]{display:none!important}
 .gateway-brand{font-size:clamp(32px,7vw,48px);margin:0 0 10px}
 .gateway-subtitle{color:#aebbe0;margin:0 0 24px}
 .gateway-spinner{width:54px;height:54px;margin:22px auto;border:5px solid #ffffff25;border-top-color:#94aaff;border-radius:50%;animation:gateway-spin .8s linear infinite}
@@ -765,7 +765,7 @@
 .gateway-loading-bar{height:7px;background:#ffffff20;border-radius:30px;overflow:hidden;max-width:240px;margin:20px auto}
 .gateway-loading-bar:after{content:"";display:block;height:100%;width:45%;background:#8ca8ff;border-radius:30px;animation:gateway-progress 1.1s ease-in-out infinite alternate}
 @keyframes gateway-progress{to{transform:translateX(130%)}}
-.gateway-options{display:flex;flex-direction:column;gap:12px;max-height:min(48vh,390px);overflow-y:auto;overscroll-behavior:contain;padding:4px 8px 18px;scrollbar-color:#7287c6 transparent}
+.gateway-options{display:flex;flex-direction:column;gap:12px;width:min(100%,780px);max-height:55dvh;overflow-y:auto;overscroll-behavior:contain;padding:4px 8px 18px;scrollbar-color:#7287c6 transparent}
 .gateway-option{width:100%;padding:19px;text-align:left;background:#ffffff12;border:1px solid #ffffff35;border-radius:17px;color:white;display:flex;align-items:center;gap:14px;font:inherit;font-size:19px}
 button.gateway-option{cursor:pointer}
 button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477d34d;outline:2px solid #8da7ff}
