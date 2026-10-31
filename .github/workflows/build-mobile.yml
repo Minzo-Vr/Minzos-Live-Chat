@@ -25,7 +25,13 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - uses: android-actions/setup-android@v3
+      # GitHub's Ubuntu runner already provides the Android SDK.
+      # Avoid setup-android's sdkmanager bootstrap, which can fail before the build.
+      - name: Verify preinstalled Android SDK
+        run: |
+          echo "ANDROID_HOME=${ANDROID_HOME}"
+          test -d "${ANDROID_HOME}/platforms" || { echo 'Android SDK platforms not found'; exit 1; }
+          test -d "${ANDROID_HOME}/build-tools" || { echo 'Android SDK build tools not found'; exit 1; }
       - name: Install Capacitor dependencies
         working-directory: mobile
         run: npm install --no-audit --no-fund
