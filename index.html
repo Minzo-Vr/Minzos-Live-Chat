@@ -774,6 +774,21 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
 .gateway-icon{font-size:28px}
 .gateway-back{margin-top:14px;background:transparent;color:#c3d1ff;border:1px solid #ffffff40;border-radius:12px;padding:10px 18px;font:inherit;cursor:pointer}
 @media(prefers-reduced-motion:reduce){.gateway-spinner,.gateway-loading-bar:after{animation:none}#interfaceGateway{transition:none}}
+
+#gatewaySelection{padding:0;display:flex;flex-direction:row;align-items:stretch;justify-content:stretch;text-align:left}
+.gateway-sidebar{width:280px;flex-shrink:0;background:#0a1024;border-right:1px solid #ffffff25;padding:26px 16px;overflow-y:auto;transition:width .2s ease,padding .2s ease}
+.gateway-sidebar.is-collapsed{width:62px;padding:26px 9px}
+.gateway-sidebar.is-collapsed .gateway-sidebar-content,.gateway-sidebar.is-collapsed .gateway-sidebar-title{display:none}
+.gateway-sidebar-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:20px}
+.gateway-sidebar-top button,.gateway-role{border:1px solid #ffffff25;background:#ffffff12;color:white;border-radius:12px;padding:10px;font:inherit;cursor:pointer}
+.gateway-sidebar-top button{flex-shrink:0}
+.gateway-sidebar-title{font-size:19px}
+.gateway-role{display:flex;align-items:center;gap:9px;width:100%;text-align:left;margin:7px 0}
+.gateway-role[aria-pressed="true"]{background:#556ad366;border-color:#a6baff}
+.gateway-role-note{color:#b6c4e6;font-size:12px;line-height:1.5;margin-top:18px}
+.gateway-main{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:clamp(18px,5vw,70px);text-align:center;overflow:auto}
+.gateway-role-filter{color:#b6c4e6;font-size:13px;margin:0 0 12px}
+@media(max-width:620px){.gateway-sidebar{width:195px;padding:16px 10px}.gateway-sidebar.is-collapsed{width:50px;padding:16px 5px}.gateway-main{padding:20px 12px}.gateway-role{font-size:13px}}
 </style>
 </head>
 <body>
@@ -783,15 +798,31 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
   <div class="gateway-spinner" aria-hidden="true"></div><div class="gateway-loading-bar" aria-hidden="true"></div>
  </div>
  <div class="gateway-panel" id="gatewaySelection" hidden>
-  <h1 class="gateway-brand">Select User Interface</h1>
-  <p class="gateway-subtitle">Choose where you want to go</p>
-  <div class="gateway-options" tabindex="0" aria-label="Scroll through interfaces">
-   <button class="gateway-option" type="button" id="gatewayOpenChat"><span class="gateway-icon">💬</span><span>Chats<small>Enter Community Chat</small></span></button>
-   <div class="gateway-option" aria-disabled="true"><span class="gateway-icon">🧩</span><span>More interfaces<small>Coming soon</small></span></div>
-   <div class="gateway-option" aria-disabled="true"><span class="gateway-icon">✨</span><span>Future features<small>Coming soon</small></span></div>
-   <div class="gateway-option" aria-disabled="true"><span class="gateway-icon">🔒</span><span>???<small>Coming soon</small></span></div>
-  </div>
- </div>
+  <aside class="gateway-sidebar" id="gatewayRoleSidebar" aria-label="Roles and access">
+   <div class="gateway-sidebar-top"><strong class="gateway-sidebar-title">Roles &amp; Access</strong><button type="button" id="gatewayToggleSidebar" aria-expanded="true" aria-label="Collapse roles sidebar">☰</button></div>
+   <div class="gateway-sidebar-content">
+    <p class="gateway-role-note">Select a role to preview its interface access.</p>
+    <button type="button" class="gateway-role" data-role="all" aria-pressed="true">🌐 All interfaces</button>
+    <button type="button" class="gateway-role" data-role="member" aria-pressed="false">👤 Member</button>
+    <button type="button" class="gateway-role" data-role="plus" aria-pressed="false">⭐ Plus</button>
+    <button type="button" class="gateway-role" data-role="moderator" aria-pressed="false">🛡️ Moderator</button>
+    <button type="button" class="gateway-role" data-role="testsubject" aria-pressed="false">🧪 Test Subject</button>
+    <button type="button" class="gateway-role" data-role="admin" aria-pressed="false">👑 Admin</button>
+    <p class="gateway-role-note">Role selection is a preview, not a role change. Access permissions will be configured separately.</p>
+   </div>
+  </aside>
+  <main class="gateway-main">
+   <h1 class="gateway-brand">Select User Interface</h1>
+   <p class="gateway-subtitle">Choose where you want to go</p>
+   <p class="gateway-role-filter" id="gatewayRoleFilter">Showing: All interfaces</p>
+   <div class="gateway-options" tabindex="0" aria-label="Scroll through interfaces">
+    <button class="gateway-option" type="button" id="gatewayOpenChat"><span class="gateway-icon">💬</span><span>Chats<small>Enter Community Chat</small></span></button>
+    <div class="gateway-option" aria-disabled="true"><span class="gateway-icon">🧩</span><span>More interfaces<small>Coming soon</small></span></div>
+    <div class="gateway-option" aria-disabled="true"><span class="gateway-icon">✨</span><span>Future features<small>Coming soon</small></span></div>
+    <div class="gateway-option" aria-disabled="true"><span class="gateway-icon">🔒</span><span>???<small>Coming soon</small></span></div>
+   </div>
+  </main>
+ </div>>
 </div>
 <script id="interface-gateway-script">
 (function(){
@@ -803,6 +834,14 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
  const start=Date.now();
  const ready=()=>setTimeout(reveal,Math.max(0,900-(Date.now()-start)));
  if(document.readyState==="complete")ready();else window.addEventListener("load",ready,{once:true});
+ const sidebar=document.getElementById("gatewayRoleSidebar");
+ const toggle=document.getElementById("gatewayToggleSidebar");
+ toggle.addEventListener("click",()=>{const collapsed=sidebar.classList.toggle("is-collapsed");toggle.setAttribute("aria-expanded",String(!collapsed));toggle.setAttribute("aria-label",collapsed?"Expand roles sidebar":"Collapse roles sidebar");});
+ const roleNames={all:"All interfaces",member:"Member",plus:"Plus",moderator:"Moderator",testsubject:"Test Subject",admin:"Admin"};
+ sidebar.querySelectorAll("[data-role]").forEach(button=>button.addEventListener("click",()=>{
+  sidebar.querySelectorAll("[data-role]").forEach(item=>item.setAttribute("aria-pressed",String(item===button)));
+  document.getElementById("gatewayRoleFilter").textContent="Previewing: "+roleNames[button.dataset.role]+" (access settings coming soon)";
+ }));
  open.addEventListener("click",()=>{gateway.classList.add("gateway-hidden");gateway.setAttribute("aria-hidden","true");setTimeout(()=>gateway.remove(),450)});
 })();
 </script>
