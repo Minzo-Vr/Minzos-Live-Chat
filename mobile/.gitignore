@@ -1,0 +1,9 @@
+node_modules/
+www/
+android/
+ios/
+.gradle/
+.DS_Store
+*.keystore
+*.p12
+*.mobileprovision
