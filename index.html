@@ -1262,6 +1262,10 @@
         <label for="slowSeconds">Delay between messages:</label>
         <select id="slowSeconds"><option value="0">Off</option><option value="5">5 seconds</option><option value="10">10 seconds</option><option value="30">30 seconds</option><option value="60">60 seconds</option></select>
         <button type="button" id="slowSave">Save slowmode</button>
+        <p><strong>Auto logout:</strong> <span id="autoLogoutAdminStatus">Checking…</span></p>
+        <label for="autoLogoutMinutes">Log out after inactivity:</label>
+        <select id="autoLogoutMinutes"><option value="0">Off</option><option value="1">1 minute</option><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option></select>
+        <button type="button" id="autoLogoutSave">Save auto logout</button>
         <p><strong>Community vote:</strong> <span id="voteAdminStatus">Checking…</span></p>
         <button type="button" id="voteStart">Start new vote</button>
         <button type="button" id="voteClose">Close vote</button>
@@ -3969,6 +3973,27 @@
         displayedMessages.delete(snapshot.key);
       });
     }
+    // Browser-side inactivity logout. This signs out the current Firebase Auth session;
+    // it does not revoke server tokens or sessions in other browsers.
+    const allowedLogoutMinutes=[0,1,5,10,15,30,60];
+    let autoLogoutMinutes=0,lastUserActivity=Date.now(),autoLogoutTimer=null,autoLogoutBusy=false;
+    function markUserActivity(){lastUserActivity=Date.now()}
+    for(const eventName of ["pointerdown","keydown","touchstart","scroll"]){
+      window.addEventListener(eventName,markUserActivity,{passive:true,capture:true});
+    }
+    function checkAutoLogout(){
+      if(!user||!auth?.currentUser||autoLogoutBusy||autoLogoutMinutes===0)return;
+      if(Date.now()-lastUserActivity<autoLogoutMinutes*60000)return;
+      autoLogoutBusy=true;
+      signOut(auth).then(()=>{
+        $("authFeedback").textContent="Signed out automatically after "+autoLogoutMinutes+" minute(s) of inactivity.";
+      }).catch(err=>{
+        console.error("Auto logout failed:",err);
+        lastUserActivity=Date.now();
+      }).finally(()=>{autoLogoutBusy=false});
+    }
+    autoLogoutTimer=setInterval(checkAutoLogout,10000);
+    document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkAutoLogout()});
     function subscribeSettings() {
       for (const unsubscribe of stopSettings) unsubscribe();
       stopSettings = [];
@@ -3982,6 +4007,16 @@
         }
         lastSeenKickEpoch = value;
       }, err => { console.error("Kick status read failed:",err); }));
+      stopSettings.push(onValue(ref(db,"chatSettings/autoLogoutMinutes"),snap=>{
+        const value=Number(snap.val());
+        autoLogoutMinutes=allowedLogoutMinutes.includes(value)?value:0;
+        $("autoLogoutMinutes").value=String(autoLogoutMinutes);
+        $("autoLogoutAdminStatus").textContent=autoLogoutMinutes?autoLogoutMinutes+" minute(s) of inactivity":"Off";
+        checkAutoLogout();
+      },err=>{
+        console.error("Auto logout setting read failed:",err);
+        $("autoLogoutAdminStatus").textContent="Unavailable (check Firebase rules)";
+      }));
       stopSettings.push(onValue(ref(db, "chatSettings/slowSeconds"), snap => {
         slowSeconds = [0,5,10,30,60].includes(snap.val()) ? snap.val() : 0;
         $("slowSeconds").value = String(slowSeconds);
@@ -4039,6 +4074,7 @@
       stopChatListeners();
       if(user?.uid!==account?.uid){clearMyTyping().catch(console.warn);if(typingUnsub){typingUnsub();typingUnsub=null;}typingEntries={};drawTyping();}
       user=account;
+      lastUserActivity=Date.now();
       if(stopEconomy){stopEconomy();stopEconomy=null;}
       $("xpStatus").hidden=!account || !hasExperimentalAccess() || !chatPrefs.enableXp;
       if(roleUnsub){roleUnsub();roleUnsub=null;}if(moderationUnsub){moderationUnsub();moderationUnsub=null;}
@@ -4927,6 +4963,18 @@
         $("adminFeedback").textContent = "Could not delete oldest messages. Check Firebase rules and your admin session.";
         console.error(err);
       } finally { button.disabled = false; }
+    });
+    $("autoLogoutSave").addEventListener("click",async()=>{
+      if(!isAdmin)return;
+      const minutes=Number($("autoLogoutMinutes").value);
+      if(!allowedLogoutMinutes.includes(minutes))return;
+      try{
+        await set(ref(db,"chatSettings/autoLogoutMinutes"),minutes);
+        $("adminFeedback").textContent="Auto logout set to "+(minutes?minutes+" minute(s) of inactivity.":"Off.")+" Applies to signed-in users with this page open.";
+      }catch(err){
+        console.error("Could not save auto logout:",err);
+        $("adminFeedback").textContent="Could not save auto logout. Firebase rules may need to allow admin writes to chatSettings/autoLogoutMinutes.";
+      }
     });
     $("slowSave").addEventListener("click", async () => {
       if (!isAdmin) return;
