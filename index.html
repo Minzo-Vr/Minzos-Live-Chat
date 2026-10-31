@@ -754,8 +754,58 @@
     #communityGameHub #gamePlayFrame{width:100%;flex:1;border:0;background:#fff;min-height:0}
     #communityGameHub .game-note{padding:8px 16px;background:#111827;color:#cbd5e1;font-size:12px}
 </style>
+<style id="interface-gateway-style">
+#interfaceGateway{position:fixed;inset:0;z-index:2147483000;background:radial-gradient(circle at 50% 10%,#253b7c 0%,#12172d 48%,#090d19 100%);color:#fff;display:grid;place-items:center;padding:20px;font-family:"Lilita One",system-ui,sans-serif;transition:opacity .35s ease,visibility .35s}
+#interfaceGateway.gateway-hidden{opacity:0;visibility:hidden;pointer-events:none}
+.gateway-panel{width:min(100%,510px);text-align:center}
+.gateway-brand{font-size:clamp(32px,7vw,48px);margin:0 0 10px}
+.gateway-subtitle{color:#aebbe0;margin:0 0 24px}
+.gateway-spinner{width:54px;height:54px;margin:22px auto;border:5px solid #ffffff25;border-top-color:#94aaff;border-radius:50%;animation:gateway-spin .8s linear infinite}
+@keyframes gateway-spin{to{transform:rotate(360deg)}}
+.gateway-loading-bar{height:7px;background:#ffffff20;border-radius:30px;overflow:hidden;max-width:240px;margin:20px auto}
+.gateway-loading-bar:after{content:"";display:block;height:100%;width:45%;background:#8ca8ff;border-radius:30px;animation:gateway-progress 1.1s ease-in-out infinite alternate}
+@keyframes gateway-progress{to{transform:translateX(130%)}}
+.gateway-options{display:flex;flex-direction:column;gap:12px;max-height:min(48vh,390px);overflow-y:auto;overscroll-behavior:contain;padding:4px 8px 18px;scrollbar-color:#7287c6 transparent}
+.gateway-option{width:100%;padding:19px;text-align:left;background:#ffffff12;border:1px solid #ffffff35;border-radius:17px;color:white;display:flex;align-items:center;gap:14px;font:inherit;font-size:19px}
+button.gateway-option{cursor:pointer}
+button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477d34d;outline:2px solid #8da7ff}
+.gateway-option[disabled]{opacity:.52;cursor:not-allowed}
+.gateway-option small{display:block;font-size:12px;color:#bbc6e6;margin-top:4px}
+.gateway-icon{font-size:28px}
+.gateway-back{margin-top:14px;background:transparent;color:#c3d1ff;border:1px solid #ffffff40;border-radius:12px;padding:10px 18px;font:inherit;cursor:pointer}
+@media(prefers-reduced-motion:reduce){.gateway-spinner,.gateway-loading-bar:after{animation:none}#interfaceGateway{transition:none}}
+</style>
 </head>
 <body>
+<div id="interfaceGateway" role="dialog" aria-modal="true" aria-label="Community Chat startup">
+ <div class="gateway-panel" id="gatewayLoading" aria-live="polite">
+  <h1 class="gateway-brand">Community Chat</h1><p class="gateway-subtitle">Getting everything ready...</p>
+  <div class="gateway-spinner" aria-hidden="true"></div><div class="gateway-loading-bar" aria-hidden="true"></div>
+ </div>
+ <div class="gateway-panel" id="gatewaySelection" hidden>
+  <h1 class="gateway-brand">Select User Interface</h1>
+  <p class="gateway-subtitle">Choose where you want to go</p>
+  <div class="gateway-options" tabindex="0" aria-label="Scroll through interfaces">
+   <button class="gateway-option" type="button" id="gatewayOpenChat"><span class="gateway-icon">💬</span><span>Chats<small>Enter Community Chat</small></span></button>
+   <div class="gateway-option" aria-disabled="true"><span class="gateway-icon">🧩</span><span>More interfaces<small>Coming soon</small></span></div>
+   <div class="gateway-option" aria-disabled="true"><span class="gateway-icon">✨</span><span>Future features<small>Coming soon</small></span></div>
+   <div class="gateway-option" aria-disabled="true"><span class="gateway-icon">🔒</span><span>???<small>Coming soon</small></span></div>
+  </div>
+ </div>
+</div>
+<script id="interface-gateway-script">
+(function(){
+ const gateway=document.getElementById("interfaceGateway");
+ const loading=document.getElementById("gatewayLoading");
+ const selection=document.getElementById("gatewaySelection");
+ const open=document.getElementById("gatewayOpenChat");
+ const reveal=()=>{loading.hidden=true;loading.style.display="none";selection.hidden=false;open.focus()};
+ const start=Date.now();
+ const ready=()=>setTimeout(reveal,Math.max(0,900-(Date.now()-start)));
+ if(document.readyState==="complete")ready();else window.addEventListener("load",ready,{once:true});
+ open.addEventListener("click",()=>{gateway.classList.add("gateway-hidden");gateway.setAttribute("aria-hidden","true");setTimeout(()=>gateway.remove(),450)});
+})();
+</script>
   <main class="chat" aria-label="Website visitor live chat">
     <aside id="dmSidebar" hidden aria-label="Direct Messages sidebar">
       <div class="dm-side-head"><strong>💬 Direct Messages</strong><button id="dmSideClose" type="button" aria-label="Collapse Direct Messages">✕</button></div>
