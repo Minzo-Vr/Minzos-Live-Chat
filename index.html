@@ -4952,14 +4952,26 @@
         $("shopOverlay").hidden=false;drawEconomy();
         return;
       }
+      const sad = text.match(/^\/sad\s+(\d+)([smhd])\s+([\s\S]+)$/i);
+      if (/^\/sad(?:\s|$)/i.test(text) && !sad) {
+        addSystem("Usage: /sad 10s Hello! (s, m, h or d)"); return;
+      }
+      const units = {s:1000,m:60000,h:3600000,d:86400000};
+      const ttl = sad ? Number(sad[1]) * units[sad[2].toLowerCase()] : 0;
+      if (sad && (!Number.isSafeInteger(ttl) || ttl < 1000 || ttl > 86400000)) {
+        addSystem("/sad duration must be between 1 second and 1 day."); return;
+      }
+      const outgoing = sad ? sad[3].trim() : text;
       sendBtn.disabled = true;
       try {
-        await push(ref(db, roomMessagePath()), {
+        const sent = await push(ref(db, roomMessagePath()), {
           uid: user.uid,
           name: incognitoDisplayName(),
-          text: text.slice(0, 500),
+          text: outgoing.slice(0, 500),
+          ...(sad ? {expiresAt: Date.now() + ttl} : {}),
           createdAt: serverTimestamp()
         });
+        if (sad) setTimeout(() => remove(sent).catch(console.warn), ttl);
         messageInput.value = "";
         clearMyTyping().catch(console.warn);
         await rewardMessageXp();
