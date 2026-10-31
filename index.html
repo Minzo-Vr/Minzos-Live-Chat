@@ -5589,9 +5589,9 @@
   #escapeWorld[hidden]{display:none!important}
   #escapeWorld{position:fixed;inset:0;z-index:2147482500;background:#030611;color:#d9faff;font:14px system-ui,sans-serif;overflow:hidden;touch-action:none}
   #escapeWorld .ew-scene{position:absolute;inset:0;perspective:650px;overflow:hidden;background:radial-gradient(ellipse at 50% 55%,#122c39 0%,#050913 60%,#010208 100%)}
-  #escapeWorld .ew-space{position:absolute;left:50%;top:52%;width:0;height:0;transform-style:preserve-3d;transform:translateZ(var(--zoom,0px)) rotateX(var(--pitch,0deg)) rotateY(var(--yaw,0deg))}
-  #escapeWorld .ew-wall{position:absolute;width:1100px;height:1100px;left:-550px;top:-550px;backface-visibility:visible;border:2px solid #1df0dc77;background:repeating-linear-gradient(0deg,transparent 0 66px,#19dccc29 67px 69px),repeating-linear-gradient(90deg,transparent 0 66px,#19dccc29 67px 69px),linear-gradient(#031321,#041a25)}
-  #escapeWorld .ew-back{transform:translateZ(-550px)}
+  #escapeWorld .ew-space{position:absolute;left:50%;top:52%;width:0;height:0;transform-style:preserve-3d;transform:rotateX(var(--pitch,0deg)) rotateY(var(--yaw,0deg)) translate3d(var(--walk-x,0px),0px,var(--walk-z,0px))}
+  #escapeWorld .ew-wall{position:absolute;width:2400px;height:2400px;left:-1200px;top:-1200px;backface-visibility:visible;border:2px solid #1df0dc77;background:repeating-linear-gradient(0deg,transparent 0 66px,#19dccc29 67px 69px),repeating-linear-gradient(90deg,transparent 0 66px,#19dccc29 67px 69px),linear-gradient(#031321,#041a25)}
+  #escapeWorld .ew-back{transform:translateZ(-1200px)}
   #escapeWorld .ew-front{transform:rotateY(180deg) translateZ(-550px)}
   #escapeWorld .ew-left{transform:rotateY(90deg) translateZ(-550px)}
   #escapeWorld .ew-right{transform:rotateY(-90deg) translateZ(-550px)}
@@ -5619,13 +5619,13 @@
 #escapeWorld .ew-left,#escapeWorld .ew-right{background:linear-gradient(0deg,#8a6442 0 24%,#b6dbea99 24% 85%,#7d5739 85%);border:24px solid #533c2b}
 #escapeWorld .ew-floor{background:repeating-linear-gradient(90deg,#805b3b 0 65px,#a47b51 66px 130px,#4b3528 131px 134px)}
 #escapeWorld .ew-ceil{background:repeating-linear-gradient(90deg,#4a3226 0 45px,#9a734f 46px 100px)}
-#escapeWorld .ew-core{width:310px;height:135px;left:-155px;top:110px;border:14px solid #443329;border-radius:22px;background:linear-gradient(#485a62,#273e46);box-shadow:0 22px 35px #0008;animation:ew-float 3s ease-in-out infinite alternate}
+#escapeWorld .ew-core{width:440px;height:180px;left:-220px;top:110px;border:14px solid #443329;border-radius:22px;background:linear-gradient(#485a62,#273e46);box-shadow:0 22px 35px #0008;animation:ew-float 3s ease-in-out infinite alternate}
 #escapeWorld .ew-core:after{content:"WELCOME TO THE RETREAT";top:35%;letter-spacing:2px;font-size:13px}
 #escapeWorld .ew-hud{color:#fff;text-shadow:0 2px 8px #000}
 </style><div class="ew-scene"><div class="ew-space">
       <div class="ew-wall ew-back"></div><div class="ew-wall ew-front"></div><div class="ew-wall ew-left"></div><div class="ew-wall ew-right"></div><div class="ew-wall ew-floor"></div><div class="ew-wall ew-ceil"></div><div class="ew-core"></div>
     </div></div>
-    <div class="ew-hud"><div><strong>🏔️ ESCAPE RETREAT · MOUNTAIN LODGE</strong><div style="font-size:12px;margin-top:6px">Drag to look around · Scroll / pinch to zoom · WASD to turn</div></div><div class="ew-controls"><span>HANGOUT MODE · EXPLORE & RELAX</span><button type="button" id="escapeReturn">↩ Return to Chat</button></div></div>
+    <div class="ew-hud"><div><strong>🏔️ ESCAPE RETREAT · MOUNTAIN LODGE</strong><div style="font-size:12px;margin-top:6px">Drag to look · WASD to walk · Scroll to move</div></div><div class="ew-controls"><span>HANGOUT MODE · EXPLORE & RELAX</span><button type="button" id="escapeReturn">↩ Return to Chat</button></div></div>
     <div class="ew-intro"><strong>REALITY UNLOADING</strong><div class="ew-headset"></div><div>VR DISCONNECTING · ESCAPE INITIATED</div></div>
   </div>
   <script>
@@ -5633,15 +5633,15 @@
     const form=document.getElementById("consoleForm"),input=document.getElementById("consoleInput"),world=document.getElementById("escapeWorld");
     if(!form||!input||!world)return;
     const space=world.querySelector(".ew-space");
-    let yaw=0,pitch=0,zoom=0,drag=null,previousFocus=null,pinchDistance=null;
-    const update=()=>{space.style.setProperty("--yaw",yaw+"deg");space.style.setProperty("--pitch",pitch+"deg");space.style.setProperty("--zoom",zoom+"px")};
+    let yaw=0,pitch=0,zoom=0,walkX=0,walkZ=0,drag=null,previousFocus=null,pinchDistance=null;const movementKeys=new Set();let lastWalkFrame=0;
+    const update=()=>{space.style.setProperty("--yaw",yaw+"deg");space.style.setProperty("--pitch",pitch+"deg");space.style.setProperty("--zoom",zoom+"px");space.style.setProperty("--walk-x",walkX+"px");space.style.setProperty("--walk-z",walkZ+"px")};
     const close=()=>{world.hidden=true;document.body.style.overflow="";if(previousFocus?.isConnected)previousFocus.focus()};
     const open=()=>{
       previousFocus=document.activeElement;
       const overlay=document.getElementById("consoleOverlay");if(overlay)overlay.hidden=true;
       world.hidden=false;document.body.style.overflow="hidden";
       const intro=world.querySelector(".ew-intro");intro.style.animation="none";void intro.offsetWidth;intro.style.animation="";
-      yaw=0;pitch=0;zoom=0;update();world.querySelector("#escapeReturn").focus();
+      yaw=0;pitch=0;zoom=0;walkX=0;walkZ=0;movementKeys.clear();update();world.querySelector("#escapeReturn").focus();
     };
     form.addEventListener("submit",e=>{
       if(input.value.trim().toLowerCase()!=="execute: escape" && input.value.trim().toLowerCase()!=="execute: return")return;
@@ -5655,7 +5655,7 @@
     world.addEventListener("pointerup",()=>drag=null);
     world.addEventListener("pointercancel",()=>drag=null);
     // Zoom remains bounded so the viewer cannot move beyond the room walls.
-    const setZoom=delta=>{zoom=Math.max(-220,Math.min(220,zoom+delta));update()};
+    const setZoom=delta=>{walkZ=Math.max(-1050,Math.min(1050,walkZ+delta));update()};
     world.addEventListener("wheel",e=>{if(e.target.closest("button"))return;e.preventDefault();setZoom(-e.deltaY*.3)},{passive:false});
     world.addEventListener("touchmove",e=>{
       if(e.touches.length!==2){pinchDistance=null;return;}
@@ -5665,16 +5665,36 @@
       pinchDistance=distance;
     },{passive:false});
     world.addEventListener("touchend",()=>pinchDistance=null);
+    const mobilePad=document.createElement("div");
+    mobilePad.className="ew-mobile-pad";
+    mobilePad.innerHTML='<button type="button" data-dir="w" aria-label="Forward">▲</button><button type="button" data-dir="a" aria-label="Left">◀</button><button type="button" data-dir="s" aria-label="Back">▼</button><button type="button" data-dir="d" aria-label="Right">▶</button>';
+    world.append(mobilePad);
+    mobilePad.querySelectorAll("button").forEach(btn=>{
+      const key=btn.dataset.dir;
+      btn.addEventListener("pointerdown",e=>{e.stopPropagation();btn.setPointerCapture(e.pointerId);movementKeys.add(key)});
+      for(const type of ["pointerup","pointercancel","lostpointercapture"])btn.addEventListener(type,()=>movementKeys.delete(key));
+    });
     document.addEventListener("keydown",e=>{
       if(world.hidden)return;
       if(e.key==="Escape"){close();return}
-      if(["ArrowLeft","a","A"].includes(e.key))yaw-=8;
-      else if(["ArrowRight","d","D"].includes(e.key))yaw+=8;
-      else if(["ArrowUp","w","W"].includes(e.key))pitch=Math.min(75,pitch+8);
-      else if(["ArrowDown","s","S"].includes(e.key))pitch=Math.max(-75,pitch-8);
-      else return;
-      e.preventDefault();update();
+      const key=e.key.toLowerCase();
+      if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright"].includes(key)){movementKeys.add(key);e.preventDefault()}
     });
+    document.addEventListener("keyup",e=>movementKeys.delete(e.key.toLowerCase()));
+    window.addEventListener("blur",()=>movementKeys.clear());
+    function walkFrame(timestamp){
+      requestAnimationFrame(walkFrame);
+      const dt=Math.min((timestamp-(lastWalkFrame||timestamp))/1000,.05);lastWalkFrame=timestamp;
+      if(world.hidden||!movementKeys.size)return;
+      const forward=Number(movementKeys.has("w")||movementKeys.has("arrowup"))-Number(movementKeys.has("s")||movementKeys.has("arrowdown"));
+      const side=Number(movementKeys.has("d")||movementKeys.has("arrowright"))-Number(movementKeys.has("a")||movementKeys.has("arrowleft"));
+      if(!forward&&!side)return;
+      const radians=yaw*Math.PI/180,speed=270*dt/Math.max(1,Math.hypot(forward,side));
+      walkX=Math.max(-1050,Math.min(1050,walkX+(Math.sin(radians)*forward-Math.cos(radians)*side)*speed));
+      walkZ=Math.max(-1050,Math.min(1050,walkZ+(Math.cos(radians)*forward+Math.sin(radians)*side)*speed));
+      update();
+    }
+    requestAnimationFrame(walkFrame);
   })();
   </script>
 </body>
