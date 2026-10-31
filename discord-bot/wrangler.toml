@@ -2,3 +2,7 @@ name = "community-chat-discord-bot"
 main = "worker.js"
 compatibility_date = "2026-10-01"
 workers_dev = true
+
+# /sad cleanup runs every minute; bind a KV namespace named SAD_MESSAGES before deployment.
+[triggers]
+crons = ["* * * * *"]
