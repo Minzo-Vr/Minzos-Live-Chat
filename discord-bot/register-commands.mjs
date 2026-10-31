@@ -19,6 +19,7 @@ const commands=[
  {type:3,name:"starts",description:"When applications open (optional)",required:false},
  {type:3,name:"results",description:"When applicants hear back (optional)",required:false}
 ]},
+{name:"add-role-to-user",description:"Give a linked Community Chat account a role",default_member_permissions:"8",options:[{type:6,name:"user",description:"Discord user to receive the role",required:true},{type:3,name:"role",description:"Community Chat role",required:true,choices:[{name:"Moderator",value:"moderator"},{name:"Plus",value:"plus"},{name:"Test Subject",value:"testsubject"},{name:"Admin",value:"admin"}]}]},
 {name:"announce",description:"Post an admin announcement to Discord",default_member_permissions:"8",options:[{type:3,name:"message",description:"Announcement text",required:true,max_length:1500}]}
 ];
 const res=await fetch(`https://discord.com/api/v10/applications/${app}/guilds/${guild}/commands`,{method:"PUT",headers:{authorization:"Bot "+token,"content-type":"application/json"},body:JSON.stringify(commands)});
