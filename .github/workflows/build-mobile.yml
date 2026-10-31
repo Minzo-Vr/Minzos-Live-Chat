@@ -67,3 +67,30 @@ jobs:
           name: community-chat-ios-simulator-app-unsigned
           path: mobile/ios/App/build/Build/Products/Debug-iphonesimulator/App.app
           if-no-files-found: error
+      - name: Build unsigned iOS device app
+        working-directory: mobile/ios/App
+        run: |
+          xcodebuild \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build-device \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+      - name: Package unsigned device IPA
+        working-directory: mobile/ios/App
+        run: |
+          set -euo pipefail
+          APP="build-device/Build/Products/Release-iphoneos/App.app"
+          test -d "$APP" || { echo "::error::Physical-device App.app not found"; exit 1; }
+          mkdir -p ipa/Payload
+          ditto "$APP" ipa/Payload/App.app
+          (cd ipa && zip -qry ../community-chat-unsigned.ipa Payload)
+          unzip -t community-chat-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: community-chat-ios-device-ipa-unsigned
+          path: mobile/ios/App/community-chat-unsigned.ipa
+          if-no-files-found: error
