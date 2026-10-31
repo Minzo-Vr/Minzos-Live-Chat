@@ -5584,5 +5584,75 @@
     };
   })();
   </script>
+
+  <style>
+  #escapeWorld[hidden]{display:none!important}
+  #escapeWorld{position:fixed;inset:0;z-index:2147482500;background:#030611;color:#d9faff;font:14px system-ui,sans-serif;overflow:hidden;touch-action:none}
+  #escapeWorld .ew-scene{position:absolute;inset:0;perspective:650px;overflow:hidden;background:radial-gradient(ellipse at 50% 55%,#122c39 0%,#050913 60%,#010208 100%)}
+  #escapeWorld .ew-space{position:absolute;left:50%;top:52%;width:0;height:0;transform-style:preserve-3d;transform:rotateX(var(--pitch,0deg)) rotateY(var(--yaw,0deg))}
+  #escapeWorld .ew-wall{position:absolute;width:1100px;height:1100px;left:-550px;top:-550px;backface-visibility:visible;border:2px solid #1df0dc77;background:repeating-linear-gradient(0deg,transparent 0 66px,#19dccc29 67px 69px),repeating-linear-gradient(90deg,transparent 0 66px,#19dccc29 67px 69px),linear-gradient(#031321,#041a25)}
+  #escapeWorld .ew-back{transform:translateZ(-550px)}
+  #escapeWorld .ew-front{transform:rotateY(180deg) translateZ(-550px)}
+  #escapeWorld .ew-left{transform:rotateY(90deg) translateZ(-550px)}
+  #escapeWorld .ew-right{transform:rotateY(-90deg) translateZ(-550px)}
+  #escapeWorld .ew-floor{transform:rotateX(90deg) translateZ(-550px)}
+  #escapeWorld .ew-ceil{transform:rotateX(-90deg) translateZ(-550px)}
+  #escapeWorld .ew-core{position:absolute;left:-65px;top:-110px;width:130px;height:220px;border:2px solid #6ff;box-shadow:0 0 35px #0ff, inset 0 0 40px #0ff8;transform:translateZ(-300px);background:linear-gradient(130deg,#0ff4,#081e32cc);animation:ew-float 3s ease-in-out infinite alternate}
+  #escapeWorld .ew-core:after{content:"ESCAPE";position:absolute;top:45%;left:0;width:100%;text-align:center;letter-spacing:4px;color:white;text-shadow:0 0 12px cyan}
+  @keyframes ew-float{to{transform:translateZ(-300px) translateY(-35px) rotateY(15deg)}}
+  #escapeWorld .ew-hud{position:absolute;inset:0;pointer-events:none;padding:20px;display:flex;flex-direction:column;justify-content:space-between;text-shadow:0 0 12px #0ff}
+  #escapeWorld .ew-controls{pointer-events:auto;display:flex;justify-content:space-between;gap:10px;align-items:end}
+  #escapeWorld button{background:#061b2ddd;color:#dfffff;border:1px solid #4ef7ef;border-radius:8px;padding:10px 14px;font:inherit}
+  #escapeWorld .ew-intro{position:absolute;inset:0;display:grid;place-content:center;text-align:center;background:#02050b;z-index:3;animation:ew-disappear 3.8s forwards}
+  #escapeWorld .ew-intro strong{font:700 clamp(24px,6vw,64px) monospace;color:#dff;letter-spacing:4px;animation:ew-glitch .15s infinite alternate}
+  #escapeWorld .ew-headset{width:min(72vw,420px);height:190px;margin:25px auto;border:25px solid #101725;border-radius:90px 90px 60px 60px;box-shadow:inset 0 0 0 5px #5cf,0 0 40px #00ffff77;animation:ew-remove 3.5s forwards}
+  @keyframes ew-remove{0%,30%{transform:translateY(0) scale(1);opacity:1}90%,100%{transform:translateY(-110vh) rotate(-24deg) scale(1.5);opacity:0}}
+  @keyframes ew-glitch{from{transform:translateX(-3px);text-shadow:-5px 0 #f0f,5px 0 #0ff}to{transform:translateX(3px);text-shadow:4px 0 #f0f,-4px 0 #0ff}}
+  @keyframes ew-disappear{0%,88%{opacity:1;visibility:visible}100%{opacity:0;visibility:hidden}}
+  </style>
+  <div id="escapeWorld" hidden role="dialog" aria-modal="true" aria-label="Escape 3D world">
+    <div class="ew-scene"><div class="ew-space">
+      <div class="ew-wall ew-back"></div><div class="ew-wall ew-front"></div><div class="ew-wall ew-left"></div><div class="ew-wall ew-right"></div><div class="ew-wall ew-floor"></div><div class="ew-wall ew-ceil"></div><div class="ew-core"></div>
+    </div></div>
+    <div class="ew-hud"><div><strong>◈ OUTSIDE THE SIMULATION</strong><div style="font-size:12px;margin-top:6px">Drag to look around · Arrow keys / WASD to turn</div></div><div class="ew-controls"><span>REALITY STATUS: UNKNOWN</span><button type="button" id="escapeReturn">↩ Return to Chat</button></div></div>
+    <div class="ew-intro"><strong>REALITY UNLOADING</strong><div class="ew-headset"></div><div>VR DISCONNECTING · ESCAPE INITIATED</div></div>
+  </div>
+  <script>
+  (() => {
+    const form=document.getElementById("consoleForm"),input=document.getElementById("consoleInput"),world=document.getElementById("escapeWorld");
+    if(!form||!input||!world)return;
+    const space=world.querySelector(".ew-space");
+    let yaw=0,pitch=0,drag=null,previousFocus=null;
+    const update=()=>{space.style.setProperty("--yaw",yaw+"deg");space.style.setProperty("--pitch",pitch+"deg")};
+    const close=()=>{world.hidden=true;document.body.style.overflow="";if(previousFocus?.isConnected)previousFocus.focus()};
+    const open=()=>{
+      previousFocus=document.activeElement;
+      const overlay=document.getElementById("consoleOverlay");if(overlay)overlay.hidden=true;
+      world.hidden=false;document.body.style.overflow="hidden";
+      const intro=world.querySelector(".ew-intro");intro.style.animation="none";void intro.offsetWidth;intro.style.animation="";
+      yaw=0;pitch=0;update();world.querySelector("#escapeReturn").focus();
+    };
+    form.addEventListener("submit",e=>{
+      if(input.value.trim().toLowerCase()!=="execute: escape" && input.value.trim().toLowerCase()!=="execute: return")return;
+      e.preventDefault();e.stopImmediatePropagation();
+      const command=input.value.trim().toLowerCase();input.value="";
+      if(command==="execute: escape")open();else close();
+    },true);
+    world.querySelector("#escapeReturn").addEventListener("click",close);
+    world.addEventListener("pointerdown",e=>{if(e.target.closest("button"))return;drag={x:e.clientX,y:e.clientY};world.setPointerCapture?.(e.pointerId)});
+    world.addEventListener("pointermove",e=>{if(!drag)return;yaw+=(e.clientX-drag.x)*.22;pitch=Math.max(-75,Math.min(75,pitch-(e.clientY-drag.y)*.18));drag={x:e.clientX,y:e.clientY};update()});
+    world.addEventListener("pointerup",()=>drag=null);
+    document.addEventListener("keydown",e=>{
+      if(world.hidden)return;
+      if(e.key==="Escape"){close();return}
+      if(["ArrowLeft","a","A"].includes(e.key))yaw-=8;
+      else if(["ArrowRight","d","D"].includes(e.key))yaw+=8;
+      else if(["ArrowUp","w","W"].includes(e.key))pitch=Math.min(75,pitch+8);
+      else if(["ArrowDown","s","S"].includes(e.key))pitch=Math.max(-75,pitch-8);
+      else return;
+      e.preventDefault();update();
+    });
+  })();
+  </script>
 </body>
 </html>
