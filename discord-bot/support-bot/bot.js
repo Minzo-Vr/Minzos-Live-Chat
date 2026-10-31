@@ -1,8 +1,9 @@
 import {Client, GatewayIntentBits, Events} from "discord.js";
+import {setupRoleSync} from "./role-sync.js";
 
 const required=["DISCORD_BOT_TOKEN","HELP_CHANNEL_ID","OPENAI_API_KEY"];
 for(const key of required)if(!process.env[key])throw Error("Missing required environment variable: "+key);
-const client=new Client({intents:[GatewayIntentBits.Guilds,GatewayIntentBits.GuildMessages,GatewayIntentBits.MessageContent]});
+const client=new Client({intents:[GatewayIntentBits.Guilds,GatewayIntentBits.GuildMessages,GatewayIntentBits.MessageContent,GatewayIntentBits.GuildMembers]});
 const cooldowns=new Map();
 const MAX_QUESTION=1200;
 const COOLDOWN_MS=20000;
@@ -45,4 +46,5 @@ client.on(Events.MessageCreate,async message=>{
  }
 });
 client.on(Events.Error,error=>console.error("Discord client error:",error));
+setupRoleSync(client);
 await client.login(process.env.DISCORD_BOT_TOKEN);
