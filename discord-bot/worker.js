@@ -21,7 +21,7 @@ async function finishSupportInteraction(data,env){
   if(typeof question!=="string"||!question.trim()||question.length>1200)content="Please provide a question under 1,200 characters.";
   else if(!env.AI)content="Support AI is not configured yet. Ask an administrator to add the Cloudflare Workers AI binding.";
   else content=await cloudflareSupport(question.trim(),env);
- }catch(error){console.error("Workers AI support failed",error);content="Support AI is temporarily unavailable. Please try again later or contact a Community Chat administrator.";}
+ }catch(error){console.error("Workers AI support failed",error);const raw=String(error?.message||error||"Unknown error");const safe=raw.replace(/https?:\/\/\S+/g,"[URL]").replace(/(?:sk-|Bearer\s+)[A-Za-z0-9._-]+/gi,"[REDACTED]").slice(0,350);content="Support AI failed ("+ (raw.includes("binding")?"binding":raw.includes("quota")||raw.includes("limit")?"usage limit":"model request") +"). Diagnostic: `"+safe.replace(/`/g,"\u0027")+"`. Please share this message with an administrator.";}
  const response=await fetch(url,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({content,allowed_mentions:{parse:[]}})});
  if(!response.ok)console.error("Could not send /ask response",response.status);
 }
