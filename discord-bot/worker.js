@@ -29,9 +29,9 @@ async function finishSupportInteraction(data,env){
   const userId=data.member?.user?.id||data.user?.id;
   const author=userId?"<@"+userId+">":"A member";
   const content=author+" asked: "+question.trim().slice(0,1200)+"\n\nBot Replied With: "+answer;
-  const sent=await fetch("https://discord.com/api/v10/channels/"+encodeURIComponent(env.DISCORD_CHANNEL_ID)+"/messages",{method:"POST",headers:{"Authorization":"Bot "+env.DISCORD_BOT_TOKEN,"content-type":"application/json"},body:JSON.stringify({content:content.slice(0,2000),allowed_mentions:{parse:[]}})});
+  const sent=await fetch("https://discord.com/api/v10/channels/"+encodeURIComponent(env.ASK_CHANNEL_ID)+"/messages",{method:"POST",headers:{"Authorization":"Bot "+env.DISCORD_BOT_TOKEN,"content-type":"application/json"},body:JSON.stringify({content:content.slice(0,2000),allowed_mentions:{parse:[]}})});
   if(!sent.ok)throw Error("Could not publish support answer (Discord status "+sent.status+")");
-  await updatePrivate("Your question and the AI answer are now visible in <#"+env.DISCORD_CHANNEL_ID+">.");
+  await updatePrivate("Your question and the AI answer are now visible in <#"+env.ASK_CHANNEL_ID+">.");
  }catch(error){
   console.error("Workers AI support failed",error);
   await updatePrivate("Sorry, the support AI couldn't answer your question right now. Please try again later or contact an administrator.");
@@ -287,8 +287,8 @@ export default {
  if(data.type!==2)return reply("Unsupported interaction.",true);
  const name=data.data?.name;
  if(name==="ask"){
-  if(!data.guild_id||!env.DISCORD_CHANNEL_ID||data.channel_id!==env.DISCORD_CHANNEL_ID)
-   return reply("This command can ONLY be used in "+(env.DISCORD_CHANNEL_ID?"<#"+env.DISCORD_CHANNEL_ID+">":"the designated support channel")+".",true);
+  if(!data.guild_id||!env.ASK_CHANNEL_ID||data.channel_id!==env.ASK_CHANNEL_ID)
+   return reply("This command can ONLY be used in "+(env.ASK_CHANNEL_ID?"<#"+env.ASK_CHANNEL_ID+">":"the designated support channel")+".",true);
   ctx.waitUntil(finishSupportInteraction(data,env));
   return json({type:5,data:{flags:64}});
  }
