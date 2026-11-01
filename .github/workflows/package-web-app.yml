@@ -1,0 +1,43 @@
+name: Package Community Chat web app
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'manifest.webmanifest'
+      - 'app-icon.svg'
+      - '.github/workflows/package-web-app.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package-web-app:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Community Chat
+        uses: actions/checkout@v4
+
+      - name: Validate web app files
+        shell: bash
+        run: |
+          test -s index.html
+          test -s manifest.webmanifest
+          python3 -m json.tool manifest.webmanifest > /dev/null
+
+      - name: Create versioned web app archive
+        shell: bash
+        run: |
+          mkdir -p dist
+          git archive --format=zip --output="dist/community-chat-web-$(git rev-parse --short HEAD).zip" HEAD -- index.html manifest.webmanifest app-icon.svg
+          git rev-parse HEAD > dist/source-commit.txt
+
+      - name: Store package for future authorized distribution
+        uses: actions/upload-artifact@v4
+        with:
+          name: community-chat-web
+          path: dist/
+          retention-days: 30
+          if-no-files-found: error
