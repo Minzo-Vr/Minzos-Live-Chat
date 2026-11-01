@@ -26,7 +26,7 @@ async function finishSupportInteraction(data,env){
   const answer=await cloudflareSupport(question.trim(),env);
   const userId=data.member?.user?.id||data.user?.id;
   const author=userId?"<@"+userId+">":"A member";
-  const content="**Question from "+author+"**\\n"+question.trim().slice(0,1200)+"\\n\\n**Support AI**\\n"+answer;
+  const content=author+" asked: "+question.trim().slice(0,1200)+"\n\nBot Replied With: "+answer;
   const sent=await fetch("https://discord.com/api/v10/channels/"+encodeURIComponent(env.DISCORD_CHANNEL_ID)+"/messages",{method:"POST",headers:{"Authorization":"Bot "+env.DISCORD_BOT_TOKEN,"content-type":"application/json"},body:JSON.stringify({content:content.slice(0,2000),allowed_mentions:{parse:[]}})});
   if(!sent.ok)throw Error("Could not publish support answer (Discord status "+sent.status+")");
   await updatePrivate("Your question and the AI answer are now visible in <#"+env.DISCORD_CHANNEL_ID+">.");
