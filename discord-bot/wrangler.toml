@@ -6,3 +6,7 @@ workers_dev = true
 # /sad cleanup runs every minute; bind a KV namespace named SAD_MESSAGES before deployment.
 [triggers]
 crons = ["* * * * *"]
+
+# Cloudflare Workers AI binding for Discord /ask support.
+[ai]
+binding = "AI"
