@@ -11,7 +11,7 @@ async function api(url,init={}){
   return response.json();
 }
 const existing=await api(base+"/guilds/"+guild+"/commands");
-const names=["ping","sad","help","latest","updates","status"];
+const names=["ping","sad","help","ask","latest","updates","status"];
 for(const name of names){
   const source=existing.find(command=>command.name===name&&command.type===1);
   if(!source)throw Error("Missing guild command /"+name+". Register existing guild commands first.");
