@@ -217,7 +217,7 @@ async function retryRoleRequest(data,env){
  await env.SAD_MESSAGES.delete("role-request:"+key);
  return reply("✅ Your linked account was found! Your role request has been sent to administrators for approval.",true);
 }
-const GLOBAL_COMMANDS_VERSION="global-user-install-v1";
+const GLOBAL_COMMANDS_VERSION="global-user-install-v2-ask-visibility";
 async function registerGlobalCommandsOnce(env){
  if(!env.SAD_MESSAGES||!env.DISCORD_BOT_TOKEN||!env.DISCORD_APPLICATION_ID||!env.DISCORD_GUILD_ID)return;
  const marker="config:"+GLOBAL_COMMANDS_VERSION;
@@ -227,12 +227,24 @@ async function registerGlobalCommandsOnce(env){
  const source=await fetch(base+"/guilds/"+env.DISCORD_GUILD_ID+"/commands",{headers});
  if(!source.ok)throw Error("Cannot read guild commands: HTTP "+source.status);
  const guildCommands=await source.json();
- for(const name of ["ping","sad","help","latest","updates","status"]){
+ for(const name of ["ping","sad","help","latest","updates","status","ask"]){
   const command=guildCommands.find(x=>x.name===name&&x.type===1);
-  if(!command)throw Error("Missing guild command /"+name);
-  const payload={type:1,name:command.name,description:command.description,
-   ...(command.options?.length?{options:command.options}:{}),
+  if(!command&&name!=="ask")throw Error("Missing guild command /"+name);
+  const payload={type:1,name:command?.name||"ask",description:command?.description||"Ask the Community Chat support AI",
+   ...(command?.options?.length?{options:command.options}:{}),
    integration_types:[0,1],contexts:[0,1,2]};
+  if(name==="ask"){
+   payload.description="Ask the Community Chat support AI";
+   payload.options=[
+    {type:3,name:"question",description:"What would you like to ask?",required:true,max_length:1200},
+    {type:3,name:"visibility",description:"Who can see the question and answer?",required:false,choices:[
+     {name:"Everyone",value:"everyone"},
+     {name:"Only Me",value:"only_me"}
+    ]}
+   ];
+   payload.integration_types=[0];
+   payload.contexts=[0];
+  }
   if(name==="sad"){
    payload.description="Timed message (requires bot installed in server)";
    const time=payload.options?.find(x=>x.name==="time");
