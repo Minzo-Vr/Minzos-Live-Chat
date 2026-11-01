@@ -2,6 +2,8 @@ name = "community-chat-discord-bot"
 main = "worker.js"
 compatibility_date = "2026-10-01"
 workers_dev = true
+# Preserve existing dashboard-managed plain-text variables on deployment.
+keep_vars = true
 
 # /sad cleanup runs every minute; bind a KV namespace named SAD_MESSAGES before deployment.
 [triggers]
@@ -10,3 +12,8 @@ crons = ["* * * * *"]
 # Cloudflare Workers AI binding for Discord /ask support.
 [ai]
 binding = "AI"
+
+# Preserve the existing KV namespace used by /sad.
+[[kv_namespaces]]
+binding = "SAD_MESSAGES"
+id = "e77628fdcb80453ba5dd0eea5ce82a23"
