@@ -24,6 +24,8 @@ async function finishSupportInteraction(data,env){
   if(typeof question!=="string"||!question.trim()||question.length>1200){await updatePrivate("Please provide a question under 1,200 characters.");return;}
   if(!env.AI){await updatePrivate("Support AI is not configured yet. Please contact an administrator.");return;}
   const answer=await cloudflareSupport(question.trim(),env);
+  const visibility=data.data?.options?.find(o=>o.name==="visibility")?.value;
+  if(visibility==="only_me"){await updatePrivate("**Your question:** "+question.trim().slice(0,1200)+"\n\n**Bot Replied With:** "+answer);return;}
   const userId=data.member?.user?.id||data.user?.id;
   const author=userId?"<@"+userId+">":"A member";
   const content=author+" asked: "+question.trim().slice(0,1200)+"\n\nBot Replied With: "+answer;
