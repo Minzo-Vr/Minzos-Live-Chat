@@ -1081,6 +1081,12 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
           </div>
           </div>
         </details>
+        <section id="chatPlusDownloads" class="plus-preview" data-setting-label="chat plus downloads apk windows ios chromebook" aria-label="Chat+ Downloads">
+          <strong>⬇ Chat+ Downloads (Test)</strong>
+          <small id="chatPlusDownloadStatus">Checking your Chat+ access…</small>
+          <button type="button" id="chatPlusDownloadButton" disabled>⬇ Download latest app</button>
+          <small>Test button only. Installable APK, Windows and iOS files are not available yet. No download will start.</small>
+        </section>
         <div class="experimental-panel" data-setting-label="experimental chat rooms search bar xp leveling hex colour color wheel">
           <button type="button" id="experimentalUnlock" class="experimental-unlock" aria-expanded="false">🧪 Experimental <span id="experimentalChevron">▾</span></button>
           <p id="experimentalHint" class="experimental-hint" role="status">🔒 Plus or Admin role required.</p>
@@ -1491,6 +1497,19 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
       return roles;
     }
     function hasRole(uid,role){return userRoles(uid).includes(role);}
+    function refreshChatPlusDownloads(){
+      const status=document.getElementById("chatPlusDownloadStatus");
+      const button=document.getElementById("chatPlusDownloadButton");
+      if(!status||!button)return;
+      const eligible=!!user&&(hasRole(user.uid,"plus")||hasRole(user.uid,"admin"));
+      status.textContent=!user?"Sign in to check access.":eligible?"Chat+ access confirmed — downloads are coming soon.":"🔒 Chat+ membership required.";
+      button.disabled=!eligible;
+    }
+    document.getElementById("chatPlusDownloadButton")?.addEventListener("click",()=>{
+      refreshChatPlusDownloads();
+      if(!user||!(hasRole(user.uid,"plus")||hasRole(user.uid,"admin")))return;
+      alert("Chat+ download button works! App builds and protected downloads are not ready yet.");
+    });
     function actualRole(uid){const roles=userRoles(uid);return roles.includes("admin")?"admin":roles.includes("moderator")?"moderator":roles.includes("plus")?"plus":roles.includes("testsubject")?"testsubject":roles.find(k=>customRoles[k])||"member";}
     function displayedRoleEffect(uid){
       const roles=userRoles(uid),chosen=appearanceByUid[uid]?.effect;
@@ -1819,6 +1838,7 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
       $("bioFeedback").textContent="";
       if(user&&db)get(ref(db,bioPath(user.uid))).then(snap=>{$("settingsBio").value=snap.val()||"";}).catch(err=>{$("bioFeedback").textContent="Bio unavailable: "+(err.code||err.message);});
       $("settingsOverlay").hidden=false;
+      refreshChatPlusDownloads();
       $("settingsName").focus();
     });
     // Settings search reveals matching collapsible sections and hides unrelated controls.
