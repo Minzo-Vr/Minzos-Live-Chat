@@ -15,15 +15,25 @@ async function cloudflareSupport(question,env){
 }
 async function finishSupportInteraction(data,env){
  const url="https://discord.com/api/v10/webhooks/"+encodeURIComponent(env.DISCORD_APPLICATION_ID)+"/"+encodeURIComponent(data.token)+"/messages/@original";
- let content;
+ const updatePrivate=async content=>{
+  const response=await fetch(url,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({content,allowed_mentions:{parse:[]}})});
+  if(!response.ok)console.error("Could not update private /ask response",response.status);
+ };
  try{
   const question=data.data?.options?.find(o=>o.name==="question")?.value;
-  if(typeof question!=="string"||!question.trim()||question.length>1200)content="Please provide a question under 1,200 characters.";
-  else if(!env.AI)content="Support AI is not configured yet. Ask an administrator to add the Cloudflare Workers AI binding.";
-  else content=await cloudflareSupport(question.trim(),env);
- }catch(error){console.error("Workers AI support failed",error);const raw=String(error?.message||error||"Unknown error");const safe=raw.replace(/https?:\/\/\S+/g,"[URL]").replace(/(?:sk-|Bearer\s+)[A-Za-z0-9._-]+/gi,"[REDACTED]").slice(0,350);content="Support AI failed ("+ (raw.includes("binding")?"binding":raw.includes("quota")||raw.includes("limit")?"usage limit":"model request") +"). Diagnostic: `"+safe.replace(/`/g,"\u0027")+"`. Please share this message with an administrator.";}
- const response=await fetch(url,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({content,allowed_mentions:{parse:[]}})});
- if(!response.ok)console.error("Could not send /ask response",response.status);
+  if(typeof question!=="string"||!question.trim()||question.length>1200){await updatePrivate("Please provide a question under 1,200 characters.");return;}
+  if(!env.AI){await updatePrivate("Support AI is not configured yet. Please contact an administrator.");return;}
+  const answer=await cloudflareSupport(question.trim(),env);
+  const userId=data.member?.user?.id||data.user?.id;
+  const author=userId?"<@"+userId+">":"A member";
+  const content="**Question from "+author+"**\\n"+question.trim().slice(0,1200)+"\\n\\n**Support AI**\\n"+answer;
+  const sent=await fetch("https://discord.com/api/v10/channels/"+encodeURIComponent(env.DISCORD_CHANNEL_ID)+"/messages",{method:"POST",headers:{"Authorization":"Bot "+env.DISCORD_BOT_TOKEN,"content-type":"application/json"},body:JSON.stringify({content:content.slice(0,2000),allowed_mentions:{parse:[]}})});
+  if(!sent.ok)throw Error("Could not publish support answer (Discord status "+sent.status+")");
+  await updatePrivate("Your question and the AI answer are now visible in <#"+env.DISCORD_CHANNEL_ID+">.");
+ }catch(error){
+  console.error("Workers AI support failed",error);
+  await updatePrivate("Sorry, the support AI couldn't answer your question right now. Please try again later or contact an administrator.");
+ }
 }
 
 const enc = new TextEncoder();
@@ -263,6 +273,8 @@ export default {
  if(data.type!==2)return reply("Unsupported interaction.",true);
  const name=data.data?.name;
  if(name==="ask"){
+  if(!data.guild_id||!env.DISCORD_CHANNEL_ID||data.channel_id!==env.DISCORD_CHANNEL_ID)
+   return reply("This command can ONLY be used in "+(env.DISCORD_CHANNEL_ID?"<#"+env.DISCORD_CHANNEL_ID+">":"the designated support channel")+".",true);
   ctx.waitUntil(finishSupportInteraction(data,env));
   return json({type:5,data:{flags:64}});
  }
