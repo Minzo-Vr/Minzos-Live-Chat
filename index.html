@@ -81,6 +81,43 @@
     .typing-dots i:nth-child(2){animation-delay:.2s}.typing-dots i:nth-child(3){animation-delay:.4s}
     @keyframes typingPulse{0%,65%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
     @media(prefers-reduced-motion:reduce){.typing-dots i{animation:none}}
+    /* Contrast fixes for controls with light backgrounds in both appearance modes. */
+    /* The global button theme sets white text on every button, including pale
+       secondary controls. Give those controls an explicit readable foreground. */
+    html .rooms-grid button:not(.selected),
+    html .emoji-picker-grid button,
+    html .sticker-grid button,
+    html .music-dock button,
+    html .chat-color-reset,
+    html .auth-gate button,
+    html .email-auth-details button,
+    html .email-link-settings button {
+      color:#202437!important;
+    }
+    html .rooms-grid button.selected{color:#fff!important}
+    /* Theme editor and secondary surfaces use the active palette, not the
+       primary button's foreground colour. */
+    html .settings-dialog .setting-feature-fold,
+    html .settings-dialog .theme-mode-settings,
+    html .settings-dialog .advanced-options,
+    html .settings-dialog .experimental-panel {
+      color:var(--theme-text)!important;
+      border-color:var(--theme-border);
+    }
+    html.community-dark .rooms-grid button:not(.selected),
+    html.community-dark .auth-gate button,
+    html.community-dark .email-auth-details button,
+    html.community-dark .email-link-settings button{
+      background:var(--theme-panel)!important;
+      color:var(--theme-text)!important;
+    }
+    html.community-dark .music-dock button,
+    html.community-dark .emoji-picker-grid button,
+    html.community-dark .sticker-grid button,
+    html.community-dark .chat-color-reset{
+      background:#e8ebff!important;
+      color:#202437!important;
+    }
     /* User-selected complete chat palette. Role name effects retain their own colours. */
     :root{
       --theme-page:#f4f6fb;--theme-surface:#ffffff;--theme-panel:#f8faff;
