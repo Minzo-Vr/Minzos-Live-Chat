@@ -794,6 +794,7 @@
 <style id="interface-gateway-style">
 #interfaceGateway{position:fixed;inset:0;width:100vw;height:100dvh;z-index:2147483000;background:radial-gradient(circle at 50% 10%,#253b7c 0%,#12172d 48%,#090d19 100%);color:#fff;display:grid;place-items:center;padding:20px;font-family:"Lilita One",system-ui,sans-serif;transition:opacity .35s ease,visibility .35s}
 #interfaceGateway.gateway-hidden{opacity:0;visibility:hidden;pointer-events:none}
+#adminAiOverlay[hidden]{display:none!important}
 .gateway-panel{width:100%;max-width:none;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:clamp(18px,5vw,70px)}.gateway-panel[hidden]{display:none!important}
 .gateway-brand{font-size:clamp(32px,7vw,48px);margin:0 0 10px}
 .gateway-subtitle{color:#aebbe0;margin:0 0 24px}
@@ -860,7 +861,7 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
     <div class="gateway-option" aria-disabled="true"><span class="gateway-icon">🔒</span><span>???<small>Coming soon</small></span></div>
    </div>
   </main>
- </div>>
+ </div>
 </div>
 <div id="adminAiOverlay" hidden style="position:fixed;inset:0;z-index:2147483001;background:#101528ef;color:white;display:flex;align-items:center;justify-content:center;padding:12px">
  <section style="width:min(720px,100%);height:min(85dvh,760px);background:#17213b;border:1px solid #ffffff40;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px">
@@ -878,7 +879,7 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
  const loading=document.getElementById("gatewayLoading");
  const selection=document.getElementById("gatewaySelection");
  const open=document.getElementById("gatewayOpenChat");
- const reveal=()=>{loading.hidden=true;loading.style.display="none";selection.hidden=false;open.focus()};
+ const reveal=()=>{if(sessionStorage.getItem("communityChatEntered")==="yes"){gateway.remove();return;}loading.hidden=true;loading.style.display="none";selection.hidden=false;open.focus()};
  const start=Date.now();
  const ready=()=>setTimeout(reveal,Math.max(0,900-(Date.now()-start)));
  if(document.readyState==="complete")ready();else window.addEventListener("load",ready,{once:true});
@@ -893,7 +894,9 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
  const aiOverlay=document.getElementById("adminAiOverlay"),aiStatus=document.getElementById("adminAiStatus"),aiMessages=document.getElementById("adminAiMessages");
  let aiHistory=[],aiToken=null;
  const aiAppend=(who,message)=>{const div=document.createElement("div");div.style.marginBottom="12px";const name=document.createElement("strong");name.textContent=who+": ";div.append(name,document.createTextNode(String(message).slice(0,12000)));aiMessages.append(div);aiMessages.scrollTop=aiMessages.scrollHeight;};
- document.getElementById("gatewayOpenAI").addEventListener("click",()=>{aiOverlay.hidden=false;aiStatus.textContent="Checking admin access…";document.dispatchEvent(new CustomEvent("community-admin-ai-auth-request"));});
+ const openAdminAI=()=>{aiOverlay.hidden=false;aiStatus.textContent="Checking admin access…";document.dispatchEvent(new CustomEvent("community-admin-ai-auth-request"));};
+ document.getElementById("gatewayOpenAI").addEventListener("click",openAdminAI);
+ document.getElementById("adminAiHeaderOpen").addEventListener("click",openAdminAI);
  document.getElementById("adminAiClose").addEventListener("click",()=>{aiOverlay.hidden=true;});
  document.addEventListener("community-admin-ai-auth-result",e=>{
    aiToken=e.detail?.token||null;
@@ -936,7 +939,7 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
      aiStatus.textContent="Admin AI ready.";
    }catch(err){aiStatus.textContent="AI service not available yet: "+err.message;}
  });
- open.addEventListener("click",()=>{gateway.classList.add("gateway-hidden");gateway.setAttribute("aria-hidden","true");setTimeout(()=>gateway.remove(),450)});
+ open.addEventListener("click",()=>{sessionStorage.setItem("communityChatEntered","yes");gateway.classList.add("gateway-hidden");gateway.setAttribute("aria-hidden","true");setTimeout(()=>gateway.remove(),450)});
 })();
 </script>
   <main class="chat" aria-label="Website visitor live chat">
@@ -955,6 +958,7 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
     <header>
       <div><div style="display:flex;align-items:center;gap:8px"><h1>Community Chat</h1><button type="button" class="settings-btn" id="settingsBtn" aria-label="Chat settings" title="Chat settings" hidden>⚙️</button></div><p>General Chat · Messages and group calls</p></div>
       <div class="header-right">
+        <button type="button" id="adminAiHeaderOpen" class="fullscreen-toggle" title="Open Admin AI" aria-label="Open Admin AI">🤖 AI</button>
         <button type="button" id="gameHubToggle" class="fullscreen-toggle" title="Open Game Hub" aria-label="Open Game Hub" style="font-weight:800;text-decoration:none">🎮 Games</button>
         <button type="button" id="browserSidebarToggle" class="fullscreen-toggle browser-launch" aria-label="Open Community Browser sidebar" aria-controls="browserSidebar" aria-expanded="false" title="Open Community Browser sidebar">🌐 Browser</button>
         <button type="button" id="announcementsToggle" class="fullscreen-toggle" aria-label="Open announcements" aria-haspopup="dialog" title="What’s new">📢</button>
