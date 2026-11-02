@@ -894,10 +894,12 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
  const aiOverlay=document.getElementById("adminAiOverlay"),aiStatus=document.getElementById("adminAiStatus"),aiMessages=document.getElementById("adminAiMessages");
  let aiHistory=[],aiToken=null;
  const aiAppend=(who,message)=>{const div=document.createElement("div");div.style.marginBottom="12px";const name=document.createElement("strong");name.textContent=who+": ";div.append(name,document.createTextNode(String(message).slice(0,12000)));aiMessages.append(div);aiMessages.scrollTop=aiMessages.scrollHeight;};
- const openAdminAI=()=>{aiOverlay.hidden=false;aiStatus.textContent="Checking admin access…";document.dispatchEvent(new CustomEvent("community-admin-ai-auth-request"));};
+ const openAdminAI=()=>{aiOverlay.style.display="flex";aiOverlay.hidden=false;aiStatus.textContent="Checking admin access…";document.dispatchEvent(new CustomEvent("community-admin-ai-auth-request"));};
  document.getElementById("gatewayOpenAI").addEventListener("click",openAdminAI);
  document.getElementById("adminAiHeaderOpen").addEventListener("click",openAdminAI);
- document.getElementById("adminAiClose").addEventListener("click",()=>{aiOverlay.hidden=true;});
+ const closeAdminAI=()=>{aiOverlay.hidden=true;aiOverlay.style.display="none";};
+ document.getElementById("adminAiClose").addEventListener("click",closeAdminAI);
+ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!aiOverlay.hidden)closeAdminAI();});
  document.addEventListener("community-admin-ai-auth-result",e=>{
    aiToken=e.detail?.token||null;
    const ok=!!aiToken;
