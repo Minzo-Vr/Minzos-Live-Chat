@@ -854,12 +854,23 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
    <p class="gateway-role-filter" id="gatewayRoleFilter">Showing: All interfaces</p>
    <div class="gateway-options" tabindex="0" aria-label="Scroll through interfaces">
     <button class="gateway-option" type="button" id="gatewayOpenChat"><span class="gateway-icon">💬</span><span>Chats<small>Enter Community Chat</small></span></button>
+    <button class="gateway-option" type="button" id="gatewayOpenAI"><span class="gateway-icon">🤖</span><span>AI (Admin Only)<small>Ask AI questions or import a conversation</small></span></button>
     <div class="gateway-option" aria-disabled="true"><span class="gateway-icon">🧩</span><span>More interfaces<small>Coming soon</small></span></div>
     <div class="gateway-option" aria-disabled="true"><span class="gateway-icon">✨</span><span>Future features<small>Coming soon</small></span></div>
     <div class="gateway-option" aria-disabled="true"><span class="gateway-icon">🔒</span><span>???<small>Coming soon</small></span></div>
    </div>
   </main>
  </div>>
+</div>
+<div id="adminAiOverlay" hidden style="position:fixed;inset:0;z-index:2147483001;background:#101528ef;color:white;display:flex;align-items:center;justify-content:center;padding:12px">
+ <section style="width:min(720px,100%);height:min(85dvh,760px);background:#17213b;border:1px solid #ffffff40;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px">
+  <header style="display:flex;align-items:center;justify-content:space-between"><strong>🤖 Admin AI</strong><button type="button" id="adminAiClose">✕ Close</button></header>
+  <small id="adminAiStatus" role="status">Checking admin access…</small>
+  <div id="adminAiMessages" role="log" aria-live="polite" style="flex:1;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1225;border-radius:10px;padding:12px"></div>
+  <label style="font-size:13px">Import a ChatGPT conversation (.json or .txt) <input type="file" id="adminAiImport" accept=".json,.txt,application/json,text/plain" disabled></label>
+  <form id="adminAiForm" style="display:flex;gap:8px"><input id="adminAiQuestion" maxlength="1500" placeholder="Ask Community Chat AI…" style="flex:1;min-width:0" disabled><button type="submit" id="adminAiSend" disabled>Send</button></form>
+  <small>Imported chats are displayed locally in this browser session. AI replies require a separately deployed, admin-verified Worker. Do not import private conversations on shared devices.</small>
+ </section>
 </div>
 <script id="interface-gateway-script">
 (function(){
@@ -879,6 +890,44 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
   sidebar.querySelectorAll("[data-role]").forEach(item=>item.setAttribute("aria-pressed",String(item===button)));
   document.getElementById("gatewayRoleFilter").textContent="Previewing: "+roleNames[button.dataset.role]+" (access settings coming soon)";
  }));
+ const aiOverlay=document.getElementById("adminAiOverlay"),aiStatus=document.getElementById("adminAiStatus"),aiMessages=document.getElementById("adminAiMessages");
+ let aiHistory=[],aiToken=null;
+ const aiAppend=(who,message)=>{const div=document.createElement("div");div.style.marginBottom="12px";const name=document.createElement("strong");name.textContent=who+": ";div.append(name,document.createTextNode(String(message).slice(0,12000)));aiMessages.append(div);aiMessages.scrollTop=aiMessages.scrollHeight;};
+ document.getElementById("gatewayOpenAI").addEventListener("click",()=>{aiOverlay.hidden=false;aiStatus.textContent="Checking admin access…";document.dispatchEvent(new CustomEvent("community-admin-ai-auth-request"));});
+ document.getElementById("adminAiClose").addEventListener("click",()=>{aiOverlay.hidden=true;});
+ document.addEventListener("community-admin-ai-auth-result",e=>{
+   aiToken=e.detail?.token||null;
+   const ok=!!aiToken;
+   aiStatus.textContent=ok?"Admin verified. Conversation import ready; AI backend setup pending.":"Admin sign-in required. Enter Chats and sign in with your admin account first.";
+   document.getElementById("adminAiImport").disabled=!ok;
+   document.getElementById("adminAiQuestion").disabled=!ok;
+   document.getElementById("adminAiSend").disabled=!ok;
+ });
+ document.getElementById("adminAiImport").addEventListener("change",async e=>{
+   if(!aiToken)return;
+   const file=e.target.files?.[0];if(!file)return;
+   if(file.size>2_000_000){aiStatus.textContent="File exceeds 2 MB limit.";return;}
+   try{
+     const raw=await file.text();let entries=[];
+     if(file.name.toLowerCase().endsWith(".json")){
+       const data=JSON.parse(raw);
+       if(Array.isArray(data))entries=data;
+       else if(Array.isArray(data.messages))entries=data.messages;
+       else if(data.mapping&&typeof data.mapping==="object")entries=Object.values(data.mapping).map(x=>x.message).filter(Boolean);
+       else throw Error("Unsupported JSON format");
+       entries=entries.map(x=>({role:x.role||x.author?.role||"message",content:typeof x.content==="string"?x.content:Array.isArray(x.content?.parts)?x.content.parts.filter(p=>typeof p==="string").join("\n"):x.text||""})).filter(x=>typeof x.content==="string"&&x.content.trim());
+     }else entries=[{role:"Imported conversation",content:raw}];
+     aiMessages.replaceChildren();aiHistory=[];
+     for(const item of entries.slice(-100)){aiAppend(item.role,item.content);if(["user","assistant"].includes(item.role))aiHistory.push({role:item.role,content:item.content.slice(0,3000)});}
+     aiStatus.textContent="Imported "+Math.min(entries.length,100)+" entries locally. Nothing uploaded.";
+   }catch(err){aiStatus.textContent="Import failed: "+err.message;}
+ });
+ document.getElementById("adminAiForm").addEventListener("submit",async e=>{
+   e.preventDefault();const input=document.getElementById("adminAiQuestion"),question=input.value.trim();if(!aiToken||!question)return;
+   aiAppend("You",question);input.value="";
+   aiHistory.push({role:"user",content:question});aiHistory=aiHistory.slice(-16);
+   aiStatus.textContent="AI endpoint not connected yet. Your question was not sent.";
+ });
  open.addEventListener("click",()=>{gateway.classList.add("gateway-hidden");gateway.setAttribute("aria-hidden","true");setTimeout(()=>gateway.remove(),450)});
 })();
 </script>
@@ -1515,6 +1564,11 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
       refreshChatPlusDownloads();
       if(!user||!(hasRole(user.uid,"plus")||hasRole(user.uid,"admin")))return;
       alert("Chat+ download button works! App builds and protected downloads are not ready yet.");
+    });
+    document.addEventListener("community-admin-ai-auth-request",async()=>{
+      let token=null;
+      try{if(user&&auth){const claims=await user.getIdTokenResult();if(claims.claims.admin===true)token=await user.getIdToken();}}catch(e){console.warn("AI admin authentication unavailable",e);}
+      document.dispatchEvent(new CustomEvent("community-admin-ai-auth-result",{detail:{token}}));
     });
     function actualRole(uid){const roles=userRoles(uid);return roles.includes("admin")?"admin":roles.includes("moderator")?"moderator":roles.includes("plus")?"plus":roles.includes("testsubject")?"testsubject":roles.find(k=>customRoles[k])||"member";}
     function displayedRoleEffect(uid){
