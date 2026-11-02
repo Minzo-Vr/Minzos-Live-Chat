@@ -865,7 +865,7 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
 </div>
 <div id="adminAiOverlay" hidden style="position:fixed;inset:0;z-index:2147483001;background:#101528ef;color:white;display:flex;align-items:center;justify-content:center;padding:12px">
  <section style="width:min(720px,100%);height:min(85dvh,760px);background:#17213b;border:1px solid #ffffff40;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px">
-  <header style="display:flex;align-items:center;justify-content:space-between"><strong>🤖 Admin AI</strong><button type="button" id="adminAiClose">✕ Close</button></header>
+  <header style="display:flex;align-items:center;justify-content:space-between"><strong>🤖 Admin AI</strong><button type="button" id="adminAiClose" style="position:relative;z-index:5;cursor:pointer;pointer-events:auto;padding:10px 14px;background:#334a85;color:white;border:1px solid #a3b6f8;border-radius:10px" onclick="document.getElementById('adminAiOverlay').setAttribute('hidden','');document.getElementById('adminAiOverlay').style.setProperty('display','none','important');return false;">✕ Close</button></header>
   <small id="adminAiStatus" role="status">Checking admin access…</small>
   <div id="adminAiMessages" role="log" aria-live="polite" style="flex:1;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1225;border-radius:10px;padding:12px"></div>
   <label style="font-size:13px">Import a ChatGPT conversation (.json or .txt) <input type="file" id="adminAiImport" accept=".json,.txt,application/json,text/plain" disabled></label>
@@ -873,6 +873,17 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
   <small>Imported chats are displayed locally in this browser session. AI replies require a separately deployed, admin-verified Worker. Do not import private conversations on shared devices.</small>
  </section>
 </div>
+<script>
+// Independent fallback: close Admin AI even if the main gateway module fails to initialize.
+document.addEventListener("click",function(event){
+ const close=event.target.closest?.("#adminAiClose");
+ if(!close)return;
+ event.preventDefault();
+ event.stopPropagation();
+ const panel=document.getElementById("adminAiOverlay");
+ if(panel){panel.hidden=true;panel.style.setProperty("display","none","important");}
+},true);
+</script>
 <script id="interface-gateway-script">
 (function(){
  const gateway=document.getElementById("interfaceGateway");
@@ -894,7 +905,7 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
  const aiOverlay=document.getElementById("adminAiOverlay"),aiStatus=document.getElementById("adminAiStatus"),aiMessages=document.getElementById("adminAiMessages");
  let aiHistory=[],aiToken=null;
  const aiAppend=(who,message)=>{const div=document.createElement("div");div.style.marginBottom="12px";const name=document.createElement("strong");name.textContent=who+": ";div.append(name,document.createTextNode(String(message).slice(0,12000)));aiMessages.append(div);aiMessages.scrollTop=aiMessages.scrollHeight;};
- const openAdminAI=()=>{aiOverlay.style.display="flex";aiOverlay.hidden=false;aiStatus.textContent="Checking admin access…";document.dispatchEvent(new CustomEvent("community-admin-ai-auth-request"));};
+ const openAdminAI=()=>{aiOverlay.style.removeProperty("display");aiOverlay.hidden=false;aiStatus.textContent="Checking admin access…";document.dispatchEvent(new CustomEvent("community-admin-ai-auth-request"));};
  document.getElementById("gatewayOpenAI").addEventListener("click",openAdminAI);
  document.getElementById("adminAiHeaderOpen").addEventListener("click",openAdminAI);
  const closeAdminAI=()=>{aiOverlay.hidden=true;aiOverlay.style.display="none";};
