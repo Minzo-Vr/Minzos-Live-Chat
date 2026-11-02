@@ -795,6 +795,8 @@
 #interfaceGateway{position:fixed;inset:0;width:100vw;height:100dvh;z-index:2147483000;background:radial-gradient(circle at 50% 10%,#253b7c 0%,#12172d 48%,#090d19 100%);color:#fff;display:grid;place-items:center;padding:20px;font-family:"Lilita One",system-ui,sans-serif;transition:opacity .35s ease,visibility .35s}
 #interfaceGateway.gateway-hidden{opacity:0;visibility:hidden;pointer-events:none}
 #adminAiOverlay[hidden]{display:none!important}
+#adminAiOverlay:not([hidden]){position:fixed!important;inset:0!important;top:0!important;left:0!important;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;z-index:2147483001!important;display:flex!important;align-items:stretch!important;justify-content:stretch!important;padding:0!important;margin:0!important;border-radius:0!important;box-sizing:border-box!important}
+#adminAiOverlay:not([hidden])>section{width:100%!important;max-width:none!important;height:100%!important;max-height:none!important;border-radius:0!important;margin:0!important;box-sizing:border-box!important}
 .gateway-panel{width:100%;max-width:none;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:clamp(18px,5vw,70px)}.gateway-panel[hidden]{display:none!important}
 .gateway-brand{font-size:clamp(32px,7vw,48px);margin:0 0 10px}
 .gateway-subtitle{color:#aebbe0;margin:0 0 24px}
@@ -874,6 +876,27 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
  </section>
 </div>
 <script>
+// Navigation is intentionally independent of the optional gateway AI module.
+function communityShowLoader(){
+ const gateway=document.getElementById("interfaceGateway");
+ if(!gateway)return;
+ const loading=document.getElementById("gatewayLoading");
+ const selection=document.getElementById("gatewaySelection");
+ sessionStorage.removeItem("communityChatEntered");
+ gateway.classList.remove("gateway-hidden");
+ gateway.removeAttribute("aria-hidden");
+ gateway.hidden=false;
+ if(loading)loading.hidden=true;
+ if(selection)selection.hidden=false;
+ const ai=document.getElementById("adminAiOverlay");
+ if(ai){ai.hidden=true;ai.style.setProperty("display","none","important");}
+}
+document.addEventListener("click",function(e){
+ const back=e.target.closest?.("#backToLoader");
+ if(back){e.preventDefault();communityShowLoader();return;}
+ const chats=e.target.closest?.("#gatewayOpenChat");
+ if(chats){e.preventDefault();sessionStorage.setItem("communityChatEntered","yes");const gateway=document.getElementById("interfaceGateway");if(gateway){gateway.classList.add("gateway-hidden");gateway.setAttribute("aria-hidden","true");gateway.hidden=true;}return;}
+},true);
 // Independent fallback: close Admin AI even if the main gateway module fails to initialize.
 document.addEventListener("click",function(event){
  const close=event.target.closest?.("#adminAiClose");
@@ -890,7 +913,7 @@ document.addEventListener("click",function(event){
  const loading=document.getElementById("gatewayLoading");
  const selection=document.getElementById("gatewaySelection");
  const open=document.getElementById("gatewayOpenChat");
- const reveal=()=>{if(sessionStorage.getItem("communityChatEntered")==="yes"){gateway.remove();return;}loading.hidden=true;loading.style.display="none";selection.hidden=false;open.focus()};
+ const reveal=()=>{if(sessionStorage.getItem("communityChatEntered")==="yes"){gateway.hidden=true;return;}loading.hidden=true;loading.style.display="none";selection.hidden=false;open.focus()};
  const start=Date.now();
  const ready=()=>setTimeout(reveal,Math.max(0,900-(Date.now()-start)));
  if(document.readyState==="complete")ready();else window.addEventListener("load",ready,{once:true});
@@ -952,7 +975,7 @@ document.addEventListener("click",function(event){
      aiStatus.textContent="Admin AI ready.";
    }catch(err){aiStatus.textContent="AI service not available yet: "+err.message;}
  });
- open.addEventListener("click",()=>{sessionStorage.setItem("communityChatEntered","yes");gateway.classList.add("gateway-hidden");gateway.setAttribute("aria-hidden","true");setTimeout(()=>gateway.remove(),450)});
+ open.addEventListener("click",()=>{sessionStorage.setItem("communityChatEntered","yes");gateway.classList.add("gateway-hidden");gateway.setAttribute("aria-hidden","true");setTimeout(()=>{gateway.hidden=true;},450)});
 })();
 </script>
   <main class="chat" aria-label="Website visitor live chat">
@@ -969,7 +992,7 @@ document.addEventListener("click",function(event){
     </aside>
 
     <header>
-      <div><div style="display:flex;align-items:center;gap:8px"><h1>Community Chat</h1><button type="button" class="settings-btn" id="settingsBtn" aria-label="Chat settings" title="Chat settings" hidden>⚙️</button></div><p>General Chat · Messages and group calls</p></div>
+      <div><div style="display:flex;align-items:center;gap:8px"><h1>Community Chat</h1><button type="button" id="backToLoader" class="fullscreen-toggle" title="Back to interface selection">↩ Back to loader</button><button type="button" class="settings-btn" id="settingsBtn" aria-label="Chat settings" title="Chat settings" hidden>⚙️</button></div><p>General Chat · Messages and group calls</p></div>
       <div class="header-right">
         <button type="button" id="adminAiHeaderOpen" class="fullscreen-toggle" title="Open Admin AI" aria-label="Open Admin AI">🤖 AI</button>
         <button type="button" id="gameHubToggle" class="fullscreen-toggle" title="Open Game Hub" aria-label="Open Game Hub" style="font-weight:800;text-decoration:none">🎮 Games</button>
