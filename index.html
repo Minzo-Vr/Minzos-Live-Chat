@@ -926,7 +926,15 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
    e.preventDefault();const input=document.getElementById("adminAiQuestion"),question=input.value.trim();if(!aiToken||!question)return;
    aiAppend("You",question);input.value="";
    aiHistory.push({role:"user",content:question});aiHistory=aiHistory.slice(-16);
-   aiStatus.textContent="AI endpoint not connected yet. Your question was not sent.";
+   aiStatus.textContent="Contacting admin AI…";
+   try{
+     const resp=await fetch("https://community-chat-admin-ai.kobefalzon8.workers.dev/api/admin-ai",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+aiToken},body:JSON.stringify({messages:aiHistory})});
+     const data=await resp.json();
+     if(!resp.ok)throw Error(data.error||"AI request failed");
+     aiAppend("AI",data.answer||"No answer returned");
+     aiHistory.push({role:"assistant",content:data.answer||""});
+     aiStatus.textContent="Admin AI ready.";
+   }catch(err){aiStatus.textContent="AI service not available yet: "+err.message;}
  });
  open.addEventListener("click",()=>{gateway.classList.add("gateway-hidden");gateway.setAttribute("aria-hidden","true");setTimeout(()=>gateway.remove(),450)});
 })();
