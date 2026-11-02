@@ -858,6 +858,7 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
    <div class="gateway-options" tabindex="0" aria-label="Scroll through interfaces">
     <button class="gateway-option" type="button" id="gatewayOpenChat"><span class="gateway-icon">💬</span><span>Chats<small>Enter Community Chat</small></span></button>
     <button class="gateway-option" type="button" id="gatewayOpenAI"><span class="gateway-icon">🤖</span><span>AI (Admin Only)<small>Ask AI questions or import a conversation</small></span></button>
+    <button class="gateway-option" type="button" id="gatewayOpenYeeps"><span class="gateway-icon">🎮</span><span>Yeeps Buddy<small>Quest APK download &amp; launcher</small></span></button>
     <div class="gateway-option" aria-disabled="true"><span class="gateway-icon">🧩</span><span>More interfaces<small>Coming soon</small></span></div>
     <div class="gateway-option" aria-disabled="true"><span class="gateway-icon">✨</span><span>Future features<small>Coming soon</small></span></div>
     <div class="gateway-option" aria-disabled="true"><span class="gateway-icon">🔒</span><span>???<small>Coming soon</small></span></div>
@@ -865,6 +866,15 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
   </main>
  </div>
 </div>
+<div id="yeepsBuddyLauncher" hidden role="dialog" aria-modal="true" aria-label="Yeeps Buddy launcher" style="position:fixed;inset:0;z-index:2147483002;background:radial-gradient(circle at 50% 10%,#243b70,#0a1023 65%);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;box-sizing:border-box;font-family:system-ui,sans-serif">
+ <div style="width:min(560px,100%);display:flex;flex-direction:column;gap:18px;align-items:center">
+ <div style="font-size:64px" aria-hidden="true">🎮</div><h1 style="margin:0">Yeeps Buddy Launcher</h1>
+ <p style="line-height:1.6;margin:0">Yeeps Buddy is a Quest/Android APK, not a web game. Download it on a compatible device, then install and launch it there. Browsers cannot directly run the APK.</p>
+ <a href="https://live.yeeps-tools.org/download/" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:16px 26px;border-radius:12px;background:#6478f5;color:#fff;text-decoration:none;font-weight:700">⬇ Open Yeeps Buddy Download</a>
+ <p style="font-size:13px;opacity:.8;margin:0">This opens the project's external download page. Only install APKs from sources you trust.</p>
+ <button type="button" id="yeepsBuddyBack" style="cursor:pointer;padding:12px 22px;border:1px solid #9aadeb;border-radius:10px;background:#253357;color:white">← Back to loader</button>
+ </div></div>
+<style>#yeepsBuddyLauncher[hidden]{display:none!important}</style>
 <div id="adminAiOverlay" hidden style="position:fixed;inset:0;z-index:2147483001;background:#101528ef;color:white;display:flex;align-items:center;justify-content:center;padding:12px">
  <section style="width:min(720px,100%);height:min(85dvh,760px);background:#17213b;border:1px solid #ffffff40;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px">
   <header style="display:flex;align-items:center;justify-content:space-between"><strong>🤖 Admin AI</strong><button type="button" id="adminAiClose" style="position:relative;z-index:5;cursor:pointer;pointer-events:auto;padding:10px 14px;background:#334a85;color:white;border:1px solid #a3b6f8;border-radius:10px" onclick="document.getElementById('adminAiOverlay').setAttribute('hidden','');document.getElementById('adminAiOverlay').style.setProperty('display','none','important');return false;">✕ Close</button></header>
@@ -876,6 +886,13 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
  </section>
 </div>
 <script>
+// Yeeps Buddy download launcher: no APK execution or third-party scripts.
+document.addEventListener("click",function(e){
+ const start=e.target.closest?.("#gatewayOpenYeeps");
+ const back=e.target.closest?.("#yeepsBuddyBack");
+ if(start){e.preventDefault();const p=document.getElementById("yeepsBuddyLauncher");if(p){p.hidden=false;}return;}
+ if(back){e.preventDefault();const p=document.getElementById("yeepsBuddyLauncher");if(p){p.hidden=true;}return;}
+},true);
 // Navigation is intentionally independent of the optional gateway AI module.
 function communityShowLoader(){
  const gateway=document.getElementById("interfaceGateway");
