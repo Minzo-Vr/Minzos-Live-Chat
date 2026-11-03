@@ -1631,7 +1631,39 @@ document.addEventListener("click",function(event){
     <p class="hint">Be kind. Do not share passwords, phone numbers, addresses, or other private information.</p>
   </main>
 
-  <script type="module">
+  <script type="module" id="admin-ai-independent-auth">
+import {initializeApp,getApps} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {getAuth,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+const aiFirebaseConfig={apiKey:"AIzaSyB4wOgGUTR-fgweHtsJiK9XyykU_PND0GE",authDomain:"website-chat-80038.firebaseapp.com",databaseURL:"https://website-chat-80038-default-rtdb.firebaseio.com/",projectId:"website-chat-80038",appId:"1:42470201717:web:890e9ebf1f0865c8ea9b3c"};
+try{
+ const app=getApps().find(a=>a.name==="[DEFAULT]")||initializeApp(aiFirebaseConfig);
+ const aiAuth=getAuth(app);
+ let aiCurrentUser=null,aiAuthReady=false;
+ const respond=async()=>{
+  let token=null,reason="Please sign in to Community Chat first.";
+  try{
+   if(!aiAuthReady){reason="Firebase is still loading your account. Try again in a moment.";}
+   else if(aiCurrentUser){
+    const claims=await aiCurrentUser.getIdTokenResult(true);
+    if(claims.claims.admin===true){token=await aiCurrentUser.getIdToken();}
+    else{reason="Signed in, but your account has no verified Firebase admin claim. The Admin role in Realtime Database does not grant AI access. An authorised Firebase project administrator must assign the admin custom claim.";}
+   }
+  }catch(error){reason="Firebase could not verify your account: "+(error?.code||error?.message||"unknown error");}
+  document.dispatchEvent(new CustomEvent("community-admin-ai-auth-result",{detail:{token,reason}}));
+ };
+ document.addEventListener("community-admin-ai-auth-request",respond);
+ onAuthStateChanged(aiAuth,user=>{
+  aiCurrentUser=user;aiAuthReady=true;
+  if(!document.getElementById("adminAiOverlay")?.hidden)respond();
+ },error=>{
+  aiAuthReady=true;aiCurrentUser=null;
+  if(!document.getElementById("adminAiOverlay")?.hidden)document.dispatchEvent(new CustomEvent("community-admin-ai-auth-result",{detail:{token:null,reason:"Firebase sign-in failed: "+(error?.code||"unknown error")}}));
+ });
+}catch(error){
+ document.addEventListener("community-admin-ai-auth-request",()=>document.dispatchEvent(new CustomEvent("community-admin-ai-auth-result",{detail:{token:null,reason:"Could not initialize Firebase admin verification: "+(error?.message||"unknown error")}})));
+}
+</script>
+<script type="module">
     /*
       SETUP:
       1. Create a Firebase project at https://console.firebase.google.com/
@@ -1708,25 +1740,6 @@ document.addEventListener("click",function(event){
       if(!user||!(hasRole(user.uid,"plus")||hasRole(user.uid,"admin")))return;
       alert("Chat+ download button works! App builds and protected downloads are not ready yet.");
     });
-    document.addEventListener("community-admin-ai-auth-request",async()=>{
-      let token=null,reason="Please sign in to Community Chat with your admin account.";
-      try{
-        if(user&&auth){
-          // Refresh claims so newly granted admin access is recognized immediately.
-          const claims=await user.getIdTokenResult(true);
-          if(claims.claims.admin===true){
-            token=await user.getIdToken();
-          }else{
-            reason=hasRole(user.uid,"admin")
-              ?"Your account has the Admin display role, but the AI requires a verified Firebase admin claim. Ask the Firebase project owner to grant the admin custom claim; database rules alone cannot enable AI access."
-              :"This account does not have verified admin access to the AI.";
-          }
-        }
-      }catch(e){reason="Could not verify admin access. Try signing in again.";console.warn("AI admin authentication unavailable",e);}
-      document.dispatchEvent(new CustomEvent("community-admin-ai-auth-result",{detail:{token,reason}}));
-    });
-    // Handle an AI panel that was opened while Firebase was still initializing.
-    if(!document.getElementById("adminAiOverlay")?.hidden){document.dispatchEvent(new CustomEvent("community-admin-ai-auth-request"));}
     function actualRole(uid){const roles=userRoles(uid);return roles.includes("admin")?"admin":roles.includes("moderator")?"moderator":roles.includes("plus")?"plus":roles.includes("testsubject")?"testsubject":roles.find(k=>customRoles[k])||"member";}
     function displayedRoleEffect(uid){
       const roles=userRoles(uid),chosen=appearanceByUid[uid]?.effect;
