@@ -76,9 +76,23 @@ async function placeYeepsBlock(item){
   if(!combined.length)throw Error('This block contains no meshes');
   const bounds=new THREE.Box3();combined.forEach(mesh=>bounds.expandByObject(mesh));
   const center=bounds.getCenter(new THREE.Vector3());
-  // Normalize the model origin so the model footprint can be positioned on the grid.
-  for(const mesh of combined){mesh.geometry.translate(-center.x,-center.y,-center.z);mesh.position.set(0,0,0);snapYeeps(mesh);}
-  select(combined[0]);status.textContent='Placed '+item.label+' ('+combined.length+' mesh'+(combined.length===1?'':'es')+')';
+  const actual=bounds.getSize(new THREE.Vector3());
+  const dims=yeepsDimensions(combined[0]);
+  // Fit the complete imported block to its named grid footprint, preserving proportions.
+  // Use one common scale factor for all meshes so multi-part models stay together.
+  const targetWidth=dims[0],targetDepth=dims[2];
+  const factors=[];
+  if(actual.x>0.00001)factors.push(targetWidth/actual.x);
+  if(actual.z>0.00001)factors.push(targetDepth/actual.z);
+  const factor=factors.length?Math.min(...factors):1;
+  const safeFactor=Number.isFinite(factor)&&factor>0?factor:1;
+  for(const mesh of combined){
+   mesh.geometry.translate(-center.x,-center.y,-center.z);
+   mesh.geometry.scale(safeFactor,safeFactor,safeFactor);
+   mesh.position.set(0,0,0);
+   snapYeeps(mesh);
+  }
+  select(combined[0]);status.textContent='Placed '+item.label+' · '+dims[0]+'×'+dims[2]+' grid · '+combined.length+' mesh(es)';
  }catch(error){console.error(error);status.textContent='Could not place block: '+error.message;}finally{yeepsBusy=false;}
 }
 let yeepsMode=false;
