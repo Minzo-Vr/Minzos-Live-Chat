@@ -78,17 +78,15 @@ async function placeYeepsBlock(item){
   const center=bounds.getCenter(new THREE.Vector3());
   const actual=bounds.getSize(new THREE.Vector3());
   const dims=yeepsDimensions(combined[0]);
-  // Fit the complete imported block to its named grid footprint, preserving proportions.
-  // Use one common scale factor for all meshes so multi-part models stay together.
-  const targetWidth=dims[0],targetDepth=dims[2];
-  const factors=[];
-  if(actual.x>0.00001)factors.push(targetWidth/actual.x);
-  if(actual.z>0.00001)factors.push(targetDepth/actual.z);
-  const factor=factors.length?Math.min(...factors):1;
-  const safeFactor=Number.isFinite(factor)&&factor>0?factor:1;
+  // Match each horizontal axis to its full named grid footprint.
+  // A 1x2 must cover exactly 1 unit in X and 2 units in Z.
+  const scaleX=actual.x>0.00001?dims[0]/actual.x:1;
+  const scaleZ=actual.z>0.00001?dims[2]/actual.z:1;
+  // Preserve natural vertical proportions using the width scaling.
+  const scaleY=scaleX;
   for(const mesh of combined){
    mesh.geometry.translate(-center.x,-center.y,-center.z);
-   mesh.geometry.scale(safeFactor,safeFactor,safeFactor);
+   mesh.geometry.scale(scaleX,scaleY,scaleZ);
    mesh.position.set(0,0,0);
    snapYeeps(mesh);
   }
