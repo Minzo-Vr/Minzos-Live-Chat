@@ -873,7 +873,7 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
     <button type="button" class="gateway-role" data-role="admin" aria-pressed="false">👑 Admin</button>
     <p class="gateway-role-note">Role selection is a preview, not a role change. Access permissions will be configured separately.</p>
    </div>
-   <div class="gateway-sidebar-version" title="Game Hub version">v0.01</div>
+   <div class="gateway-sidebar-version" id="gatewayCommitVersion" title="Latest GitHub commit for Game Hub">Commit: loading…</div>
   </aside>
   <button id="gatewayAccountButton" type="button" aria-label="Sign in or manage account">👤 <span id="gatewayAccountText">Sign in</span></button>
   <main class="gateway-main">
@@ -1631,7 +1631,22 @@ document.addEventListener("click",function(event){
     <p class="hint">Be kind. Do not share passwords, phone numbers, addresses, or other private information.</p>
   </main>
 
-  <script type="module" id="admin-ai-independent-auth">
+  <script>
+(function(){
+ const label=document.getElementById("gatewayCommitVersion");
+ if(!label)return;
+ fetch("https://api.github.com/repos/Minzo-Vr/Minzos-Live-Chat/commits?path=index.html&per_page=1",{headers:{"Accept":"application/vnd.github+json"},cache:"no-store"})
+  .then(response=>{if(!response.ok)throw new Error("GitHub API "+response.status);return response.json();})
+  .then(commits=>{
+   const sha=commits?.[0]?.sha;
+   if(!/^[0-9a-f]{40}$/.test(sha||""))throw new Error("Commit unavailable");
+   label.textContent="Commit: "+sha.slice(0,7);
+   label.title="Latest index.html commit: "+sha;
+  })
+  .catch(()=>{label.textContent="Commit: unavailable";label.title="Unable to fetch the latest commit from GitHub";});
+})();
+</script>
+<script type="module" id="admin-ai-independent-auth">
 import {initializeApp,getApps} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {getAuth,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 window.__adminAiAuthLoaded=true;
