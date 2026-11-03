@@ -129,7 +129,83 @@ async function placeYeepsBlock(item){
 let yeepsMode=false;
 const yeepsButton=document.getElementById('yeepsMode');
 const yeepsGrid=new THREE.GridHelper(40,40,0x69d6ff,0x2a7b91);
-yeepsGrid.position.y=0.015;yeepsGrid.visible=false;scene.add(yeepsGrid);
+yeepsGrid.position.y=0.035;yeepsGrid.visible=false;scene.add(yeepsGrid);
+// Decorative Yeeps-inspired landscape: separate from editable blocks.
+const yeepsScenery=new THREE.Group();
+yeepsScenery.name='Yeeps forest backdrop (not editable)';
+scene.add(yeepsScenery);
+const sceneryMats={
+ grass:new THREE.MeshStandardMaterial({color:0x277e69,roughness:1}),
+ grass2:new THREE.MeshStandardMaterial({color:0x206d60,roughness:1}),
+ cliff:new THREE.MeshStandardMaterial({color:0x263c40,roughness:1}),
+ leaf:new THREE.MeshStandardMaterial({color:0x18594f,roughness:1}),
+ leaf2:new THREE.MeshStandardMaterial({color:0x216a58,roughness:1}),
+ bark:new THREE.MeshStandardMaterial({color:0x42302c,roughness:1}),
+ flowerRed:new THREE.MeshStandardMaterial({color:0xc95150,roughness:1}),
+ flowerGold:new THREE.MeshStandardMaterial({color:0xd6a34a,roughness:1}),
+ floor:new THREE.MeshStandardMaterial({color:0x338f77,roughness:1}),
+};
+const sceneryCube=new THREE.BoxGeometry(1,1,1);
+function sceneryBox(x,y,z,w,h,d,material){
+ const mesh=new THREE.Mesh(sceneryCube,material);
+ mesh.position.set(x,y,z);mesh.scale.set(w,h,d);
+ yeepsScenery.add(mesh);return mesh;
+}
+let scenerySeed=7329;
+function sceneryRandom(){scenerySeed=(Math.imul(1664525,scenerySeed)+1013904223)>>>0;return scenerySeed/4294967296;}
+function sceneryTree(x,z,size=1){
+ const base=2+sceneryRandom()*2;
+ sceneryBox(x,base*size/2,z,.85*size,base*size,.85*size,sceneryMats.bark);
+ for(let tier=0;tier<3;tier++){
+  const width=(4.8-tier*.75)*size;
+  sceneryBox(x,base*size+(tier*.85+1)*size,z,width,1.5*size,width, tier%2?sceneryMats.leaf:sceneryMats.leaf2);
+ }
+}
+function buildYeepsScenery(){
+ // The central 40x40 floor is one continuous editable-looking green grid layer.
+ sceneryBox(0,-.22,0,40,.4,40,sceneryMats.floor);
+ // Terraced square canyon: all solid terrain remains OUTSIDE the grid boundary.
+ for(let ring=0;ring<6;ring++){
+  const inner=20+ring*3;
+  const outer=inner+3;
+  const height=1.3+ring*1.15;
+  const mat=ring%2?sceneryMats.grass2:sceneryMats.grass;
+  const mid=(inner+outer)/2;
+  const depth=outer-inner;
+  const length=outer*2;
+  sceneryBox(0,height/2,-mid,length,height,depth,mat);
+  sceneryBox(0,height/2,mid,length,height,depth,mat);
+  sceneryBox(-mid,height/2,0,depth,height,inner*2,mat);
+  sceneryBox(mid,height/2,0,depth,height,inner*2,mat);
+  // Dark stepped cliff face immediately below each grassy ledge.
+  sceneryBox(0,-.65,-inner,length,1.3,.35,sceneryMats.cliff);
+  sceneryBox(0,-.65,inner,length,1.3,.35,sceneryMats.cliff);
+  sceneryBox(-inner,-.65,0,.35,1.3,inner*2,sceneryMats.cliff);
+  sceneryBox(inner,-.65,0,.35,1.3,inner*2,sceneryMats.cliff);
+ }
+ // Blocky forest silhouettes scattered across the outer terraces.
+ for(let i=0;i<65;i++){
+  const x=(sceneryRandom()-.5)*75;
+  const z=(sceneryRandom()-.5)*75;
+  if(Math.max(Math.abs(x),Math.abs(z))<24)continue;
+  sceneryTree(x,z,.65+sceneryRandom()*.75);
+ }
+ // A small flower-decorated forest arch beyond the north edge of the grid.
+ const archZ=-26;
+ for(const side of [-1,1]){
+  sceneryBox(side*5.8,3.3,archZ,2.6,6.6,3.3,sceneryMats.bark);
+  sceneryBox(side*4.5,7,archZ,5,3.1,4.2,sceneryMats.leaf2);
+ }
+ sceneryBox(0,9.1,archZ,14,3.6,4.6,sceneryMats.leaf);
+ sceneryBox(0,11,archZ,10,2,4.2,sceneryMats.leaf2);
+ for(let i=0;i<18;i++){
+  const x=(sceneryRandom()-.5)*13;
+  const y=6.8+sceneryRandom()*4.5;
+  const z=archZ-2.35;
+  sceneryBox(x,y,z,.38,.38,.38,i%2?sceneryMats.flowerGold:sceneryMats.flowerRed);
+ }
+}
+buildYeepsScenery();yeepsScenery.visible=false;
 function yeepsDimensions(mesh){
  const name=(mesh?.userData?.yeepsFile||mesh?.name||'').toLowerCase();
  const match=name.match(/(?:^|[^\d])(\d+)x(\d+)(?:x([\d.]+))?(?=[_\s.-]|$)/);
@@ -169,7 +245,7 @@ function setYeepsMode(enabled){
   objects=[];
   refreshList();
  }
- yeepsMode=enabled;yeepsGrid.visible=enabled;
+ yeepsMode=enabled;yeepsGrid.visible=enabled;yeepsScenery.visible=enabled;
  document.getElementById('regularShapes').hidden=enabled;document.getElementById('yeepsLibrary').hidden=!enabled;
  yeepsButton.setAttribute('aria-pressed',String(enabled));
  yeepsButton.textContent='🧱 Yeeps Mode: '+(enabled?'On':'Off');
