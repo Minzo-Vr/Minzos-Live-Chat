@@ -97,7 +97,7 @@ function snapYeeps(mesh){
  const snap=(value,size)=>Math.round((value-size/2)/1)*1+size/2;
  mesh.position.x=snap(mesh.position.x,w);
  mesh.position.z=snap(mesh.position.z,d);
- mesh.position.y=Math.round(mesh.position.y)+h/2;
+ mesh.position.y=Math.round(mesh.position.y-h/2)+h/2;
 }
 function setYeepsMode(enabled){
  yeepsMode=enabled;yeepsGrid.visible=enabled;
@@ -105,10 +105,20 @@ function setYeepsMode(enabled){
  yeepsButton.setAttribute('aria-pressed',String(enabled));
  yeepsButton.textContent='🧱 Yeeps Mode: '+(enabled?'On':'Off');
  if(enabled){objects.forEach(snapYeeps);refreshProperties();}
- status.textContent=enabled?'Yeeps grid enabled · 1 grid square = 1 block':'Free editing enabled';
+ status.textContent=enabled?'Yeeps grid enabled · drag blocks to snap into each square':'Free editing enabled';
 }
 yeepsButton.addEventListener('click',()=>setYeepsMode(!yeepsMode));
+// Snap continuously while dragging, not just after releasing the mouse.
+let snappingYeeps=false;
+transform.addEventListener('objectChange',()=>{
+ if(!yeepsMode||!selected||snappingYeeps||transform.getMode()!=='translate')return;
+ snappingYeeps=true;
+ snapYeeps(selected);
+ refreshProperties();
+ snappingYeeps=false;
+});
 transform.addEventListener('mouseUp',()=>{if(selected&&yeepsMode){snapYeeps(selected);refreshProperties();}});
+
 
 const geometry=kind=>({box:()=>new THREE.BoxGeometry(1.5,1.5,1.5),sphere:()=>new THREE.SphereGeometry(1,32,20),cylinder:()=>new THREE.CylinderGeometry(.9,.9,1.8,32),cone:()=>new THREE.ConeGeometry(1,2,32),torus:()=>new THREE.TorusGeometry(1,.3,16,64),plane:()=>new THREE.PlaneGeometry(2,2)})[kind]?.();
 function add(kind,data){const mesh=new THREE.Mesh(geometry(kind),new THREE.MeshStandardMaterial({color:data?.color||'#7c9cff',roughness:.6,side:THREE.DoubleSide}));mesh.userData.kind=kind;mesh.name=data?.name||kind[0].toUpperCase()+kind.slice(1)+' '+(++serial);mesh.position.fromArray(data?.position||[0,kind==='plane'?.01:1,0]);mesh.rotation.set(...(data?.rotation||[kind==='plane'?-Math.PI/2:0,0,0]));mesh.scale.fromArray(data?.scale||[1,1,1]);scene.add(mesh);objects.push(mesh);snapYeeps(mesh);select(mesh);return mesh;}
