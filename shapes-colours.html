@@ -68,9 +68,13 @@ async function placeYeepsBlock(item){
    if(!child.isMesh||!child.geometry)return;
    const geometry=child.geometry.clone();geometry.applyMatrix4(child.matrixWorld);
    const mat=Array.isArray(child.material)?child.material[0]:child.material;
-   const isWooden=/(wood|wooden|timber)/i.test(item.label);const material=new THREE.MeshStandardMaterial({color:isWooden?'#b59b8f':'#ffffff',side:THREE.DoubleSide,vertexColors:false});
+   const isWooden=/(wood|wooden|timber)/i.test(item.label);
+   const isGlass=/(glass|window|pane)/i.test(item.label+' '+item.path);
+   const material=isGlass
+    ?new THREE.MeshPhysicalMaterial({color:'#e9f8ff',transparent:true,opacity:0.23,depthWrite:false,side:THREE.DoubleSide,roughness:0.06,metalness:0,clearcoat:1,clearcoatRoughness:0.02,vertexColors:false})
+    :new THREE.MeshStandardMaterial({color:isWooden?'#b59b8f':'#ffffff',side:THREE.DoubleSide,vertexColors:false});
    const mesh=new THREE.Mesh(geometry,material);mesh.name=item.label+(combined.length?' '+(combined.length+1):'');
-   mesh.userData.kind='imported';mesh.userData.yeepsFile=item.path.split('/').pop();
+   mesh.userData.kind='imported';mesh.userData.yeepsFile=item.path.split('/').pop();mesh.userData.yeepsGlass=isGlass;
    scene.add(mesh);objects.push(mesh);combined.push(mesh);
   });
   if(!combined.length)throw Error('This block contains no meshes');
@@ -87,6 +91,15 @@ async function placeYeepsBlock(item){
   for(const mesh of combined){
    mesh.geometry.translate(-center.x,-center.y,-center.z);
    mesh.geometry.scale(scaleX,scaleY,scaleZ);
+   if(mesh.userData.yeepsGlass){
+    // Bright white outer highlights, like the rim of Yeeps glass.
+    const rim=new THREE.LineSegments(
+     new THREE.EdgesGeometry(mesh.geometry,25),
+     new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.8,depthWrite:false})
+    );
+    rim.raycast=()=>{}; // The glass itself remains the selectable object.
+    mesh.add(rim);
+   }
    mesh.position.set(0,0,0);
    snapYeeps(mesh);
   }
