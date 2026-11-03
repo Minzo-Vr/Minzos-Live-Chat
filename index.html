@@ -1639,18 +1639,26 @@ const aiFirebaseConfig={apiKey:"AIzaSyB4wOgGUTR-fgweHtsJiK9XyykU_PND0GE",authDom
 try{
  const app=getApps().find(a=>a.name==="[DEFAULT]")||initializeApp(aiFirebaseConfig);
  const aiAuth=getAuth(app);
- let aiCurrentUser=null,aiAuthReady=false;
+
+ let aiCurrentUser=aiAuth.currentUser,aiAuthReady=!!aiCurrentUser,aiRequestId=0;
+ const emit=(token,reason)=>document.dispatchEvent(new CustomEvent("community-admin-ai-auth-result",{detail:{token,reason}}));
+ const withTimeout=(promise,ms)=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error("Firebase token verification timed out")),ms))]);
  const respond=async()=>{
-  let token=null,reason="Please sign in to Community Chat first.";
+  const requestId=++aiRequestId;
+  const current=aiAuth.currentUser||aiCurrentUser;
+  if(!current){emit(null,aiAuthReady?"Community Chat is not signed into Firebase in this browser. Sign in to Community Chat and reopen Admin AI.":"Firebase is still restoring your sign-in. Please wait a few seconds and try again.");return;}
+  emit(null,"Signed in to Firebase. Checking verified admin permission…");
   try{
-   if(!aiAuthReady){reason="Firebase is still loading your account. Try again in a moment.";}
-   else if(aiCurrentUser){
-    const claims=await aiCurrentUser.getIdTokenResult(true);
-    if(claims.claims.admin===true){token=await aiCurrentUser.getIdToken();}
-    else{reason="Signed in, but your account has no verified Firebase admin claim. The Admin role in Realtime Database does not grant AI access. An authorised Firebase project administrator must assign the admin custom claim.";}
-   }
-  }catch(error){reason="Firebase could not verify your account: "+(error?.code||error?.message||"unknown error");}
-  document.dispatchEvent(new CustomEvent("community-admin-ai-auth-result",{detail:{token,reason}}));
+   // Read cached claims first; refresh only if the claim is absent.
+   let result=await withTimeout(current.getIdTokenResult(),8000);
+   if(result.claims.admin!==true)result=await withTimeout(current.getIdTokenResult(true),8000);
+   if(requestId!==aiRequestId)return;
+   if(result.claims.admin!==true){emit(null,"Firebase sign-in confirmed, but this account does not have the required admin custom claim. A Firebase project administrator must grant it securely; the Realtime Database Admin role alone is not enough.");return;}
+   const token=await withTimeout(current.getIdToken(),8000);
+   if(requestId===aiRequestId)emit(token,"Verified admin access.");
+  }catch(error){
+   if(requestId===aiRequestId)emit(null,"Firebase sign-in was detected, but admin token verification failed: "+(error?.code||error?.message||"unknown error")+". Try signing out and back in.");
+  }
  };
  document.addEventListener("community-admin-ai-auth-request",respond);
  onAuthStateChanged(aiAuth,user=>{
@@ -1658,8 +1666,9 @@ try{
   if(!document.getElementById("adminAiOverlay")?.hidden)respond();
  },error=>{
   aiAuthReady=true;aiCurrentUser=null;
-  if(!document.getElementById("adminAiOverlay")?.hidden)document.dispatchEvent(new CustomEvent("community-admin-ai-auth-result",{detail:{token:null,reason:"Firebase sign-in failed: "+(error?.code||"unknown error")}}));
+  emit(null,"Firebase sign-in listener failed: "+(error?.code||error?.message||"unknown error"));
  });
+
 }catch(error){
  document.addEventListener("community-admin-ai-auth-request",()=>document.dispatchEvent(new CustomEvent("community-admin-ai-auth-result",{detail:{token:null,reason:"Could not initialize Firebase admin verification: "+(error?.message||"unknown error")}})));
 }
