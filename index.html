@@ -858,7 +858,7 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
    <div class="gateway-options" tabindex="0" aria-label="Scroll through interfaces">
     <button class="gateway-option" type="button" id="gatewayOpenChat"><span class="gateway-icon">💬</span><span>Chats<small>Enter Community Chat</small></span></button>
     <button class="gateway-option" type="button" id="gatewayOpenAI"><span class="gateway-icon">🤖</span><span>AI (Admin Only)<small>Ask AI questions or import a conversation</small></span></button>
-    <div class="gateway-option" aria-disabled="true"><span class="gateway-icon">🧩</span><span>More interfaces<small>Coming soon</small></span></div>
+    <button class="gateway-option" type="button" id="gatewayOpenShapes" onclick="location.href='shapes-colours.html'"><span class="gateway-icon">🎨</span><span>Shapes &amp; Colours<small>Build and colour 3D objects</small></span></button>
     <div class="gateway-option" aria-disabled="true"><span class="gateway-icon">✨</span><span>Future features<small>Coming soon</small></span></div>
     <div class="gateway-option" aria-disabled="true"><span class="gateway-icon">🔒</span><span>???<small>Coming soon</small></span></div>
    </div>
@@ -913,7 +913,7 @@ document.addEventListener("click",function(event){
  const loading=document.getElementById("gatewayLoading");
  const selection=document.getElementById("gatewaySelection");
  const open=document.getElementById("gatewayOpenChat");
- const reveal=()=>{if(sessionStorage.getItem("communityChatEntered")==="yes"){gateway.hidden=true;return;}loading.hidden=true;loading.style.display="none";selection.hidden=false;open.focus()};
+ const reveal=()=>{if(new URLSearchParams(location.search).get("interface")==="selection"){sessionStorage.removeItem("communityChatEntered");history.replaceState(null,"",location.pathname);}if(sessionStorage.getItem("communityChatEntered")==="yes"){gateway.hidden=true;return;}loading.hidden=true;loading.style.display="none";selection.hidden=false;open.focus()};
  const start=Date.now();
  const ready=()=>setTimeout(reveal,Math.max(0,900-(Date.now()-start)));
  if(document.readyState==="complete")ready();else window.addEventListener("load",ready,{once:true});
