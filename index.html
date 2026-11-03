@@ -842,6 +842,7 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
 #hubProfileAvatar{width:76px;height:76px;flex:none;border-radius:50%;object-fit:cover;background:#42577e;border:2px solid #8293b6}
 #hubProfileName{display:block;font-size:20px;color:#fff}
 #hubProfileBio{margin:7px 0 0;color:#d6e0f4;white-space:pre-wrap}
+#hubEditProfile{margin-top:16px;border-top:1px solid #8293b650;padding-top:14px}#hubEditProfile summary{cursor:pointer;font-weight:700}#hubProfileForm{display:grid;gap:9px;padding-top:12px}#hubProfileForm label{display:grid;gap:5px}#hubProfileForm input:not([type=file]),#hubProfileForm textarea{width:100%;box-sizing:border-box;padding:10px;border-radius:8px;background:#17233f;color:#fff;border:1px solid #8293b6}#hubProfileForm button{background:#344b79;color:#fff;border:1px solid #8098cc;border-radius:8px;padding:10px}#hubEditFeedback{font-size:13px;color:#d6e0f4}
 #hubAccountCard button{cursor:pointer}
 #hubAccountCard .auth-buttons button,#hubAccountCard #forgotPassword,#hubAccountCard #emailSignIn,#hubAccountCard #emailSignUp{background:#344b79!important;color:#fff!important;border:1px solid #8098cc!important;font-weight:700!important;box-shadow:none!important}
 #hubAccountCard .auth-buttons button:hover,#hubAccountCard #forgotPassword:hover{background:#45649b!important;color:#fff!important}
@@ -4567,6 +4568,38 @@ document.addEventListener("click",function(event){
           console.warn("Could not read anonymous account setting",err);
         });
         slowTimer=setInterval(updateSlowUI,500);
+        // Shared Hub profile editor: writes the same Firebase paths as Chat settings.
+        window.addEventListener("community-hub-profile-save",async event=>{
+          const detail=event.detail||{};
+          const requestId=detail.requestId;
+          const reply=(ok,message)=>window.dispatchEvent(new CustomEvent("community-hub-profile-save-result",{detail:{requestId,ok,message}}));
+          const account=auth.currentUser;
+          if(!account||!db){reply(false,"Sign in first.");return;}
+          try{
+            if(detail.field==="name"){
+              const name=normalizeName(String(detail.value||""));
+              if(!name){reply(false,"Enter a username.");return;}
+              await set(ref(db,profilePath(account.uid)),name);
+              savedUsername=name;usernameInput.value=name;
+              if(joined){username=name;await stopMyPresence();await registerPresence();}
+            }else if(detail.field==="bio"){
+              const bio=String(detail.value||"").trim();
+              if(bio.length>160)throw Error("Bio must be 160 characters or less.");
+              await set(ref(db,bioPath(account.uid)),bio||null);
+            }else if(detail.field==="avatar"){
+              const file=detail.file;
+              if(!file||!["image/png","image/jpeg","image/webp","image/gif"].includes(file.type)||file.size>2*1024*1024)throw Error("Choose a PNG, JPG, WebP or GIF under 2 MB.");
+              const preset=CLOUDINARY_IMAGE_PRESET||CLOUDINARY_UPLOAD_PRESET;
+              const form=new FormData();form.append("file",file);form.append("upload_preset",preset);
+              const response=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,{method:"POST",body:form});
+              const payload=await response.json();
+              const url=safeCloudinaryImageUrl(payload.secure_url);
+              if(!response.ok||!url)throw Error(payload.error?.message||"Picture upload failed.");
+              await set(ref(db,avatarPath(account.uid)),url);
+            }else throw Error("Unsupported profile setting.");
+            reply(true,"Saved! Your profile is updated in Game Hub and Community Chat.");
+          }catch(err){reply(false,err.message||"Could not save profile.");}
+        });
         // Publish the signed-in user's live profile to the Community Hub.
         let hubProfileUnsubs=[];
         onAuthStateChanged(auth,account=>{
@@ -6086,7 +6119,7 @@ document.addEventListener("click",function(event){
  if(!button||!gate||!accountBar)return;
  const parent=gate.parentNode,next=gate.nextSibling;
  const modal=document.createElement("div");modal.id="hubAccountModal";modal.hidden=true;
- modal.innerHTML='<div id="hubAccountCard" role="dialog" aria-modal="true" aria-label="Community Hub account"><button id="hubAccountClose" type="button">✕ Close</button><h2>Community Hub account</h2><p>Use your existing Community Chat account.</p><div id="hubAccountMount"></div><div id="hubSignedIn" hidden><div class="hub-profile"><img id="hubProfileAvatar" alt="Your profile picture" referrerpolicy="no-referrer"><div><strong id="hubProfileName">Community member</strong><p id="hubProfileBio">No bio added yet.</p></div></div><button id="hubGoChat" type="button">Open Chats</button></div></div>';
+ modal.innerHTML='<div id="hubAccountCard" role="dialog" aria-modal="true" aria-label="Community Hub account"><button id="hubAccountClose" type="button">✕ Close</button><h2>Community Hub account</h2><p>Use your existing Community Chat account.</p><div id="hubAccountMount"></div><div id="hubSignedIn" hidden><div class="hub-profile"><img id="hubProfileAvatar" alt="Your profile picture" referrerpolicy="no-referrer"><div><strong id="hubProfileName">Community member</strong><p id="hubProfileBio">No bio added yet.</p></div></div><button id="hubGoChat" type="button">Open Chats</button><details id="hubEditProfile"><summary>Edit profile settings</summary><form id="hubProfileForm"><label>Username<input id="hubEditName" maxlength="24" required></label><button type="button" data-save="name">Save username</button><label>Bio<textarea id="hubEditBio" maxlength="160" rows="3"></textarea></label><button type="button" data-save="bio">Save bio</button><label>Profile picture<input id="hubEditAvatar" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label><button type="button" data-save="avatar">Upload picture</button><p id="hubEditFeedback" role="status"></p></form></details></div></div>';
  document.body.append(modal);
  const mount=modal.querySelector("#hubAccountMount"),signed=modal.querySelector("#hubSignedIn");
  let lastFocus=null;
@@ -6101,6 +6134,21 @@ document.addEventListener("click",function(event){
    profileAvatar.src=p.avatar||fallbackAvatar;
  });
  profileAvatar.addEventListener("error",()=>{profileAvatar.src=fallbackAvatar;});
+ const editName=modal.querySelector("#hubEditName"),editBio=modal.querySelector("#hubEditBio"),editAvatar=modal.querySelector("#hubEditAvatar"),editFeedback=modal.querySelector("#hubEditFeedback");
+ let profileDirty=false,saveCounter=0;
+ modal.querySelector("#hubProfileForm").addEventListener("submit",e=>e.preventDefault());
+ for(const field of [editName,editBio])field.addEventListener("input",()=>{profileDirty=true;});
+ window.addEventListener("community-hub-profile",event=>{const p=event.detail||{};if(!profileDirty){editName.value=p.name==="Community member"?"":p.name||"";editBio.value=p.bio||"";}});
+ modal.querySelectorAll("[data-save]").forEach(btn=>btn.addEventListener("click",()=>{
+   const field=btn.dataset.save;
+   const value=field==="name"?editName.value:field==="bio"?editBio.value:undefined;
+   const file=field==="avatar"?editAvatar.files?.[0]:undefined;
+   const requestId=++saveCounter;
+   editFeedback.textContent=field==="avatar"?"Uploading picture…":"Saving…";btn.disabled=true;
+   const listener=event=>{if(event.detail?.requestId!==requestId)return;window.removeEventListener("community-hub-profile-save-result",listener);btn.disabled=false;editFeedback.textContent=event.detail.message;if(event.detail.ok){profileDirty=false;if(field==="avatar")editAvatar.value="";}};
+   window.addEventListener("community-hub-profile-save-result",listener);
+   window.dispatchEvent(new CustomEvent("community-hub-profile-save",{detail:{requestId,field,value,file}}));
+ }));
  function loggedIn(){return authConfirmed || !accountBar.hidden;}
  function update(){const yes=loggedIn();text.textContent=yes?"My account":"Sign in";signed.hidden=!yes;if(!modal.hidden&&yes&&gate.parentNode===mount){gate.hidden=true;}}
  function close(){modal.hidden=true;if(gate.parentNode===mount){parent.insertBefore(gate,next);gate.hidden=loggedIn();}lastFocus?.focus();}
