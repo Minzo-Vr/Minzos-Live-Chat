@@ -46,14 +46,11 @@ function showYeepsEntries(){
  }
 }
 yeepsSearch.addEventListener('input',showYeepsEntries);
-const YEEPS_EXTRA_MARKER="o[aI}\"YS0'7wT<~+g,%K3j5fE}\">XPWp]UqUrVw84Auh2J_9Hn";
 async function loadYeepsArchive(source){
  yeepsCount.textContent='Loading blocks…';
  try{
   const {default:JSZip}=await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
   const archive=await JSZip.loadAsync(source);
-  const extra=Object.values(archive.files).find(entry=>!entry.dir&&entry.name.split('/').pop().toLowerCase()==='extra');
-  if(!extra||(await extra.async('string')).includes(YEEPS_EXTRA_MARKER)===false)throw Error('invalid');
   const entries=Object.values(archive.files).filter(item=>!item.dir&&/\.glb$/i.test(item.name)).map(item=>({path:item.name,label:item.name.split('/').pop().replace(/\.glb$/i,'').replace(/_/g,' ')})).sort((a,b)=>a.label.localeCompare(b.label));
   if(!entries.length)throw Error('invalid');
   yeepsZipArchive=archive;yeepsEntries=entries;
