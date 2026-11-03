@@ -836,7 +836,8 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
 #hubAccountModal[hidden]{display:none!important}
 #hubAccountModal{position:fixed;inset:0;z-index:2147483002;background:#050917db;display:grid;place-items:center;padding:18px;color:#fff}
 #hubAccountCard{width:min(100%,520px);max-height:90dvh;overflow:auto;background:#1b2744;border:1px solid #8195c8;border-radius:18px;padding:22px;font-family:system-ui,sans-serif;box-shadow:0 20px 70px #0008}
-#hubAccountCard .auth-gate{display:block;max-width:none;width:100%;margin:0}
+#hubAccountCard .auth-gate{max-width:none;width:100%;margin:0}
+#hubAccountCard .auth-gate[hidden],#hubAccountCard #hubSignedIn[hidden]{display:none!important}
 #hubAccountCard button{cursor:pointer}
 #hubAccountCard .auth-buttons button,#hubAccountCard #forgotPassword,#hubAccountCard #emailSignIn,#hubAccountCard #emailSignUp{background:#344b79!important;color:#fff!important;border:1px solid #8098cc!important;font-weight:700!important;box-shadow:none!important}
 #hubAccountCard .auth-buttons button:hover,#hubAccountCard #forgotPassword:hover{background:#45649b!important;color:#fff!important}
