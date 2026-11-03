@@ -829,6 +829,18 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
 .gateway-main{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:clamp(18px,5vw,70px);text-align:center;overflow:auto}
 .gateway-role-filter{color:#b6c4e6;font-size:13px;margin:0 0 12px}
 @media(max-width:620px){.gateway-sidebar{width:195px;padding:16px 10px}.gateway-sidebar.is-collapsed{width:50px;padding:16px 5px}.gateway-main{padding:20px 12px}.gateway-role{font-size:13px}}
+
+/* Shared Community Hub account entry */
+#gatewayAccountButton{position:absolute;top:18px;right:20px;z-index:4;border:1px solid #8da7ff66;background:#ffffff18;color:#fff;border-radius:30px;padding:10px 15px;font:inherit;cursor:pointer;display:flex;align-items:center;gap:8px}
+#gatewayAccountButton:hover{background:#ffffff30}
+#hubAccountModal[hidden]{display:none!important}
+#hubAccountModal{position:fixed;inset:0;z-index:2147483002;background:#050917db;display:grid;place-items:center;padding:18px;color:#fff}
+#hubAccountCard{width:min(100%,520px);max-height:90dvh;overflow:auto;background:#1b2744;border:1px solid #8195c8;border-radius:18px;padding:22px;font-family:system-ui,sans-serif;box-shadow:0 20px 70px #0008}
+#hubAccountCard .auth-gate{display:block;max-width:none;width:100%;margin:0}
+#hubAccountCard button{cursor:pointer}
+#hubAccountClose{float:right;background:#324363;color:white;border:1px solid #8293b6;border-radius:9px;padding:7px 12px}
+#hubAccountCard h2{margin-top:6px}
+@media(max-width:620px){#gatewayAccountButton{top:9px;right:9px;padding:8px 10px;font-size:12px}.gateway-main{padding-top:65px}}
 </style>
 </head>
 <body>
@@ -851,6 +863,7 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
     <p class="gateway-role-note">Role selection is a preview, not a role change. Access permissions will be configured separately.</p>
    </div>
   </aside>
+  <button id="gatewayAccountButton" type="button" aria-label="Sign in or manage account">👤 <span id="gatewayAccountText">Sign in</span></button>
   <main class="gateway-main">
    <h1 class="gateway-brand">Select User Interface</h1>
    <p class="gateway-subtitle">Choose where you want to go</p>
@@ -906,6 +919,32 @@ document.addEventListener("click",function(event){
  const panel=document.getElementById("adminAiOverlay");
  if(panel){panel.hidden=true;panel.style.setProperty("display","none","important");}
 },true);
+</script>
+
+<script id="hub-account-entry-script">
+(function(){
+ const button=document.getElementById("gatewayAccountButton");
+ const text=document.getElementById("gatewayAccountText");
+ const gate=document.getElementById("authGate");
+ const accountBar=document.getElementById("accountBar");
+ if(!button||!gate||!accountBar)return;
+ const parent=gate.parentNode,next=gate.nextSibling;
+ const modal=document.createElement("div");modal.id="hubAccountModal";modal.hidden=true;
+ modal.innerHTML='<div id="hubAccountCard" role="dialog" aria-modal="true" aria-label="Community Hub account"><button id="hubAccountClose" type="button">✕ Close</button><h2>Community Hub account</h2><p>Use your existing Community Chat account.</p><div id="hubAccountMount"></div><div id="hubSignedIn" hidden><p>You are already signed in with your Community Chat account.</p><button id="hubGoChat" type="button">Open Chats</button></div></div>';
+ document.body.append(modal);
+ const mount=modal.querySelector("#hubAccountMount"),signed=modal.querySelector("#hubSignedIn");
+ let lastFocus=null;
+ function loggedIn(){return !accountBar.hidden;}
+ function update(){const yes=loggedIn();text.textContent=yes?"My account":"Sign in";signed.hidden=!yes;if(!modal.hidden&&yes&&gate.parentNode===mount){gate.hidden=true;}}
+ function close(){modal.hidden=true;if(gate.parentNode===mount){parent.insertBefore(gate,next);gate.hidden=loggedIn();}lastFocus?.focus();}
+ button.addEventListener("click",()=>{lastFocus=document.activeElement;modal.hidden=false;mount.append(gate);gate.hidden=loggedIn();update();modal.querySelector("#hubAccountClose").focus();});
+ modal.querySelector("#hubAccountClose").addEventListener("click",close);
+ modal.querySelector("#hubGoChat").addEventListener("click",()=>{close();document.getElementById("gatewayOpenChat")?.click();});
+ modal.addEventListener("click",e=>{if(e.target===modal)close();});
+ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!modal.hidden){e.preventDefault();close();}});
+ new MutationObserver(update).observe(accountBar,{attributes:true,attributeFilter:["hidden"]});
+ update();
+})();
 </script>
 <script id="interface-gateway-script">
 (function(){
