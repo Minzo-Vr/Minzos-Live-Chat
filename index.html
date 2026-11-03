@@ -986,7 +986,7 @@ document.addEventListener("click",function(event){
  document.addEventListener("community-admin-ai-auth-result",e=>{
    aiToken=e.detail?.token||null;
    const ok=!!aiToken;
-   aiStatus.textContent=ok?"Admin verified. Conversation import ready; AI backend setup pending.":"Admin sign-in required. Enter Chats and sign in with your admin account first.";
+   aiStatus.textContent=ok?"Verified admin access. AI chat is ready to try.":(e.detail?.reason||"Verified admin access required.");
    document.getElementById("adminAiImport").disabled=!ok;
    document.getElementById("adminAiQuestion").disabled=!ok;
    document.getElementById("adminAiSend").disabled=!ok;
@@ -1663,9 +1663,21 @@ document.addEventListener("click",function(event){
       alert("Chat+ download button works! App builds and protected downloads are not ready yet.");
     });
     document.addEventListener("community-admin-ai-auth-request",async()=>{
-      let token=null;
-      try{if(user&&auth){const claims=await user.getIdTokenResult();if(claims.claims.admin===true)token=await user.getIdToken();}}catch(e){console.warn("AI admin authentication unavailable",e);}
-      document.dispatchEvent(new CustomEvent("community-admin-ai-auth-result",{detail:{token}}));
+      let token=null,reason="Please sign in to Community Chat with your admin account.";
+      try{
+        if(user&&auth){
+          // Refresh claims so newly granted admin access is recognized immediately.
+          const claims=await user.getIdTokenResult(true);
+          if(claims.claims.admin===true){
+            token=await user.getIdToken();
+          }else{
+            reason=hasRole(user.uid,"admin")
+              ?"Your account has the Admin display role, but the AI requires a verified Firebase admin claim. Ask the Firebase project owner to grant the admin custom claim; database rules alone cannot enable AI access."
+              :"This account does not have verified admin access to the AI.";
+          }
+        }
+      }catch(e){reason="Could not verify admin access. Try signing in again.";console.warn("AI admin authentication unavailable",e);}
+      document.dispatchEvent(new CustomEvent("community-admin-ai-auth-result",{detail:{token,reason}}));
     });
     function actualRole(uid){const roles=userRoles(uid);return roles.includes("admin")?"admin":roles.includes("moderator")?"moderator":roles.includes("plus")?"plus":roles.includes("testsubject")?"testsubject":roles.find(k=>customRoles[k])||"member";}
     function displayedRoleEffect(uid){
