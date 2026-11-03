@@ -933,8 +933,12 @@ document.addEventListener("click",function(event){
  const open=document.getElementById("gatewayOpenChat");
  const reveal=()=>{if(new URLSearchParams(location.search).get("interface")==="selection"){sessionStorage.removeItem("communityChatEntered");history.replaceState(null,"",location.pathname);}if(sessionStorage.getItem("communityChatEntered")==="yes"){gateway.hidden=true;return;}loading.hidden=true;loading.style.display="none";selection.hidden=false;open.focus()};
  const start=Date.now();
- const ready=()=>setTimeout(reveal,Math.max(0,900-(Date.now()-start)));
- if(document.readyState==="complete")ready();else window.addEventListener("load",ready,{once:true});
+ let revealed=false;
+ const ready=()=>{if(revealed)return;revealed=true;setTimeout(reveal,Math.max(0,900-(Date.now()-start)));};
+ // The Hub must not wait indefinitely for Firebase, fonts, media, or other external assets.
+ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",ready,{once:true});else ready();
+ window.addEventListener("load",ready,{once:true});
+ setTimeout(ready,2500);
  const sidebar=document.getElementById("gatewayRoleSidebar");
  const toggle=document.getElementById("gatewayToggleSidebar");
  toggle.addEventListener("click",()=>{const collapsed=sidebar.classList.toggle("is-collapsed");toggle.setAttribute("aria-expanded",String(!collapsed));toggle.setAttribute("aria-label",collapsed?"Expand roles sidebar":"Collapse roles sidebar");});
