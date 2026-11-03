@@ -819,6 +819,8 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
 .gateway-sidebar{width:280px;flex-shrink:0;background:#0a1024;border-right:1px solid #ffffff25;padding:26px 16px;overflow-y:auto;transition:width .2s ease,padding .2s ease}
 .gateway-sidebar.is-collapsed{width:62px;padding:26px 9px}
 .gateway-sidebar.is-collapsed .gateway-sidebar-content,.gateway-sidebar.is-collapsed .gateway-sidebar-title{display:none}
+.gateway-sidebar-version{margin-top:24px;padding:12px 8px;border-top:1px solid #ffffff25;color:#aebce3;font-size:12px;letter-spacing:.04em;text-align:center}
+.gateway-sidebar.is-collapsed .gateway-sidebar-version{font-size:10px;padding:10px 0;overflow-wrap:anywhere}
 .gateway-sidebar-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:20px}
 .gateway-sidebar-top button,.gateway-role{border:1px solid #ffffff25;background:#ffffff12;color:white;border-radius:12px;padding:10px;font:inherit;cursor:pointer}
 .gateway-sidebar-top button{flex-shrink:0}
@@ -871,6 +873,7 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
     <button type="button" class="gateway-role" data-role="admin" aria-pressed="false">👑 Admin</button>
     <p class="gateway-role-note">Role selection is a preview, not a role change. Access permissions will be configured separately.</p>
    </div>
+   <div class="gateway-sidebar-version" title="Game Hub version">v0.01</div>
   </aside>
   <button id="gatewayAccountButton" type="button" aria-label="Sign in or manage account">👤 <span id="gatewayAccountText">Sign in</span></button>
   <main class="gateway-main">
