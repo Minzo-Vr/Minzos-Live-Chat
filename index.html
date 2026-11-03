@@ -838,6 +838,10 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
 #hubAccountCard{width:min(100%,520px);max-height:90dvh;overflow:auto;background:#1b2744;border:1px solid #8195c8;border-radius:18px;padding:22px;font-family:system-ui,sans-serif;box-shadow:0 20px 70px #0008}
 #hubAccountCard .auth-gate{max-width:none;width:100%;margin:0}
 #hubAccountCard .auth-gate[hidden],#hubAccountCard #hubSignedIn[hidden]{display:none!important}
+#hubAccountCard .hub-profile{display:flex;align-items:center;gap:14px;padding:16px 4px;overflow-wrap:anywhere}
+#hubProfileAvatar{width:76px;height:76px;flex:none;border-radius:50%;object-fit:cover;background:#42577e;border:2px solid #8293b6}
+#hubProfileName{display:block;font-size:20px;color:#fff}
+#hubProfileBio{margin:7px 0 0;color:#d6e0f4;white-space:pre-wrap}
 #hubAccountCard button{cursor:pointer}
 #hubAccountCard .auth-buttons button,#hubAccountCard #forgotPassword,#hubAccountCard #emailSignIn,#hubAccountCard #emailSignUp{background:#344b79!important;color:#fff!important;border:1px solid #8098cc!important;font-weight:700!important;box-shadow:none!important}
 #hubAccountCard .auth-buttons button:hover,#hubAccountCard #forgotPassword:hover{background:#45649b!important;color:#fff!important}
@@ -4563,6 +4567,24 @@ document.addEventListener("click",function(event){
           console.warn("Could not read anonymous account setting",err);
         });
         slowTimer=setInterval(updateSlowUI,500);
+        // Publish the signed-in user's live profile to the Community Hub.
+        let hubProfileUnsubs=[];
+        onAuthStateChanged(auth,account=>{
+          hubProfileUnsubs.forEach(off=>off());hubProfileUnsubs=[];
+          if(!account){window.dispatchEvent(new CustomEvent("community-hub-profile",{detail:null}));return;}
+          const profile={name:account.displayName||"Community member",avatar:account.photoURL||"",bio:""};
+          const emit=()=>window.dispatchEvent(new CustomEvent("community-hub-profile",{detail:{...profile}}));
+          emit();
+          for(const [field,path] of [["name",profilePath(account.uid)],["avatar",avatarPath(account.uid)],["bio",bioPath(account.uid)]]){
+            hubProfileUnsubs.push(onValue(ref(db,path),snap=>{
+              const value=snap.val();
+              if(field==="name")profile.name=typeof value==="string"&&value.trim()?value.trim():account.displayName||"Community member";
+              else if(field==="avatar")profile.avatar=safeCloudinaryImageUrl(value)||account.photoURL||"";
+              else profile.bio=typeof value==="string"?value.slice(0,160):"";
+              emit();
+            },err=>console.warn("Hub profile unavailable",field,err)));
+          }
+        });
         onAuthStateChanged(auth,account=>{
           applyAuthAccount(account).catch(err=>{
             console.error("Authentication initialization failed",err);
@@ -6064,11 +6086,21 @@ document.addEventListener("click",function(event){
  if(!button||!gate||!accountBar)return;
  const parent=gate.parentNode,next=gate.nextSibling;
  const modal=document.createElement("div");modal.id="hubAccountModal";modal.hidden=true;
- modal.innerHTML='<div id="hubAccountCard" role="dialog" aria-modal="true" aria-label="Community Hub account"><button id="hubAccountClose" type="button">✕ Close</button><h2>Community Hub account</h2><p>Use your existing Community Chat account.</p><div id="hubAccountMount"></div><div id="hubSignedIn" hidden><p>You are already signed in with your Community Chat account.</p><button id="hubGoChat" type="button">Open Chats</button></div></div>';
+ modal.innerHTML='<div id="hubAccountCard" role="dialog" aria-modal="true" aria-label="Community Hub account"><button id="hubAccountClose" type="button">✕ Close</button><h2>Community Hub account</h2><p>Use your existing Community Chat account.</p><div id="hubAccountMount"></div><div id="hubSignedIn" hidden><div class="hub-profile"><img id="hubProfileAvatar" alt="Your profile picture" referrerpolicy="no-referrer"><div><strong id="hubProfileName">Community member</strong><p id="hubProfileBio">No bio added yet.</p></div></div><button id="hubGoChat" type="button">Open Chats</button></div></div>';
  document.body.append(modal);
  const mount=modal.querySelector("#hubAccountMount"),signed=modal.querySelector("#hubSignedIn");
  let lastFocus=null;
  let authConfirmed=!accountBar.hidden;
+ const profileAvatar=modal.querySelector("#hubProfileAvatar"),profileName=modal.querySelector("#hubProfileName"),profileBio=modal.querySelector("#hubProfileBio");
+ const fallbackAvatar="data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="40" fill="#42577e"/><circle cx="40" cy="29" r="15" fill="#d8e1f5"/><ellipse cx="40" cy="75" rx="28" ry="26" fill="#d8e1f5"/></svg>');
+ profileAvatar.src=fallbackAvatar;
+ window.addEventListener("community-hub-profile",event=>{
+   const p=event.detail||{};
+   profileName.textContent=p.name||"Community member";
+   profileBio.textContent=p.bio||"No bio added yet.";
+   profileAvatar.src=p.avatar||fallbackAvatar;
+ });
+ profileAvatar.addEventListener("error",()=>{profileAvatar.src=fallbackAvatar;});
  function loggedIn(){return authConfirmed || !accountBar.hidden;}
  function update(){const yes=loggedIn();text.textContent=yes?"My account":"Sign in";signed.hidden=!yes;if(!modal.hidden&&yes&&gate.parentNode===mount){gate.hidden=true;}}
  function close(){modal.hidden=true;if(gate.parentNode===mount){parent.insertBefore(gate,next);gate.hidden=loggedIn();}lastFocus?.focus();}
