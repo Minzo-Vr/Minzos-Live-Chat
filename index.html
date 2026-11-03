@@ -881,6 +881,27 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
   </main>
  </div>
 </div>
+<script id="hub-startup-recovery">
+// Runs immediately after Hub markup, independently of the chat and AI modules.
+(function(){
+ const gateway=document.getElementById("interfaceGateway");
+ const loading=document.getElementById("gatewayLoading");
+ const selection=document.getElementById("gatewaySelection");
+ if(!gateway||!loading||!selection)return;
+ function show(){
+  let entered=false;
+  try{entered=sessionStorage.getItem("communityChatEntered")==="yes";}catch(e){console.warn("Hub session storage unavailable",e);}
+  const forced=new URLSearchParams(location.search).get("interface")==="selection";
+  if(forced){entered=false;try{sessionStorage.removeItem("communityChatEntered");}catch(e){} }
+  loading.hidden=true;loading.style.display="none";
+  selection.hidden=false;selection.style.display="flex";
+  if(entered){gateway.hidden=true;}else{gateway.hidden=false;gateway.classList.remove("gateway-hidden");gateway.removeAttribute("aria-hidden");}
+ }
+ // This recovery does not depend on load/DOMContentLoaded events or external resources.
+ setTimeout(show,1100);
+ setTimeout(()=>{if(!gateway.hidden&&!loading.hidden)show();},3500);
+})();
+</script>
 <div id="adminAiOverlay" hidden style="position:fixed;inset:0;z-index:2147483001;background:#101528ef;color:white;display:flex;align-items:center;justify-content:center;padding:12px">
  <section style="width:min(720px,100%);height:min(85dvh,760px);background:#17213b;border:1px solid #ffffff40;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px">
   <header style="display:flex;align-items:center;justify-content:space-between"><strong>🤖 Admin AI</strong><button type="button" id="adminAiClose" style="position:relative;z-index:5;cursor:pointer;pointer-events:auto;padding:10px 14px;background:#334a85;color:white;border:1px solid #a3b6f8;border-radius:10px" onclick="document.getElementById('adminAiOverlay').setAttribute('hidden','');document.getElementById('adminAiOverlay').style.setProperty('display','none','important');return false;">✕ Close</button></header>
