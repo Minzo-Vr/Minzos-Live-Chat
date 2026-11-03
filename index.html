@@ -915,6 +915,15 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
   <div id="adminAiMessages" role="log" aria-live="polite" style="flex:1;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1225;border-radius:10px;padding:12px"></div>
   <label style="font-size:13px">Import a ChatGPT conversation (.json or .txt) <input type="file" id="adminAiImport" accept=".json,.txt,application/json,text/plain" disabled></label>
   <form id="adminAiForm" style="display:flex;gap:8px"><input id="adminAiQuestion" maxlength="1500" placeholder="Ask Community Chat AI…" style="flex:1;min-width:0" disabled><button type="submit" id="adminAiSend" disabled>Send</button></form>
+  <details id="adminAiGitHubPanel" style="border:1px solid #6074a5;border-radius:10px;padding:10px">
+   <summary style="cursor:pointer">GitHub code editor (admin only)</summary>
+   <p style="font-size:12px">Generate a proposed change, review the exact replacement, then approve a GitHub commit. No changes are published automatically.</p>
+   <select id="adminAiGitHubFile" aria-label="GitHub file"><option value="index.html">Community Hub — index.html</option><option value="shapes-colours.html">Shapes &amp; Colours</option></select>
+   <textarea id="adminAiGitHubRequest" rows="3" maxlength="1400" placeholder="Describe one small change…" style="display:block;width:100%;margin:8px 0"></textarea>
+   <button id="adminAiGitHubPreview" type="button" disabled>Generate preview</button>
+   <pre id="adminAiGitHubDiff" style="max-height:220px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px"></pre>
+   <button id="adminAiGitHubApprove" type="button" disabled>Approve and commit to GitHub</button>
+  </details>
   <small>Imported chats are displayed locally in this browser session. AI replies require a separately deployed, admin-verified Worker. Do not import private conversations on shared devices.</small>
  </section>
 </div>
@@ -990,6 +999,40 @@ document.addEventListener("click",function(event){
    document.getElementById("adminAiImport").disabled=!ok;
    document.getElementById("adminAiQuestion").disabled=!ok;
    document.getElementById("adminAiSend").disabled=!ok;
+   githubPreview.disabled=!ok;
+   if(!ok)resetGithubPreview();
+ });
+ const githubEndpoint="https://community-chat-admin-ai.kobefalzon8.workers.dev/api/admin-ai/github";
+ let pendingGitHubEdit=null;
+ const githubPreview=document.getElementById("adminAiGitHubPreview"),githubApprove=document.getElementById("adminAiGitHubApprove"),githubDiff=document.getElementById("adminAiGitHubDiff");
+ const resetGithubPreview=()=>{pendingGitHubEdit=null;githubApprove.disabled=true;githubDiff.textContent="";};
+ document.getElementById("adminAiGitHubRequest").addEventListener("input",resetGithubPreview);
+ document.getElementById("adminAiGitHubFile").addEventListener("change",resetGithubPreview);
+ async function callAdminGithub(payload){
+  const resp=await fetch(githubEndpoint,{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+aiToken},body:JSON.stringify(payload)});
+  const data=await resp.json();if(!resp.ok)throw Error(data.error||"GitHub request failed");return data;
+ }
+ githubPreview.addEventListener("click",async()=>{
+  if(!aiToken)return;
+  resetGithubPreview();githubPreview.disabled=true;aiStatus.textContent="Preparing GitHub preview…";
+  try{
+   const data=await callAdminGithub({action:"propose",path:document.getElementById("adminAiGitHubFile").value,instruction:document.getElementById("adminAiGitHubRequest").value});
+   pendingGitHubEdit=data;
+   githubDiff.textContent="FILE: "+data.proposal.path+"\\n\\nREMOVE:\\n"+data.proposal.old+"\\n\\nREPLACE WITH:\\n"+data.proposal.replacement;
+   githubApprove.disabled=false;aiStatus.textContent="Review the replacement before approving.";
+  }catch(e){aiStatus.textContent=e.message;}
+  finally{githubPreview.disabled=!aiToken;}
+ });
+ githubApprove.addEventListener("click",async()=>{
+  if(!aiToken||!pendingGitHubEdit)return;
+  const edit=pendingGitHubEdit;
+  if(!confirm("Commit this exact preview to "+edit.proposal.path+" on GitHub?"))return;
+  githubApprove.disabled=true;aiStatus.textContent="Committing approved change…";
+  try{
+   const result=await callAdminGithub({action:"commit",proposal:edit.proposal,signature:edit.signature});
+   resetGithubPreview();aiStatus.textContent="GitHub commit created: "+result.commit;
+   aiAppend("GitHub","Approved change committed: "+result.url);
+  }catch(e){aiStatus.textContent=e.message;githubApprove.disabled=false;}
  });
  document.getElementById("adminAiImport").addEventListener("change",async e=>{
    if(!aiToken)return;
