@@ -28,7 +28,7 @@ async function githubFile(env,path){
  const res=await fetch("https://api.github.com/repos/"+REPO+"/contents/"+path,{headers:githubHeaders(env)});
  if(!res.ok)throw Error("GitHub file unavailable ("+res.status+")");
  const data=await res.json();
- const binary=atob(data.content.replace(/\\s/g,""));
+ const binary=atob(data.content.replace(/\s/g,""));
  const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
  return {sha:data.sha,content:new TextDecoder().decode(bytes)};
 }
@@ -54,12 +54,12 @@ async function githubEdit(request,env,body,adminUid){
   // Limited context: propose only exact, small text replacements.
   const content=file.content.slice(0,45000);
   const result=await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast",{
-   messages:[{role:"system",content:"You are a careful GitHub code editor. Return ONLY a valid JSON object with keys old and replacement. The old value MUST be a verbatim contiguous substring of the supplied source, unique within the file. replacement is its complete substitute. Keep both snippets small. Do not modify authentication, access controls, secrets, or payment code. If unable to do this safely, return {\\"old\\":\\"\\",\\"replacement\\":\\"\\"}."},
-    {role:"user",content:"File: "+body.path+"\\nRequest: "+instruction+"\\nSource (first 45000 characters):\\n"+content}],
+   messages:[{role:"system",content:"You are a careful GitHub code editor. Return ONLY a valid JSON object with keys old and replacement. The old value MUST be a verbatim contiguous substring of the supplied source, unique within the file. replacement is its complete substitute. Keep both snippets small. Do not modify authentication, access controls, secrets, or payment code. If unable to do this safely, return {\"old\":\"\",\"replacement\":\"\"}."},
+    {role:"user",content:"File: "+body.path+"\nRequest: "+instruction+"\nSource (first 45000 characters):\n"+content}],
    max_tokens:2800
   });
   const raw=String(result?.response||"").trim();
-  let edit;try{edit=JSON.parse(raw.replace(/^\x60\x60\x60(?:json)?\\s*|\\s*\x60\x60\x60$/g,""));}catch{throw Error("AI could not produce a safe preview. Try a smaller change.");}
+  let edit;try{edit=JSON.parse(raw.replace(/^\x60\x60\x60(?:json)?\s*|\s*\x60\x60\x60$/g,""));}catch{throw Error("AI could not produce a safe preview. Try a smaller change.");}
   const old=edit.old,replacement=edit.replacement;
   if(typeof old!=="string"||typeof replacement!=="string"||old.length<5||old.length>5000||replacement.length>10000||!file.content.includes(old)||file.content.indexOf(old)!==file.content.lastIndexOf(old))throw Error("AI suggestion was not an exact, unique replacement. Try a more specific request.");
   if(/(?:firebase|authorization|auth|token|password|secret|admin|stripe|payment)/i.test(instruction+" "+old+" "+replacement))throw Error("Sensitive code requires manual review outside AI auto-edits.");
