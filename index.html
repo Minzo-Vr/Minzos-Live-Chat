@@ -989,7 +989,7 @@ document.addEventListener("click",function(event){
  const aiOverlay=document.getElementById("adminAiOverlay"),aiStatus=document.getElementById("adminAiStatus"),aiMessages=document.getElementById("adminAiMessages");
  let aiHistory=[],aiToken=null;
  const aiAppend=(who,message)=>{const div=document.createElement("div");div.style.marginBottom="12px";const name=document.createElement("strong");name.textContent=who+": ";div.append(name,document.createTextNode(String(message).slice(0,12000)));aiMessages.append(div);aiMessages.scrollTop=aiMessages.scrollHeight;};
- const openAdminAI=()=>{aiOverlay.style.removeProperty("display");aiOverlay.hidden=false;aiStatus.textContent="Checking admin access…";document.dispatchEvent(new CustomEvent("community-admin-ai-auth-request"));setTimeout(()=>{if(!aiOverlay.hidden&&aiStatus.textContent==="Checking admin access…"){aiStatus.textContent="Admin verification did not respond. Open Community Chat and sign in, then reopen Admin AI. If it persists, the Firebase authentication module may not have loaded."; }},6000);};
+ const openAdminAI=()=>{aiOverlay.style.removeProperty("display");aiOverlay.hidden=false;aiStatus.textContent="Checking admin access…";document.dispatchEvent(new CustomEvent("community-admin-ai-auth-request"));setTimeout(()=>{if(!aiOverlay.hidden&&aiStatus.textContent==="Checking admin access…"){aiStatus.textContent=window.__adminAiAuthLoaded?"Firebase loaded but admin verification has not completed. Check your connection and sign-in status.":"Admin verification module did not load. Check whether gstatic.com is blocked, or open DevTools Console for the failed module import. This is not a GitHub token problem."; }},12000);};
  document.getElementById("gatewayOpenAI").addEventListener("click",openAdminAI);
  document.getElementById("adminAiHeaderOpen").addEventListener("click",openAdminAI);
  const closeAdminAI=()=>{aiOverlay.hidden=true;aiOverlay.style.display="none";};
@@ -1634,6 +1634,7 @@ document.addEventListener("click",function(event){
   <script type="module" id="admin-ai-independent-auth">
 import {initializeApp,getApps} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {getAuth,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+window.__adminAiAuthLoaded=true;
 const aiFirebaseConfig={apiKey:"AIzaSyB4wOgGUTR-fgweHtsJiK9XyykU_PND0GE",authDomain:"website-chat-80038.firebaseapp.com",databaseURL:"https://website-chat-80038-default-rtdb.firebaseio.com/",projectId:"website-chat-80038",appId:"1:42470201717:web:890e9ebf1f0865c8ea9b3c"};
 try{
  const app=getApps().find(a=>a.name==="[DEFAULT]")||initializeApp(aiFirebaseConfig);
@@ -1662,6 +1663,20 @@ try{
 }catch(error){
  document.addEventListener("community-admin-ai-auth-request",()=>document.dispatchEvent(new CustomEvent("community-admin-ai-auth-result",{detail:{token:null,reason:"Could not initialize Firebase admin verification: "+(error?.message||"unknown error")}})));
 }
+</script>
+<script>
+(function(){
+ const moduleScript=document.getElementById("admin-ai-independent-auth");
+ moduleScript?.addEventListener("error",()=>{
+  const status=document.getElementById("adminAiStatus");
+  if(status)status.textContent="Admin AI Firebase module failed to load. Check your internet, browser extensions, and blocked gstatic.com requests.";
+ });
+ window.addEventListener("unhandledrejection",event=>{
+  if(!String(event.reason||"").match(/firebase|gstatic|auth\/|module/i))return;
+  const status=document.getElementById("adminAiStatus");
+  if(status&&status.textContent.includes("Checking admin"))status.textContent="Firebase authentication failed to initialize: "+String(event.reason?.message||event.reason).slice(0,180);
+ });
+})();
 </script>
 <script type="module">
     /*
