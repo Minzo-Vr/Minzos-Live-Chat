@@ -9,7 +9,7 @@ const scene=new THREE.Scene();scene.background=new THREE.Color('#121a2b');
 const camera=new THREE.PerspectiveCamera(55,1,.1,1000);camera.position.set(7,6,9);
 const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputColorSpace=THREE.SRGBColorSpace;viewport.prepend(renderer.domElement);
 const orbit=new OrbitControls(camera,renderer.domElement);orbit.enableDamping=true;orbit.target.set(0,1,0);
-const transform=new TransformControls(camera,renderer.domElement);scene.add(transform);transform.addEventListener('dragging-changed',e=>orbit.enabled=!e.value);transform.addEventListener('objectChange',refreshProperties);
+const transform=new TransformControls(camera,renderer.domElement);scene.add(transform.getHelper());transform.addEventListener('dragging-changed',e=>orbit.enabled=!e.value);transform.addEventListener('objectChange',refreshProperties);
 scene.add(new THREE.HemisphereLight(0xffffff,0x465675,2));const sun=new THREE.DirectionalLight(0xffffff,2);sun.position.set(5,9,7);scene.add(sun);
 const grid=new THREE.GridHelper(30,30,0x6b84ad,0x35445d);scene.add(grid);scene.add(new THREE.AxesHelper(2));
 let objects=[],selected=null,serial=0;
