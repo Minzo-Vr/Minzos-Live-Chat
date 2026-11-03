@@ -4449,6 +4449,7 @@ document.addEventListener("click",function(event){
       $("settingsBtn").hidden = !signedIn;
       if(!signedIn) $("settingsOverlay").hidden=true;
       if(signedIn) $("accountLabel").textContent = isAdmin ? "Signed in as admin" : "Signed in with Google — choose a chat username";
+      window.dispatchEvent(new CustomEvent("community-auth-status",{detail:{signedIn}}));
     }
     function stopChatListeners() {
       if(stopMessages){stopMessages();stopMessages=null;}
@@ -6038,7 +6039,8 @@ document.addEventListener("click",function(event){
  document.body.append(modal);
  const mount=modal.querySelector("#hubAccountMount"),signed=modal.querySelector("#hubSignedIn");
  let lastFocus=null;
- function loggedIn(){return !accountBar.hidden;}
+ let authConfirmed=!accountBar.hidden;
+ function loggedIn(){return authConfirmed || !accountBar.hidden;}
  function update(){const yes=loggedIn();text.textContent=yes?"My account":"Sign in";signed.hidden=!yes;if(!modal.hidden&&yes&&gate.parentNode===mount){gate.hidden=true;}}
  function close(){modal.hidden=true;if(gate.parentNode===mount){parent.insertBefore(gate,next);gate.hidden=loggedIn();}lastFocus?.focus();}
  button.addEventListener("click",()=>{lastFocus=document.activeElement;modal.hidden=false;mount.append(gate);gate.hidden=loggedIn();update();modal.querySelector("#hubAccountClose").focus();});
@@ -6046,7 +6048,8 @@ document.addEventListener("click",function(event){
  modal.querySelector("#hubGoChat").addEventListener("click",()=>{close();document.getElementById("gatewayOpenChat")?.click();});
  modal.addEventListener("click",e=>{if(e.target===modal)close();});
  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!modal.hidden){e.preventDefault();close();}});
- new MutationObserver(update).observe(accountBar,{attributes:true,attributeFilter:["hidden"]});
+ window.addEventListener("community-auth-status",event=>{authConfirmed=Boolean(event.detail?.signedIn);update();});
+ new MutationObserver(()=>{authConfirmed=!accountBar.hidden;update();}).observe(accountBar,{attributes:true,attributeFilter:["hidden"]});
  update();
 })();
 </script>
