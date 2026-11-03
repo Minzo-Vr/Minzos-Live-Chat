@@ -68,7 +68,7 @@ async function placeYeepsBlock(item){
    if(!child.isMesh||!child.geometry)return;
    const geometry=child.geometry.clone();geometry.applyMatrix4(child.matrixWorld);
    const mat=Array.isArray(child.material)?child.material[0]:child.material;
-   const material=new THREE.MeshStandardMaterial({color:'#ffffff',side:THREE.DoubleSide,vertexColors:false});
+   const isWooden=/(wood|wooden|timber)/i.test(item.label);const material=new THREE.MeshStandardMaterial({color:isWooden?'#b59b8f':'#ffffff',side:THREE.DoubleSide,vertexColors:false});
    const mesh=new THREE.Mesh(geometry,material);mesh.name=item.label+(combined.length?' '+(combined.length+1):'');
    mesh.userData.kind='imported';mesh.userData.yeepsFile=item.path.split('/').pop();
    scene.add(mesh);objects.push(mesh);combined.push(mesh);
