@@ -125,6 +125,22 @@ function snapYeeps(mesh){
  mesh.position.y=Math.round(mesh.position.y-h/2)+h/2;
 }
 function setYeepsMode(enabled){
+ if(enabled&&!yeepsMode&&objects.length){
+  if(objects.length>10&&!window.confirm('Entering Yeeps Mode will remove all '+objects.length+' shapes from the current editor. This cannot be undone unless you saved your build. Continue?'))return;
+  select(null);
+  for(const mesh of objects){
+   scene.remove(mesh);
+   mesh.traverse(child=>{
+    if(child.geometry)child.geometry.dispose();
+    if(child.material){
+     const materials=Array.isArray(child.material)?child.material:[child.material];
+     materials.forEach(material=>material.dispose());
+    }
+   });
+  }
+  objects=[];
+  refreshList();
+ }
  yeepsMode=enabled;yeepsGrid.visible=enabled;
  document.getElementById('regularShapes').hidden=enabled;document.getElementById('yeepsLibrary').hidden=!enabled;
  yeepsButton.setAttribute('aria-pressed',String(enabled));
