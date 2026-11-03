@@ -989,7 +989,7 @@ document.addEventListener("click",function(event){
  const aiOverlay=document.getElementById("adminAiOverlay"),aiStatus=document.getElementById("adminAiStatus"),aiMessages=document.getElementById("adminAiMessages");
  let aiHistory=[],aiToken=null;
  const aiAppend=(who,message)=>{const div=document.createElement("div");div.style.marginBottom="12px";const name=document.createElement("strong");name.textContent=who+": ";div.append(name,document.createTextNode(String(message).slice(0,12000)));aiMessages.append(div);aiMessages.scrollTop=aiMessages.scrollHeight;};
- const openAdminAI=()=>{aiOverlay.style.removeProperty("display");aiOverlay.hidden=false;aiStatus.textContent="Checking admin access…";document.dispatchEvent(new CustomEvent("community-admin-ai-auth-request"));setTimeout(()=>{if(!aiOverlay.hidden&&aiStatus.textContent==="Checking admin access…"){aiStatus.textContent=window.__adminAiAuthLoaded?"Firebase loaded but admin verification has not completed. Check your connection and sign-in status.":"Admin verification module did not load. Check whether gstatic.com is blocked, or open DevTools Console for the failed module import. This is not a GitHub token problem."; }},12000);};
+ const openAdminAI=()=>{aiOverlay.style.removeProperty("display");aiOverlay.hidden=false;aiStatus.textContent="Checking admin access…";document.dispatchEvent(new CustomEvent("community-admin-ai-auth-request"));if(typeof window.__adminAiVerify==="function")window.__adminAiVerify();setTimeout(()=>{if(!aiOverlay.hidden&&aiStatus.textContent==="Checking admin access…"){aiStatus.textContent=window.__adminAiAuthLoaded?"Verification diagnostic: "+(window.__adminAiAuthStage||"Firebase imported but verification listener not initialized"):"Admin verification module did not load. Check whether gstatic.com is blocked, or open DevTools Console for the failed module import."; }},12000);};
  document.getElementById("gatewayOpenAI").addEventListener("click",openAdminAI);
  document.getElementById("adminAiHeaderOpen").addEventListener("click",openAdminAI);
  const closeAdminAI=()=>{aiOverlay.hidden=true;aiOverlay.style.display="none";};
@@ -1666,11 +1666,13 @@ const aiFirebaseConfig={apiKey:"AIzaSyB4wOgGUTR-fgweHtsJiK9XyykU_PND0GE",authDom
 try{
  const app=getApps().find(a=>a.name==="[DEFAULT]")||initializeApp(aiFirebaseConfig);
  const aiAuth=getAuth(app);
+ window.__adminAiAuthStage="Firebase app and auth initialized";
 
  let aiCurrentUser=aiAuth.currentUser,aiAuthReady=!!aiCurrentUser,aiRequestId=0;
- const emit=(token,reason)=>document.dispatchEvent(new CustomEvent("community-admin-ai-auth-result",{detail:{token,reason}}));
+ const emit=(token,reason)=>{window.__adminAiAuthStage=reason;document.dispatchEvent(new CustomEvent("community-admin-ai-auth-result",{detail:{token,reason}}));};
  const withTimeout=(promise,ms)=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error("Firebase token verification timed out")),ms))]);
  const respond=async()=>{
+  window.__adminAiAuthStage="Admin verification request received";
   const requestId=++aiRequestId;
   const current=aiAuth.currentUser||aiCurrentUser;
   if(!current){emit(null,aiAuthReady?"Community Chat is not signed into Firebase in this browser. Sign in to Community Chat and reopen Admin AI.":"Firebase is still restoring your sign-in. Please wait a few seconds and try again.");return;}
@@ -1688,8 +1690,11 @@ try{
   }
  };
  document.addEventListener("community-admin-ai-auth-request",respond);
+ window.__adminAiVerify=respond;
+ if(!document.getElementById("adminAiOverlay")?.hidden)respond();
  onAuthStateChanged(aiAuth,user=>{
   aiCurrentUser=user;aiAuthReady=true;
+  window.__adminAiAuthStage=user?"Firebase session restored":"Firebase session has no signed-in user";
   if(!document.getElementById("adminAiOverlay")?.hidden)respond();
  },error=>{
   aiAuthReady=true;aiCurrentUser=null;
