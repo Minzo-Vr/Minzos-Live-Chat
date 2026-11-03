@@ -986,7 +986,7 @@ document.addEventListener("click",function(event){
  const aiOverlay=document.getElementById("adminAiOverlay"),aiStatus=document.getElementById("adminAiStatus"),aiMessages=document.getElementById("adminAiMessages");
  let aiHistory=[],aiToken=null;
  const aiAppend=(who,message)=>{const div=document.createElement("div");div.style.marginBottom="12px";const name=document.createElement("strong");name.textContent=who+": ";div.append(name,document.createTextNode(String(message).slice(0,12000)));aiMessages.append(div);aiMessages.scrollTop=aiMessages.scrollHeight;};
- const openAdminAI=()=>{aiOverlay.style.removeProperty("display");aiOverlay.hidden=false;aiStatus.textContent="Checking admin access…";document.dispatchEvent(new CustomEvent("community-admin-ai-auth-request"));};
+ const openAdminAI=()=>{aiOverlay.style.removeProperty("display");aiOverlay.hidden=false;aiStatus.textContent="Checking admin access…";document.dispatchEvent(new CustomEvent("community-admin-ai-auth-request"));setTimeout(()=>{if(!aiOverlay.hidden&&aiStatus.textContent==="Checking admin access…"){aiStatus.textContent="Admin verification did not respond. Open Community Chat and sign in, then reopen Admin AI. If it persists, the Firebase authentication module may not have loaded."; }},6000);};
  document.getElementById("gatewayOpenAI").addEventListener("click",openAdminAI);
  document.getElementById("adminAiHeaderOpen").addEventListener("click",openAdminAI);
  const closeAdminAI=()=>{aiOverlay.hidden=true;aiOverlay.style.display="none";};
@@ -1722,6 +1722,8 @@ document.addEventListener("click",function(event){
       }catch(e){reason="Could not verify admin access. Try signing in again.";console.warn("AI admin authentication unavailable",e);}
       document.dispatchEvent(new CustomEvent("community-admin-ai-auth-result",{detail:{token,reason}}));
     });
+    // Handle an AI panel that was opened while Firebase was still initializing.
+    if(!document.getElementById("adminAiOverlay")?.hidden){document.dispatchEvent(new CustomEvent("community-admin-ai-auth-request"));}
     function actualRole(uid){const roles=userRoles(uid);return roles.includes("admin")?"admin":roles.includes("moderator")?"moderator":roles.includes("plus")?"plus":roles.includes("testsubject")?"testsubject":roles.find(k=>customRoles[k])||"member";}
     function displayedRoleEffect(uid){
       const roles=userRoles(uid),chosen=appearanceByUid[uid]?.effect;
