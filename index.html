@@ -4502,13 +4502,16 @@ document.addEventListener("click",function(event){
         label.classList.toggle("admin-rgb-name",isAdmin && label.dataset.authorUid===account.uid);
       }
       const emailPassword=account.providerData.some(p=>p.providerId==="password") || token.signInProvider==="password";
-      if(!google && !emailPassword && !isAdmin && !(account.isAnonymous && anonymousAccountsEnabled)) {
+      // Discord OAuth is verified server-side and signs in through a Firebase custom token.
+      const discordCustomLogin=token.signInProvider==="custom" && !account.isAnonymous;
+      if(!google && !emailPassword && !discordCustomLogin && !isAdmin && !(account.isAnonymous && anonymousAccountsEnabled)) {
         await signOut(auth);return;
       }
       resetChatIdentity();setAuthDisplay(true);
       void indexOwnEmailForModeration(account);
       if(account.isAnonymous)$("accountLabel").textContent="🕵️ Signed in anonymously — choose a chat username";
       else if(emailPassword&&!google&&!isAdmin)$("accountLabel").textContent="✉️ Signed in with email — choose a chat username";
+      else if(discordCustomLogin&&!isAdmin)$("accountLabel").textContent="🎮 Signed in with Discord — choose a chat username";
       startAnnouncementListeners();
       startEconomy();startFriends();startRoleListeners();
       $("adminPanel").hidden=!isAdmin;$("adminLogin").hidden=isAdmin;
