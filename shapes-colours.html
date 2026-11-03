@@ -173,12 +173,15 @@ function buildYeepsScenery(){
   const mid=(inner+outer)/2;
   const depth=outer-inner;
   const length=outer*2;
-  sceneryBox(0,height/2,-mid,length,height,depth,mat);
+  // Leave a clear entrance corridor through every northern terrace.
+  const passage=15;
+  const flank=(length-passage)/2;
+  for(const side of [-1,1])sceneryBox(side*(passage+flank)/2,height/2,-mid,flank,height,depth,mat);
   sceneryBox(0,height/2,mid,length,height,depth,mat);
   sceneryBox(-mid,height/2,0,depth,height,inner*2,mat);
   sceneryBox(mid,height/2,0,depth,height,inner*2,mat);
   // Dark stepped cliff face immediately below each grassy ledge.
-  sceneryBox(0,-.65,-inner,length,1.3,.35,sceneryMats.cliff);
+  for(const side of [-1,1])sceneryBox(side*(15+(length-15)/2)/2,-.65,-inner,(length-15)/2,1.3,.35,sceneryMats.cliff);
   sceneryBox(0,-.65,inner,length,1.3,.35,sceneryMats.cliff);
   sceneryBox(-inner,-.65,0,.35,1.3,inner*2,sceneryMats.cliff);
   sceneryBox(inner,-.65,0,.35,1.3,inner*2,sceneryMats.cliff);
@@ -187,11 +190,11 @@ function buildYeepsScenery(){
  for(let i=0;i<65;i++){
   const x=(sceneryRandom()-.5)*75;
   const z=(sceneryRandom()-.5)*75;
-  if(Math.max(Math.abs(x),Math.abs(z))<24)continue;
+  if(Math.max(Math.abs(x),Math.abs(z))<24 || (z< -19 && Math.abs(x)<10))continue;
   sceneryTree(x,z,.65+sceneryRandom()*.75);
  }
  // A small flower-decorated forest arch beyond the north edge of the grid.
- const archZ=-26;
+ const archZ=-22.5;
  for(const side of [-1,1]){
   sceneryBox(side*5.8,3.3,archZ,2.6,6.6,3.3,sceneryMats.bark);
   sceneryBox(side*4.5,7,archZ,5,3.1,4.2,sceneryMats.leaf2);
