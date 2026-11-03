@@ -138,11 +138,19 @@ function yeepsDimensions(mesh){
 function snapYeeps(mesh){
  if(!yeepsMode||!mesh)return;
  const [w,h,d]=yeepsDimensions(mesh);
- // Centers of odd-width blocks sit on half-grid points; even widths on whole points.
- const snap=(value,size)=>Math.round((value-size/2)/1)*1+size/2;
- mesh.position.x=snap(mesh.position.x,w);
- mesh.position.z=snap(mesh.position.z,d);
- mesh.position.y=Math.round(mesh.position.y-h/2)+h/2;
+ // Snap to whole grid cells, then clamp the complete block footprint
+ // inside the 40x40 Yeeps grid (from -20 to +20 on both axes).
+ const halfGrid=20;
+ const snapInside=(value,size)=>{
+  const footprint=Math.max(1,Math.ceil(size));
+  if(footprint>=halfGrid*2)return 0;
+  const firstCell=Math.round(value-size/2);
+  const boundedCell=THREE.MathUtils.clamp(firstCell,-halfGrid,halfGrid-footprint);
+  return boundedCell+size/2;
+ };
+ mesh.position.x=snapInside(mesh.position.x,w);
+ mesh.position.z=snapInside(mesh.position.z,d);
+ mesh.position.y=Math.max(h/2,Math.round(mesh.position.y-h/2)+h/2);
 }
 function setYeepsMode(enabled){
  if(enabled&&!yeepsMode&&objects.length){
