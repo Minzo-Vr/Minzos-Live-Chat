@@ -972,28 +972,6 @@ document.addEventListener("click",function(event){
 </script>
 
 
-<script id="interface-gateway-script">
-(function(){
- const gateway=document.getElementById("interfaceGateway");
- const loading=document.getElementById("gatewayLoading");
- const selection=document.getElementById("gatewaySelection");
- const open=document.getElementById("gatewayOpenChat");
- const reveal=()=>{if(new URLSearchParams(location.search).get("interface")==="selection"){sessionStorage.removeItem("communityChatEntered");history.replaceState(null,"",location.pathname);}if(sessionStorage.getItem("communityChatEntered")==="yes"){gateway.hidden=true;return;}loading.hidden=true;loading.style.display="none";selection.hidden=false;open.focus()};
- const start=Date.now();
- let revealed=false;
- const ready=()=>{if(revealed)return;revealed=true;setTimeout(reveal,Math.max(0,900-(Date.now()-start)));};
- // The Hub must not wait indefinitely for Firebase, fonts, media, or other external assets.
- if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",ready,{once:true});else ready();
- window.addEventListener("load",ready,{once:true});
- setTimeout(ready,2500);
- const sidebar=document.getElementById("gatewayRoleSidebar");
- const toggle=document.getElementById("gatewayToggleSidebar");
- toggle.addEventListener("click",()=>{const collapsed=sidebar.classList.toggle("is-collapsed");toggle.setAttribute("aria-expanded",String(!collapsed));toggle.setAttribute("aria-label",collapsed?"Expand roles sidebar":"Collapse roles sidebar");});
- const roleNames={all:"All interfaces",member:"Member",plus:"Plus",moderator:"Moderator",testsubject:"Test Subject",admin:"Admin"};
- sidebar.querySelectorAll("[data-role]").forEach(button=>button.addEventListener("click",()=>{
-  sidebar.querySelectorAll("[data-role]").forEach(item=>item.setAttribute("aria-pressed",String(item===button)));
-  document.getElementById("gatewayRoleFilter").textContent="Previewing: "+roleNames[button.dataset.role]+" (access settings coming soon)";
- }));
 <script>
 (function(){
  const KEY="minzo.adminAi.projectMemory.v1";
@@ -1032,6 +1010,29 @@ document.addEventListener("click",function(event){
  render();
 })();
 </script>
+<script id="interface-gateway-script">
+(function(){
+ const gateway=document.getElementById("interfaceGateway");
+ const loading=document.getElementById("gatewayLoading");
+ const selection=document.getElementById("gatewaySelection");
+ const open=document.getElementById("gatewayOpenChat");
+ const reveal=()=>{if(new URLSearchParams(location.search).get("interface")==="selection"){sessionStorage.removeItem("communityChatEntered");history.replaceState(null,"",location.pathname);}if(sessionStorage.getItem("communityChatEntered")==="yes"){gateway.hidden=true;return;}loading.hidden=true;loading.style.display="none";selection.hidden=false;open.focus()};
+ const start=Date.now();
+ let revealed=false;
+ const ready=()=>{if(revealed)return;revealed=true;setTimeout(reveal,Math.max(0,900-(Date.now()-start)));};
+ // The Hub must not wait indefinitely for Firebase, fonts, media, or other external assets.
+ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",ready,{once:true});else ready();
+ window.addEventListener("load",ready,{once:true});
+ setTimeout(ready,2500);
+ const sidebar=document.getElementById("gatewayRoleSidebar");
+ const toggle=document.getElementById("gatewayToggleSidebar");
+ toggle.addEventListener("click",()=>{const collapsed=sidebar.classList.toggle("is-collapsed");toggle.setAttribute("aria-expanded",String(!collapsed));toggle.setAttribute("aria-label",collapsed?"Expand roles sidebar":"Collapse roles sidebar");});
+ const roleNames={all:"All interfaces",member:"Member",plus:"Plus",moderator:"Moderator",testsubject:"Test Subject",admin:"Admin"};
+ sidebar.querySelectorAll("[data-role]").forEach(button=>button.addEventListener("click",()=>{
+  sidebar.querySelectorAll("[data-role]").forEach(item=>item.setAttribute("aria-pressed",String(item===button)));
+  document.getElementById("gatewayRoleFilter").textContent="Previewing: "+roleNames[button.dataset.role]+" (access settings coming soon)";
+ }));
+
  const aiOverlay=document.getElementById("adminAiOverlay"),aiStatus=document.getElementById("adminAiStatus"),aiMessages=document.getElementById("adminAiMessages");
  let aiHistory=[],aiToken=null;
  const aiAppend=(who,message)=>{const div=document.createElement("div");div.style.marginBottom="12px";const name=document.createElement("strong");name.textContent=who+": ";div.append(name,document.createTextNode(String(message).slice(0,12000)));aiMessages.append(div);aiMessages.scrollTop=aiMessages.scrollHeight;};
