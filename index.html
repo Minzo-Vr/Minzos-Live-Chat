@@ -4929,15 +4929,30 @@ try{
     $("discordLinkAccount").addEventListener("click",()=>discordOAuth("link").catch(console.error));
 
     $("googleSignIn").addEventListener("click",async()=>{
-      const btn=$("googleSignIn");btn.disabled=true;
-      $("authFeedback").textContent="Opening Google sign-in…";
+      const btn=$("googleSignIn"),feedback=$("authFeedback");
+      btn.disabled=true;
+      feedback.textContent="Opening Google sign-in…";
+      const previousUid=auth.currentUser?.uid||null;
       try {
         const provider=new GoogleAuthProvider();
         await signInWithPopup(auth,provider);
-        $("authFeedback").textContent="Signed in! Choose a username.";
+        feedback.textContent="Signed in successfully!";
       } catch(err){
-        console.error("Google sign-in",err);
-        $("authFeedback").textContent="Google sign-in failed: "+(err.code||err.message);
+        // Some browsers report popup-closed even after Firebase has completed sign-in.
+        // Wait briefly for the auth state listener to settle before reporting failure.
+        if(err.code==="auth/popup-closed-by-user"){
+          await new Promise(resolve=>setTimeout(resolve,600));
+          if(auth.currentUser){
+            feedback.textContent=auth.currentUser.uid===previousUid
+              ?"You're already signed in."
+              :"Signed in successfully!";
+          }else{
+            feedback.textContent="Google sign-in did not finish. Please try again.";
+          }
+        }else{
+          console.error("Google sign-in",err);
+          feedback.textContent="Google sign-in failed: "+(err.code||err.message);
+        }
       } finally {btn.disabled=false;}
     });
     // Email sign-in and sign-up use Firebase Auth, not a custom password store.
