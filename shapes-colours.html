@@ -543,7 +543,7 @@ document.addEventListener('keydown',e=>{if(walking&&['KeyW','KeyA','KeyS','KeyD'
 document.addEventListener('keyup',e=>keys.delete(e.code));
 document.addEventListener('mousemove',e=>{if(!walking||document.pointerLockElement!==renderer.domElement)return;yaw-=e.movementX*.002;pitch=Math.max(-1.45,Math.min(1.45,pitch-e.movementY*.002));});
 document.addEventListener('pointerlockchange',()=>{if(walking&&document.pointerLockElement!==renderer.domElement)exitWalk();});
-renderer.domElement.addEventListener('click',()=>{if((walking||flying)&&document.pointerLockElement!==renderer.domElement)renderer.domElement.requestPointerLock?.().catch(()=>{});});
+// Clicking the canvas no longer starts mouse capture / click-to-fly. First Person uses its dedicated button.
 window.addEventListener('blur',()=>keys.clear());
 let lastPresence=0;function walkFrame(now){if(now-lastPresence>180&&(walking||flying)){lastPresence=now;window.dispatchEvent(new CustomEvent('mb-presence-position',{detail:{x:camera.position.x,y:camera.position.y,z:camera.position.z,yaw}}));}const dt=Math.min(.05,(now-lastWalk)/1000);lastWalk=now;
  if(flying){const forward=Number(flyKeys.has('KeyW'))-Number(flyKeys.has('KeyS'))-stickY,side=Number(flyKeys.has('KeyD'))-Number(flyKeys.has('KeyA'))+stickX,vertical=Number(flyKeys.has('Space'))-Number(flyKeys.has('ControlLeft')||flyKeys.has('ControlRight'));const speed=(flyKeys.has('ShiftLeft')||flyKeys.has('ShiftRight')?16:7)*dt/(Math.hypot(forward,side,vertical)||1);camera.position.x+=(-Math.sin(flyYaw)*forward+Math.cos(flyYaw)*side)*speed;camera.position.z+=(-Math.cos(flyYaw)*forward-Math.sin(flyYaw)*side)*speed;camera.position.y+=vertical*speed;camera.rotation.order='YXZ';camera.rotation.set(flyPitch,flyYaw,0);return;}
