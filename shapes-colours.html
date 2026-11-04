@@ -455,6 +455,27 @@ document.getElementById('back').onclick=()=>{location.href='./?interface=selecti
 const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();let down=null;
 renderer.domElement.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY};});
 renderer.domElement.addEventListener('pointerup',e=>{if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>5||e.button!==0)return;const rect=renderer.domElement.getBoundingClientRect();mouse.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);ray.setFromCamera(mouse,camera);const hits=ray.intersectObjects(objects,true);select(hits.length?(objects.find(o=>o===hits[0].object||o.children.includes(hits[0].object))||null):null);});
+const remoteHeads=new Map();
+function updateRemoteHeads(members,selfUid){
+ const seen=new Set();
+ for(const [uid,data] of Object.entries(members||{})){
+  if(uid===selfUid||!data||!Number.isFinite(data.x)||!Number.isFinite(data.z))continue;
+  seen.add(uid);let entry=remoteHeads.get(uid);
+  if(!entry){
+   const group=new THREE.Group();
+   const head=new THREE.Mesh(new THREE.SphereGeometry(.32,18,12),new THREE.MeshStandardMaterial({color:0x7bc9ff,transparent:true,opacity:.10,depthWrite:false}));
+   group.add(head);
+   const canvas=document.createElement('canvas');canvas.width=256;canvas.height=64;
+   const ctx=canvas.getContext('2d');ctx.fillStyle='rgba(20,30,48,.75)';ctx.fillRect(0,0,256,64);ctx.fillStyle='#ffffff';ctx.font='24px sans-serif';ctx.textAlign='center';ctx.fillText(String(data.name||'Builder').slice(0,20),128,40);
+   const texture=new THREE.CanvasTexture(canvas),label=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthWrite:false}));label.position.y=.55;label.scale.set(1.8,.45,1);group.add(label);
+   scene.add(group);entry={group,texture};remoteHeads.set(uid,entry);
+  }
+  entry.group.position.set(data.x,Number.isFinite(data.y)?data.y:1.7,data.z);
+ }
+ for(const [uid,entry] of remoteHeads){if(seen.has(uid))continue;scene.remove(entry.group);entry.texture.dispose();remoteHeads.delete(uid);}
+}
+window.addEventListener('mb-members',e=>updateRemoteHeads(e.detail.members,e.detail.selfUid));
+window.addEventListener('mb-disconnected',()=>updateRemoteHeads({},''));
 let walking=false,yaw=0,pitch=0,lastWalk=performance.now();const keys=new Set(),fpButton=document.getElementById('firstPerson');
 function exitWalk(){walking=false;keys.clear();fpButton.textContent='🎮 First person';orbit.enabled=true;transform.visible=true;if(document.pointerLockElement===renderer.domElement)document.exitPointerLock();}
 fpButton.onclick=()=>{if(walking){exitWalk();return;}walking=true;select(null);orbit.enabled=false;transform.visible=false;fpButton.textContent='Exit first person';const direction=new THREE.Vector3();camera.getWorldDirection(direction);yaw=Math.atan2(-direction.x,-direction.z);pitch=Math.asin(Math.max(-1,Math.min(1,direction.y)));camera.position.y=1.7;renderer.domElement.requestPointerLock?.().catch(()=>{status.textContent='Click the 3D view to capture your mouse.';});status.textContent='WASD move · Shift run · Mouse look · Esc exit';};
@@ -464,7 +485,7 @@ document.addEventListener('mousemove',e=>{if(!walking||document.pointerLockEleme
 document.addEventListener('pointerlockchange',()=>{if(walking&&document.pointerLockElement!==renderer.domElement)exitWalk();});
 renderer.domElement.addEventListener('click',()=>{if(walking&&document.pointerLockElement!==renderer.domElement)renderer.domElement.requestPointerLock?.().catch(()=>{});});
 window.addEventListener('blur',()=>keys.clear());
-function walkFrame(now){const dt=Math.min(.05,(now-lastWalk)/1000);lastWalk=now;if(!walking)return;const f=Number(keys.has('KeyW'))-Number(keys.has('KeyS')),r=Number(keys.has('KeyD'))-Number(keys.has('KeyA')),speed=(keys.has('ShiftLeft')||keys.has('ShiftRight')?8:4)*dt/(Math.hypot(f,r)||1);camera.position.x+=(-Math.sin(yaw)*f+Math.cos(yaw)*r)*speed;camera.position.z+=(-Math.cos(yaw)*f-Math.sin(yaw)*r)*speed;camera.position.y=1.7;camera.rotation.order='YXZ';camera.rotation.set(pitch,yaw,0);}
+let lastPresence=0;function walkFrame(now){if(now-lastPresence>180&&walking){lastPresence=now;window.dispatchEvent(new CustomEvent('mb-presence-position',{detail:{x:camera.position.x,y:camera.position.y,z:camera.position.z,yaw}}));}const dt=Math.min(.05,(now-lastWalk)/1000);lastWalk=now;if(!walking)return;const f=Number(keys.has('KeyW'))-Number(keys.has('KeyS')),r=Number(keys.has('KeyD'))-Number(keys.has('KeyA')),speed=(keys.has('ShiftLeft')||keys.has('ShiftRight')?8:4)*dt/(Math.hypot(f,r)||1);camera.position.x+=(-Math.sin(yaw)*f+Math.cos(yaw)*r)*speed;camera.position.z+=(-Math.cos(yaw)*f-Math.sin(yaw)*r)*speed;camera.position.y=1.7;camera.rotation.order='YXZ';camera.rotation.set(pitch,yaw,0);}
 function resize(){const rect=viewport.getBoundingClientRect();const w=Math.max(1,Math.floor(rect.width)),h=Math.max(1,Math.floor(rect.height));camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false);}new ResizeObserver(resize).observe(viewport);window.addEventListener('resize',resize);resize();
 add('box');orbit.update();
 const diagnostics=document.getElementById('diagnostics');let frames=0,renderError='';
@@ -491,9 +512,11 @@ import {getAuth,GoogleAuthProvider,signInWithPopup} from "https://www.gstatic.co
 import {getDatabase,ref,set,remove,onChildAdded,onChildChanged,onChildRemoved,onValue,onDisconnect} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 const config={apiKey:"AIzaSyB4wOgGUTR-fgweHtsJiK9XyykU_PND0GE",authDomain:"website-chat-80038.firebaseapp.com",databaseURL:"https://website-chat-80038-default-rtdb.firebaseio.com/",projectId:"website-chat-80038",appId:"1:42470201717:web:890e9ebf1f0865c8ea9b3c"};
 const app=getApps().find(a=>a.name==="[DEFAULT]")||initializeApp(config),auth=getAuth(app),db=getDatabase(app);
-const $=id=>document.getElementById(id),status=$('mbStatus'),roomInput=$('mbRoom');let room='',unsubs=[],session=0;
+const $=id=>document.getElementById(id),status=$('mbStatus'),roomInput=$('mbRoom');let room='',unsubs=[],session=0,memberRef=null,memberUid='';
 const notify=(type,detail)=>window.dispatchEvent(new CustomEvent(type,{detail}));
-const clean=()=>{session++;for(const stop of unsubs)stop();unsubs=[];room='';$('mbLeave').disabled=true;$('mbJoin').disabled=false;notify('mb-disconnected');};
+window.addEventListener('mb-presence-position',e=>{if(!room||!memberRef)return;const p=e.detail;set(memberRef,{name:(auth.currentUser?.displayName||'Builder').slice(0,40),joinedAt:memberJoinedAt,x:Number(p.x.toFixed(2)),y:Number(p.y.toFixed(2)),z:Number(p.z.toFixed(2)),yaw:Number(p.yaw.toFixed(2))}).catch(()=>{});});
+let memberJoinedAt=0;
+const clean=()=>{if(memberRef)remove(memberRef).catch(()=>{});memberRef=null;memberUid='';session++;for(const stop of unsubs)stop();unsubs=[];room='';$('mbLeave').disabled=true;$('mbJoin').disabled=false;notify('mb-disconnected');};
 $('mbLeave').onclick=()=>{clean();status.textContent='Left room. Your current scene is now local.';};
 $('mbCopy').onclick=async()=>{const code=room||roomInput.value.trim().toUpperCase();if(!/^[A-Z0-9_-]{4,16}$/.test(code)){status.textContent='Enter a 4–16 character room code first.';return;}const url=new URL(location.href);url.searchParams.set('build',code);try{await navigator.clipboard.writeText(url.href);status.textContent='Room link copied.';}catch{status.textContent=url.href;}};
 const requested=new URLSearchParams(location.search).get('build');if(requested)roomInput.value=requested.slice(0,16);
@@ -507,7 +530,7 @@ $('mbJoin').onclick=async()=>{
   // Check permission before clearing the local scene.
   await new Promise((resolve,reject)=>{let stop=()=>{};stop=onValue(items,()=>{stop();resolve();},reject,{onlyOnce:true});});
   if(ticket!==session)return;
-  await set(member,{name:(user.displayName||'Builder').slice(0,40),joinedAt:Date.now()});
+  memberJoinedAt=Date.now();await set(member,{name:(user.displayName||'Builder').slice(0,40),joinedAt:memberJoinedAt});memberRef=member;memberUid=user.uid;
   onDisconnect(member).remove().catch(()=>{});
   if(ticket!==session)return;
   room=code;$('mbLeave').disabled=false;status.textContent='Connected to '+code+' — shared basic shapes only.';
@@ -516,7 +539,7 @@ $('mbJoin').onclick=async()=>{
   unsubs.push(onChildAdded(items,receive,e=>status.textContent='Room read failed: '+e.message));
   unsubs.push(onChildChanged(items,receive,e=>status.textContent='Room read failed: '+e.message));
   unsubs.push(onChildRemoved(items,snap=>{if(ticket===session)notify('mb-object',{id:snap.key,data:null});}));
-  unsubs.push(onValue(members,snap=>{$('mbMembers').textContent=Object.keys(snap.val()||{}).length+' builder(s) online';}));
+  unsubs.push(onValue(members,snap=>{const list=snap.val()||{};$('mbMembers').textContent=Object.keys(list).length+' builder(s) online';notify('mb-members',{members:list,selfUid:user.uid});}));
  }catch(e){if(ticket!==session)return;clean();status.textContent='Cannot join: '+e.message+'. Firebase MultiBuilder rules must be installed.';}
 };
 </script></body></html>
