@@ -455,6 +455,8 @@ document.getElementById('back').onclick=()=>{location.href='./?interface=selecti
 const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();let down=null;
 renderer.domElement.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY};});
 renderer.domElement.addEventListener('pointerup',e=>{if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>5||e.button!==0)return;const rect=renderer.domElement.getBoundingClientRect();mouse.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);ray.setFromCamera(mouse,camera);const hits=ray.intersectObjects(objects,true);select(hits.length?(objects.find(o=>o===hits[0].object||o.children.includes(hits[0].object))||null):null);});
+const yeepAccountColours=['#CCCEFF','#FFC5BF','#FFB9F7'];
+function yeepColourForUid(uid){let hash=2166136261;for(const char of uid){hash=Math.imul(hash^char.charCodeAt(0),16777619)>>>0;}return yeepAccountColours[hash%yeepAccountColours.length];}
 const remoteHeads=new Map();
 function updateRemoteHeads(members,selfUid){
  const seen=new Set();
@@ -463,10 +465,10 @@ function updateRemoteHeads(members,selfUid){
   seen.add(uid);let entry=remoteHeads.get(uid);
   if(!entry){
    const group=new THREE.Group();
-   const head=new THREE.Mesh(new THREE.SphereGeometry(.32,18,12),new THREE.MeshStandardMaterial({color:0x7bc9ff,transparent:true,opacity:.10,depthWrite:false}));
+   const head=new THREE.Mesh(new THREE.SphereGeometry(.32,18,12),new THREE.MeshStandardMaterial({color:yeepColourForUid(uid),transparent:true,opacity:.10,depthWrite:false}));
    group.add(head);
    const canvas=document.createElement('canvas');canvas.width=256;canvas.height=64;
-   const ctx=canvas.getContext('2d');ctx.fillStyle='rgba(20,30,48,.75)';ctx.fillRect(0,0,256,64);ctx.fillStyle='#ffffff';ctx.font='24px sans-serif';ctx.textAlign='center';ctx.fillText(String(data.name||'Builder').slice(0,20),128,40);
+   const ctx=canvas.getContext('2d');ctx.fillStyle='rgba(20,30,48,.75)';ctx.fillRect(0,0,256,64);ctx.fillStyle=yeepColourForUid(uid);ctx.font='24px sans-serif';ctx.textAlign='center';ctx.fillText(String(data.name||'Builder').slice(0,20),128,40);
    const texture=new THREE.CanvasTexture(canvas),label=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthWrite:false}));label.position.y=.55;label.scale.set(1.8,.45,1);group.add(label);
    scene.add(group);entry={group,texture};remoteHeads.set(uid,entry);
   }
@@ -516,7 +518,9 @@ const $=id=>document.getElementById(id),status=$('mbStatus'),roomInput=$('mbRoom
 const notify=(type,detail)=>window.dispatchEvent(new CustomEvent(type,{detail}));
 window.addEventListener('mb-presence-position',e=>{if(!room||!memberRef)return;const p=e.detail;set(memberRef,{name:(auth.currentUser?.displayName||'Builder').slice(0,40),joinedAt:memberJoinedAt,x:Number(p.x.toFixed(2)),y:Number(p.y.toFixed(2)),z:Number(p.z.toFixed(2)),yaw:Number(p.yaw.toFixed(2))}).catch(()=>{});});
 let memberJoinedAt=0;
-const clean=()=>{if(memberRef)remove(memberRef).catch(()=>{});memberRef=null;memberUid='';session++;for(const stop of unsubs)stop();unsubs=[];room='';$('mbLeave').disabled=true;$('mbJoin').disabled=false;notify('mb-disconnected');};
+const yeepAccountColours=['#CCCEFF','#FFC5BF','#FFB9F7'];
+function yeepColourForUid(uid){let hash=2166136261;for(const char of uid){hash=Math.imul(hash^char.charCodeAt(0),16777619)>>>0;}return yeepAccountColours[hash%yeepAccountColours.length];}
+const clean=()=>{status.style.color='';if(memberRef)remove(memberRef).catch(()=>{});memberRef=null;memberUid='';session++;for(const stop of unsubs)stop();unsubs=[];room='';$('mbLeave').disabled=true;$('mbJoin').disabled=false;notify('mb-disconnected');};
 $('mbLeave').onclick=()=>{clean();status.textContent='Left room. Your current scene is now local.';};
 $('mbCopy').onclick=async()=>{const code=room||roomInput.value.trim().toUpperCase();if(!/^[A-Z0-9_-]{4,16}$/.test(code)){status.textContent='Enter a 4–16 character room code first.';return;}const url=new URL(location.href);url.searchParams.set('build',code);try{await navigator.clipboard.writeText(url.href);status.textContent='Room link copied.';}catch{status.textContent=url.href;}};
 const requested=new URLSearchParams(location.search).get('build');if(requested)roomInput.value=requested.slice(0,16);
@@ -533,7 +537,7 @@ $('mbJoin').onclick=async()=>{
   memberJoinedAt=Date.now();await set(member,{name:(user.displayName||'Builder').slice(0,40),joinedAt:memberJoinedAt});memberRef=member;memberUid=user.uid;
   onDisconnect(member).remove().catch(()=>{});
   if(ticket!==session)return;
-  room=code;$('mbLeave').disabled=false;status.textContent='Connected to '+code+' — shared basic shapes only.';
+  room=code;$('mbLeave').disabled=false;const colour=yeepColourForUid(user.uid);status.textContent='Connected to '+code+' · Your Yeeps colour: '+({ '#CCCEFF':'Blue','#FFC5BF':'Peach','#FFB9F7':'Purple' }[colour]);status.style.color=colour;
   notify('mb-connected',{room:code,publish:(id,data)=>set(ref(db,'multiBuilderRooms/'+code+'/objects/'+id),data).catch(e=>status.textContent='Save failed: '+e.message),remove:id=>remove(ref(db,'multiBuilderRooms/'+code+'/objects/'+id)).catch(e=>status.textContent='Delete failed: '+e.message)});
   const receive=(snap)=>{if(ticket===session)notify('mb-object',{id:snap.key,data:snap.val()});};
   unsubs.push(onChildAdded(items,receive,e=>status.textContent='Room read failed: '+e.message));
