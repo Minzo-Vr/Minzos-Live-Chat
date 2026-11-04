@@ -18,6 +18,10 @@ MultiBuilder is implemented in `shapes-colours.html`, but requires a new `multiB
       "$uid": {
         ".write": "auth != null && auth.uid === $uid && auth.token.firebase.sign_in_provider === 'google.com'",
         ".validate": "newData.hasChildren(['name','joinedAt']) && newData.child('name').isString() && newData.child('name').val().length <= 40 && newData.child('joinedAt').isNumber()",
+        "x": {".validate": "newData.isNumber() && newData.val() >= -1000 && newData.val() <= 1000"},
+        "y": {".validate": "newData.isNumber() && newData.val() >= -1000 && newData.val() <= 1000"},
+        "z": {".validate": "newData.isNumber() && newData.val() >= -1000 && newData.val() <= 1000"},
+        "yaw": {".validate": "newData.isNumber() && newData.val() >= -7 && newData.val() <= 7"},
         "$other": {".validate": false}
       }
     }
@@ -33,3 +37,6 @@ MultiBuilder is implemented in `shapes-colours.html`, but requires a new `multiB
 - The builder count uses a presence record and onDisconnect; using Leave may not immediately remove a presence record until disconnect.
 - A room link opens the editor with its code prefilled; press Join / Create to connect.
 - Test these rules in Firebase Rules Playground before publishing; this document is a proposed configuration, not a claim of deployment.
+
+## Player positions (November 2026)
+The editor now writes optional `x`, `y`, `z`, and `yaw` numeric fields to each member record during first-person movement. The member rules above include these fields. Other builders appear as 90%-transparent floating heads with names. These changes must be merged into and published alongside existing Firebase rules; editing this document does not publish rules. Uploaded avatar models are not shared yet.
