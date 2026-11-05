@@ -51,7 +51,22 @@ scene.add(new THREE.HemisphereLight(0xffffff,0x465675,2));const sun=new THREE.Di
 const grid=new THREE.GridHelper(30,30,0x6b84ad,0x35445d);scene.add(grid);scene.add(new THREE.AxesHelper(2));
 let objects=[],selected=null,serial=0;
 const mbKinds=new Set(['box','sphere','cylinder','cone','torus','plane','imported']);let mbActive=false,mbRemote=false,mbPublish=null,mbRemove=null;
-const mbNotify=mesh=>{if(!mbActive||mbRemote||!mesh||!mbKinds.has(mesh.userData.kind))return;if(yeepsMode&&mesh.userData.kind==='imported'&&!transform.dragging)snapYeeps(mesh);mesh.userData.mbId||='o'+crypto.randomUUID().replace(/-/g,'');mesh.userData.mbLocalOwner=true;mesh.userData.mbPlacedAt??=Date.now();mbPublish?.(mesh.userData.mbId,{kind:mesh.userData.kind,name:mesh.name.slice(0,80),color:'#'+mesh.material.color.getHexString(),position:mesh.position.toArray(),rotation:[mesh.rotation.x,mesh.rotation.y,mesh.rotation.z].map(v=>Math.round(v/(Math.PI/2))*(Math.PI/2)),scale:mesh.scale.toArray(),...(mesh.userData.kind==='imported'?{yeepsPath:mesh.userData.yeepsPath}: {})});};
+// Only snap on drag release. Publishing must never mutate a mesh while it is being dragged.
+const mbNotify=mesh=>{
+ if(!mbActive||mbRemote||!mesh||!mbKinds.has(mesh.userData.kind))return;
+ if(transform.dragging){const now=Date.now();if(now-(mesh.userData.mbLastPublish||0)<90)return;mesh.userData.mbLastPublish=now;}
+ mesh.userData.mbId||='o'+crypto.randomUUID().replace(/-/g,'');
+ mesh.userData.mbLocalOwner=true;
+ mesh.userData.mbPlacedAt??=Date.now();
+ mbPublish?.(mesh.userData.mbId,{
+  kind:mesh.userData.kind,name:mesh.name.slice(0,80),
+  color:'#'+mesh.material.color.getHexString(),position:mesh.position.toArray(),
+  rotation:[mesh.rotation.x,mesh.rotation.y,mesh.rotation.z].map(v=>Math.round(v/(Math.PI/2))*(Math.PI/2)),
+  scale:mesh.scale.toArray(),
+  ...(mesh.userData.kind==='imported'?{yeepsPath:mesh.userData.yeepsPath}: {})
+ });
+};
+window.addEventListener('mb-error',e=>{status.textContent=e.detail.message;});
 window.addEventListener('mb-connected',e=>{
  // Joining a room must not destroy blocks already placed in the local scene.
  // Remote objects arrive separately through mb-object events.
@@ -59,6 +74,8 @@ window.addEventListener('mb-connected',e=>{
  mbPublish=e.detail.publish;
  mbRemove=e.detail.remove;
  status.textContent='MultiBuilder connected · loading shared Yeeps blocks…';
+ // Blocks made before joining must be sent to the room too.
+ for(const mesh of objects){if(!mesh.userData.mbPlaceholder&&(!mesh.userData.mbId||mesh.userData.mbLocalOwner))mbNotify(mesh);}
  if(!yeepsZipArchive)loadReleaseYeepsBlocks().catch(error=>{status.textContent='Shared blocks need the Yeeps ZIP: '+error.message;});
  else flushSharedYeeps();
 });
@@ -70,14 +87,30 @@ function applySharedTransform(mesh,data){
  mesh.position.fromArray(data.position||[0,1,0]);
  mesh.rotation.set(...(data.rotation||[0,0,0]).map(v=>Math.round(v/(Math.PI/2))*(Math.PI/2)));
  mesh.scale.fromArray(data.scale||[1,1,1]);
- if(yeepsMode&&mesh.userData.kind==='imported')snapYeeps(mesh);
+ // Positions in the room are already authoritative; do not re-snap incoming data.
  refreshList();if(mesh===selected)refreshProperties();
 }
 const mbLoadingAssets=new Set();
+function showSharedPlaceholder(id,data){
+ const file=(data.yeepsPath||'').split('/').pop()||'shared block';
+ const dims=yeepsDimensions({userData:{yeepsFile:file}});
+ const geo=new THREE.BoxGeometry(...dims.map(n=>Math.max(0.2,Math.min(30,n))));
+ const material=new THREE.MeshStandardMaterial({color:'#a0ddff',transparent:true,opacity:0.7,roughness:0.75});
+ const mesh=new THREE.Mesh(geo,material);
+ mesh.userData.kind='imported';
+ mesh.userData.mbId=id;
+ mesh.userData.mbPlaceholder=true;
+ mesh.userData.yeepsFile=file;
+ mesh.userData.yeepsPath=data.yeepsPath;
+ mesh.name=data.name||'Shared block (loading)';
+ scene.add(mesh);objects.push(mesh);
+ applySharedTransform(mesh,data);
+ return mesh;
+}
 async function receiveSharedYeeps(id,data){
  if(!mbActive||mbLoadingAssets.has(id))return;
  const existing=objects.find(o=>o.userData.mbId===id);
- if(existing){applySharedTransform(existing,data);mbPendingAssets.delete(id);return;}
+ if(existing&&!existing.userData.mbPlaceholder){if(!existing.userData.mbLocalOwner)applySharedTransform(existing,data);mbPendingAssets.delete(id);return;}
  if(!data.yeepsPath||!yeepsZipArchive||yeepsBusy)return;
  const item=yeepsEntries.find(entry=>entry.path===data.yeepsPath);
  if(!item)return;
@@ -90,8 +123,13 @@ async function receiveSharedYeeps(id,data){
   if(!mbActive||!mbPendingAssets.has(id)){
    mbRemote=true;try{remove(mesh);}finally{mbRemote=false;}return;
   }
+  const placeholder=objects.find(o=>o.userData.mbId===id&&o.userData.mbPlaceholder);
+  const wasSelected=placeholder===selected;
+  if(placeholder){mbRemote=true;try{remove(placeholder);}finally{mbRemote=false;}}
   mesh.userData.mbId=id;
+  mesh.userData.mbLocalOwner=false;
   applySharedTransform(mesh,mbPendingAssets.get(id));
+  if(wasSelected)select(mesh);
   mbPendingAssets.delete(id);
  }finally{mbLoadingAssets.delete(id);if(mbPendingAssets.size)setTimeout(flushSharedYeeps,120);}
 }
@@ -103,21 +141,29 @@ function flushSharedYeeps(){
 }
 window.addEventListener('mb-object',e=>{
  if(!mbActive)return;const {id,data}=e.detail;
- if(data===null){mbPendingAssets.delete(id);const mesh=objects.find(o=>o.userData.mbId===id);if(mesh){if(mesh.userData.mbLocalOwner){status.textContent='MultiBuilder: room removed a locally placed block; kept it in your editor';return;}mbRemote=true;try{remove(mesh);}finally{mbRemote=false;}}return;}
+ if(data===null){mbPendingAssets.delete(id);const mesh=objects.find(o=>o.userData.mbId===id);if(mesh){mbRemote=true;try{remove(mesh);}finally{mbRemote=false;}}return;}
  if(!mbKinds.has(data.kind))return;
+ // Firebase broadcasts our own edits back to us. Reapplying them during a drag
+ // fights TransformControls and makes blocks appear stuck.
+ const local=objects.find(o=>o.userData.mbId===id);
+ if(local?.userData.mbLocalOwner)return;
  if(data.kind==='imported'){
   const existing=objects.find(o=>o.userData.mbId===id);
-  if(existing){if(!existing.userData.mbLocalOwner)applySharedTransform(existing,data);return;}
-  mbPendingAssets.set(id,data);if(!yeepsZipArchive)loadReleaseYeepsBlocks().catch(error=>{status.textContent='Cannot load shared blocks: '+error.message;});flushSharedYeeps();return;
+  if(existing&&!existing.userData.mbPlaceholder){if(!existing.userData.mbLocalOwner)applySharedTransform(existing,data);return;}
+  if(!existing)showSharedPlaceholder(id,data);
+  else if(!existing.userData.mbLocalOwner)applySharedTransform(existing,data);
+  mbPendingAssets.set(id,data);
+  if(!yeepsZipArchive)loadReleaseYeepsBlocks().catch(error=>{status.textContent='Shared placeholder shown; full model unavailable: '+error.message;});
+  flushSharedYeeps();return;
  }
  mbRemote=true;
  try{
   let mesh=objects.find(o=>o.userData.mbId===id);
-  if(!mesh){mesh=add(data.kind,data);mesh.userData.mbId=id;mesh.visible=!yeepsMode;}
+  if(!mesh){mesh=add(data.kind,data,{remote:true});mesh.userData.mbId=id;mesh.visible=!yeepsMode;}
   else applySharedTransform(mesh,data);
  }finally{mbRemote=false;}
 });
-window.addEventListener('mb-clear',()=>{mbRemote=true;try{for(const mesh of [...objects]){if(!mesh.userData.mbLocalOwner)remove(mesh);}}finally{mbRemote=false;}});
+window.addEventListener('mb-clear',()=>{mbRemote=true;try{for(const mesh of [...objects])remove(mesh);}finally{mbRemote=false;}});
 
 let yeepsZipArchive=null,yeepsEntries=[],yeepsBusy=false;
 const yeepsZipInput=document.getElementById('yeepsZip'),yeepsSearch=document.getElementById('yeepsSearch'),yeepsBlocks=document.getElementById('yeepsBlocks'),yeepsCount=document.getElementById('yeepsCount');
@@ -388,14 +434,15 @@ yeepsButton.addEventListener('click',()=>setYeepsMode(!yeepsMode));
 // objectChange caused its drag origin to shift on every mouse movement, producing
 // exaggerated motion and pointer drift. Snap once after releasing instead.
 transform.addEventListener('mouseUp',()=>{
- if(!selected||!yeepsMode||transform.getMode()!=='translate')return;
- snapYeeps(selected);
+ if(!selected)return;
+ if(yeepsMode&&transform.getMode()==='translate')snapYeeps(selected);
  refreshProperties();
+ // Always send the final position/rotation/scale, even after throttled drags.
  mbNotify(selected);
 });
 
 const geometry=kind=>({box:()=>new THREE.BoxGeometry(1.5,1.5,1.5),sphere:()=>new THREE.SphereGeometry(1,32,20),cylinder:()=>new THREE.CylinderGeometry(.9,.9,1.8,32),cone:()=>new THREE.ConeGeometry(1,2,32),torus:()=>new THREE.TorusGeometry(1,.3,16,64),plane:()=>new THREE.PlaneGeometry(2,2)})[kind]?.();
-function add(kind,data){const mesh=new THREE.Mesh(geometry(kind),new THREE.MeshStandardMaterial({color:data?.color||'#7c9cff',roughness:.6,side:THREE.DoubleSide}));mesh.userData.kind=kind;mesh.name=data?.name||kind[0].toUpperCase()+kind.slice(1)+' '+(++serial);mesh.position.fromArray(data?.position||[0,kind==='plane'?.01:1,0]);mesh.rotation.set(...(data?.rotation||[kind==='plane'?-Math.PI/2:0,0,0]).map(v=>Math.round(v/(Math.PI/2))*(Math.PI/2)));mesh.scale.fromArray(data?.scale||[1,1,1]);scene.add(mesh);objects.push(mesh);snapYeeps(mesh);select(mesh);mbNotify(mesh);return mesh;}
+function add(kind,data,options={}){const mesh=new THREE.Mesh(geometry(kind),new THREE.MeshStandardMaterial({color:data?.color||'#7c9cff',roughness:.6,side:THREE.DoubleSide}));mesh.userData.kind=kind;mesh.name=data?.name||kind[0].toUpperCase()+kind.slice(1)+' '+(++serial);mesh.position.fromArray(data?.position||[0,kind==='plane'?.01:1,0]);mesh.rotation.set(...(data?.rotation||[kind==='plane'?-Math.PI/2:0,0,0]).map(v=>Math.round(v/(Math.PI/2))*(Math.PI/2)));mesh.scale.fromArray(data?.scale||[1,1,1]);scene.add(mesh);objects.push(mesh);if(!options.remote){snapYeeps(mesh);select(mesh);mbNotify(mesh);}else refreshList();return mesh;}
 function select(mesh){selected=mesh;updatePartsButtons();transform.detach();if(mesh)transform.attach(mesh);document.getElementById('properties').hidden=!mesh;document.getElementById('noSelection').hidden=!!mesh;refreshProperties();refreshList();}
 function updatePartsButtons(){
  const split=document.getElementById('separateParts'),join=document.getElementById('combineParts');
@@ -454,7 +501,7 @@ document.getElementById('propertyTabs').addEventListener('click',event=>{
 document.getElementById('color').oninput=e=>setSelectedColour(e.target.value);
 
 document.getElementById('modes').onclick=e=>{const mode=e.target.closest('[data-mode]')?.dataset.mode;if(!mode)return;transform.setMode(mode);document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));};
-function remove(mesh){if(!mesh)return;if(mbActive&&!mbRemote&&mesh.userData.mbId)mbRemove?.(mesh.userData.mbId);transform.detach();scene.remove(mesh);objects=objects.filter(o=>o!==mesh);mesh.traverse(part=>{part.geometry?.dispose();part.material?.dispose();});select(null);}
+function remove(mesh){if(!mesh)return;if(mbActive&&!mbRemote&&mesh.userData.mbId)mbRemove?.(mesh.userData.mbId);const wasSelected=selected===mesh;if(wasSelected)transform.detach();scene.remove(mesh);objects=objects.filter(o=>o!==mesh);mesh.traverse(part=>{part.geometry?.dispose();part.material?.dispose();});if(wasSelected)select(null);else refreshList();}
 document.getElementById('delete').onclick=()=>remove(selected);
 function duplicateSelection(){if(!selected)return;const data=serialize(selected);data.name+=' Copy';data.position[0]+=1;if(data.kind==='imported'){const clone=selected.clone();clone.geometry=selected.geometry.clone();clone.material=selected.material.clone();clone.name=data.name;clone.position.x+=1;scene.add(clone);objects.push(clone);snapYeeps(clone);select(clone);}else add(data.kind,data);}
 document.getElementById('duplicate').onclick=duplicateSelection;
@@ -899,7 +946,7 @@ $('mbJoin').onclick=async()=>{
   onDisconnect(member).remove().catch(()=>{});
   if(ticket!==session)return;
   room=code;$('mbLeave').disabled=false;const colour=yeepColourForUid(user.uid);status.textContent='Connected to '+code+' · Your Yeeps colour: '+({ '#CCCEFF':'Blue','#FFC5BF':'Peach','#FFB9F7':'Purple' }[colour]);status.style.color=colour;
-  notify('mb-connected',{room:code,publish:(id,data)=>set(ref(db,'multiBuilderRooms/'+code+'/objects/'+id),data).catch(e=>status.textContent='Save failed: '+e.message),remove:id=>remove(ref(db,'multiBuilderRooms/'+code+'/objects/'+id)).catch(e=>status.textContent='Delete failed: '+e.message)});
+  notify('mb-connected',{room:code,publish:(id,data)=>set(ref(db,'multiBuilderRooms/'+code+'/objects/'+id),data).catch(e=>{const message='Block NOT synced: '+e.message;status.textContent=message;notify('mb-error',{message});}),remove:id=>remove(ref(db,'multiBuilderRooms/'+code+'/objects/'+id)).catch(e=>{const message='Block delete NOT synced: '+e.message;status.textContent=message;notify('mb-error',{message});})});
   const receive=(snap)=>{if(ticket===session)notify('mb-object',{id:snap.key,data:snap.val()});};
   unsubs.push(onChildAdded(items,receive,e=>status.textContent='Room read failed: '+e.message));
   unsubs.push(onChildChanged(items,receive,e=>status.textContent='Room read failed: '+e.message));
