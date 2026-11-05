@@ -593,7 +593,7 @@ function bubbleRender(){
  for(const item of bubbleCatalog[bubbleCategory]){const b=document.createElement('button');b.type='button';b.textContent=item[0]+' '+item[1];b.style.cssText='min-height:60px;border:2px solid '+(item===bubbleChoice?'#b9f9ff':'#557299')+';border-radius:18px;background:#28496b;color:white;font-size:13px';b.onclick=()=>{bubbleChoice=item;bubbleRender();fpBubblePanel.hidden=true;fpBubbleToggle.setAttribute('aria-expanded','false');status.textContent=item[1]+' selected · tap 🧱 to build';};fpBubbleItems.append(b);}
 }
 // Real Three.js bubble meshes float in front of the first-person camera.
-const physicalBubbles=new THREE.Group();camera.add(physicalBubbles);scene.add(camera);
+const physicalBubbles=new THREE.Group();camera.add(physicalBubbles);
 physicalBubbles.visible=false;
 const bubbleRay=new THREE.Raycaster(),bubblePointer=new THREE.Vector2();
 const bubbleMeshes=[];let bubbleOpen=false,bubbleOpeningAt=0,bubbleGrab=null,bubbleGrabStart=null;
@@ -642,8 +642,8 @@ function setPhysicalBubbles(open){
 function bubbleHit(clientX,clientY){
  const rect=renderer.domElement.getBoundingClientRect();
  bubblePointer.set((clientX-rect.left)/rect.width*2-1,-(clientY-rect.top)/rect.height*2+1);
- bubbleRay.setFromCamera(bubblePointer,camera);
- const hits=bubbleRay.intersectObjects(bubbleMeshes,true);
+ camera.updateMatrixWorld(true);bubbleRay.setFromCamera(bubblePointer,camera);
+ const hits=bubbleRay.intersectObjects(bubbleMeshes.flatMap(b=>b.children.filter(c=>c.isMesh)),false);
  if(!hits.length)return null;
  let obj=hits[0].object;while(obj.parent&&obj.parent!==physicalBubbles)obj=obj.parent;
  return bubbleMeshes.includes(obj)?obj:null;
@@ -652,7 +652,7 @@ renderer.domElement.addEventListener('pointerdown',e=>{
  if(!walking||!bubbleOpen)return;
  const hit=bubbleHit(e.clientX,e.clientY);if(!hit)return;
  e.preventDefault();e.stopPropagation();bubbleGrab=hit;bubbleGrabStart={x:e.clientX,y:e.clientY,time:performance.now()};
- renderer.domElement.setPointerCapture?.(e.pointerId);
+ try{renderer.domElement.setPointerCapture?.(e.pointerId);}catch{}
 },true);
 renderer.domElement.addEventListener('pointermove',e=>{
  if(!bubbleGrab||!bubbleGrabStart)return;
@@ -684,6 +684,25 @@ function animatePhysicalBubbles(now){
 bubbleRender();
 fpBubbleToggle.onclick=()=>setPhysicalBubbles(!bubbleOpen);
 fpBubblePlace.onclick=()=>firstPersonBuild();
+// Two large circular HUD controls: category bubble and rotating last-selected object.
+const hud=document.createElement('div');hud.id='fpBubbleHud';hud.style.cssText='position:absolute;bottom:16px;left:50%;transform:translateX(-50%);z-index:25;display:flex;gap:22px;align-items:center;justify-content:center;pointer-events:none';
+hud.innerHTML='<button id="bubbleHudMenu" type="button" aria-label="Open build bubbles" style="pointer-events:auto;width:clamp(92px,17vw,130px);height:clamp(92px,17vw,130px);border-radius:50%;border:3px solid #c4efff;background:radial-gradient(circle at 32% 24%,#b5eaffcc,#207cc0cc 55%,#12294c);color:white;font:700 16px system-ui;box-shadow:0 0 22px #4dcaff88,inset 0 0 20px #ffffff55;cursor:pointer">🫧<div style="font-size:13px">Bubbles</div></button><button id="bubbleHudBuild" type="button" aria-label="Place selected block" style="pointer-events:auto;position:relative;width:clamp(92px,17vw,130px);height:clamp(92px,17vw,130px);border-radius:50%;border:3px solid #c4efff;background:radial-gradient(circle at 32% 24%,#a2eaff88,#194b78 60%,#101b36);color:white;box-shadow:0 0 22px #4dcaff88,inset 0 0 20px #ffffff55;cursor:pointer;overflow:hidden"><canvas id="bubbleHudPreview" width="160" height="160" style="position:absolute;inset:0;width:100%;height:100%"></canvas><span id="bubbleHudName" style="position:absolute;bottom:8px;left:0;right:0;text-align:center;font:700 12px system-ui;text-shadow:0 1px 4px #000">Cube</span></button>';
+viewport.append(hud);hud.hidden=true;
+const hudMenu=document.getElementById('bubbleHudMenu'),hudBuild=document.getElementById('bubbleHudBuild'),hudName=document.getElementById('bubbleHudName');
+hudMenu.onclick=()=>setPhysicalBubbles(!bubbleOpen);hudBuild.onclick=()=>firstPersonBuild();
+const previewCanvas=document.getElementById('bubbleHudPreview');
+const previewRenderer=new THREE.WebGLRenderer({canvas:previewCanvas,alpha:true,antialias:true});
+previewRenderer.setPixelRatio(Math.min(devicePixelRatio||1,2));previewRenderer.setSize(160,160,false);
+const previewScene=new THREE.Scene(),previewCamera=new THREE.PerspectiveCamera(38,1,.1,20);previewCamera.position.set(2.7,2.1,3.7);previewCamera.lookAt(0,0,0);
+previewScene.add(new THREE.AmbientLight(0xffffff,1.6));const previewLight=new THREE.DirectionalLight(0xffffff,2);previewLight.position.set(3,5,4);previewScene.add(previewLight);
+let previewMesh=null,previewChoice=null;
+function refreshBubblePreview(){
+ if(previewChoice===bubbleChoice)return;previewChoice=bubbleChoice;
+ if(previewMesh){previewScene.remove(previewMesh);previewMesh.geometry.dispose();previewMesh.material.dispose();}
+ const kind=bubbleChoice[2],geo=kind==='sphere'?new THREE.SphereGeometry(.8,24,18):kind==='cylinder'?new THREE.CylinderGeometry(.7,.7,1.4,24):kind==='cone'?new THREE.ConeGeometry(.8,1.5,24):kind==='torus'?new THREE.TorusGeometry(.65,.22,12,32):kind==='plane'?new THREE.BoxGeometry(1.7,.13,1.7):new THREE.BoxGeometry(1.3,1.3,1.3);
+ previewMesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:0x83dcff,metalness:.24,roughness:.3}));previewScene.add(previewMesh);hudName.textContent=bubbleChoice[1];
+}
+function animateBubblePreview(now){if(!walking)return;refreshBubblePreview();previewMesh.rotation.y=now*.00055;previewMesh.rotation.x=.15+Math.sin(now*.0004)*.1;previewRenderer.render(previewScene,previewCamera);}
 const fpBuildButton=document.getElementById('fpBuild');
 function firstPersonBuild(){
  if(!walking)return;
@@ -700,12 +719,12 @@ function firstPersonBuild(){
 }
 fpBuildButton.onclick=firstPersonBuild;
 let walking=false,yaw=0,pitch=0,lastWalk=performance.now();const keys=new Set(),fpButton=document.getElementById('firstPerson');
-function exitWalk(){walking=false;fpBuildButton.hidden=true;fpBubbleUI.hidden=true;setPhysicalBubbles(false);playerView.visible=false;keys.clear();fpButton.textContent='🎮 First person';if(document.pointerLockElement===renderer.domElement)document.exitPointerLock();resumeFly();}
-fpButton.onclick=()=>{if(walking){exitWalk();return;}if(flying)exitFly();walking=true;fpBuildButton.hidden=false;fpBubbleUI.hidden=false;playerView.visible=true;playerView.position.copy(camera.position);select(null);orbit.enabled=false;transform.visible=false;fpButton.textContent='Exit first person';const direction=new THREE.Vector3();camera.getWorldDirection(direction);yaw=Math.atan2(-direction.x,-direction.z);pitch=Math.asin(Math.max(-1,Math.min(1,direction.y)));camera.position.y=1.7;if(!matchMedia('(pointer:coarse)').matches)renderer.domElement.requestPointerLock?.().catch(()=>{status.textContent='Click the 3D view to capture your mouse.';});status.textContent='WASD move · Shift run · Mouse look · Esc exit';};
+function exitWalk(){walking=false;fpBuildButton.hidden=true;fpBubbleUI.hidden=true;hud.hidden=true;setPhysicalBubbles(false);playerView.visible=false;keys.clear();fpButton.textContent='🎮 First person';if(document.pointerLockElement===renderer.domElement)document.exitPointerLock();resumeFly();}
+fpButton.onclick=()=>{if(walking){exitWalk();return;}if(flying)exitFly();walking=true;fpBuildButton.hidden=false;fpBubbleUI.hidden=false;hud.hidden=false;fpBubbleToggle.style.display='none';fpBubblePlace.style.display='none';playerView.visible=true;playerView.position.copy(camera.position);select(null);orbit.enabled=false;transform.visible=false;fpButton.textContent='Exit first person';const direction=new THREE.Vector3();camera.getWorldDirection(direction);yaw=Math.atan2(-direction.x,-direction.z);pitch=Math.asin(Math.max(-1,Math.min(1,direction.y)));camera.position.y=1.7;if(!matchMedia('(pointer:coarse)').matches)renderer.domElement.requestPointerLock?.().catch(()=>{status.textContent='Click the 3D view to capture your mouse.';});status.textContent='WASD move · Shift run · Mouse look · Esc exit';};
 document.addEventListener('keydown',e=>{if(walking&&['KeyW','KeyA','KeyS','KeyD','ShiftLeft','ShiftRight'].includes(e.code)){keys.add(e.code);e.preventDefault();}if(walking&&e.code==='KeyB'&&!e.repeat&&!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName)){firstPersonBuild();e.preventDefault();}if(walking&&e.code==='Escape')exitWalk();});
 document.addEventListener('keyup',e=>keys.delete(e.code));
 document.addEventListener('mousemove',e=>{if(!walking||document.pointerLockElement!==renderer.domElement)return;yaw-=e.movementX*.002;pitch=Math.max(-1.45,Math.min(1.45,pitch-e.movementY*.002));});
-document.addEventListener('pointerlockchange',()=>{if(walking&&document.pointerLockElement!==renderer.domElement&&!bubbleOpen&&!matchMedia('(pointer:coarse)').matches)exitWalk();});
+document.addEventListener('pointerlockchange',()=>{if(walking&&document.pointerLockElement!==renderer.domElement&&!bubbleOpen&&!matchMedia('(pointer:coarse)').matches)status.textContent='Mouse released · click the view to look around';});
 // Clicking the canvas no longer starts mouse capture / click-to-fly. First Person uses its dedicated button.
 window.addEventListener('blur',()=>keys.clear());
 let lastPresence=0;function walkFrame(now){if(now-lastPresence>180&&(walking||flying)){lastPresence=now;window.dispatchEvent(new CustomEvent('mb-presence-position',{detail:{x:camera.position.x,y:camera.position.y,z:camera.position.z,yaw}}));}const dt=Math.min(.05,(now-lastWalk)/1000);lastWalk=now;
@@ -715,7 +734,7 @@ function resize(){const rect=viewport.getBoundingClientRect();const w=Math.max(1
 add('box');orbit.update();
 const diagnostics=document.getElementById('diagnostics');let frames=0,renderError='';
 function updateDiagnostics(){const rect=renderer.domElement.getBoundingClientRect();const gl=renderer.getContext();diagnostics.textContent='3D diagnostic\nObjects: '+objects.length+' | Frames: '+frames+'\nCanvas: '+Math.round(rect.width)+' × '+Math.round(rect.height)+'\nWebGL: '+(gl.isContextLost()?'LOST':'active')+(renderError?'\nError: '+renderError:'');}
-function animate(now){requestAnimationFrame(animate);try{walkFrame(now||performance.now());animatePhysicalBubbles(now||performance.now());if(!walking&&!flying)orbit.update();renderer.render(scene,camera);frames++;if(frames%60===0)updateDiagnostics();}catch(err){renderError=err.message;status.textContent='3D rendering error: '+err.message;console.error('Shapes & Colours rendering:',err);updateDiagnostics();}}updateDiagnostics();animate();
+function animate(now){requestAnimationFrame(animate);try{walkFrame(now||performance.now());animatePhysicalBubbles(now||performance.now());animateBubblePreview(now||performance.now());if(!walking&&!flying)orbit.update();renderer.render(scene,camera);frames++;if(frames%60===0)updateDiagnostics();}catch(err){renderError=err.message;status.textContent='3D rendering error: '+err.message;console.error('Shapes & Colours rendering:',err);updateDiagnostics();}}updateDiagnostics();animate();
 </script><script>
 (function(){
  const button=document.getElementById('mbToggle'),panel=document.getElementById('multiBuilderPanel');
