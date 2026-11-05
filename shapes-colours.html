@@ -51,7 +51,7 @@ scene.add(new THREE.HemisphereLight(0xffffff,0x465675,2));const sun=new THREE.Di
 const grid=new THREE.GridHelper(30,30,0x6b84ad,0x35445d);scene.add(grid);scene.add(new THREE.AxesHelper(2));
 let objects=[],selected=null,serial=0;
 const mbKinds=new Set(['box','sphere','cylinder','cone','torus','plane','imported']);let mbActive=false,mbRemote=false,mbPublish=null,mbRemove=null;
-const mbNotify=mesh=>{if(!mbActive||mbRemote||!mesh||!mbKinds.has(mesh.userData.kind))return;mesh.userData.mbId||='o'+crypto.randomUUID().replace(/-/g,'');mbPublish?.(mesh.userData.mbId,{kind:mesh.userData.kind,name:mesh.name.slice(0,80),color:'#'+mesh.material.color.getHexString(),position:mesh.position.toArray(),rotation:[mesh.rotation.x,mesh.rotation.y,mesh.rotation.z].map(v=>Math.round(v/(Math.PI/2))*(Math.PI/2)),scale:mesh.scale.toArray(),...(mesh.userData.kind==='imported'?{yeepsPath:mesh.userData.yeepsPath}: {})});};
+const mbNotify=mesh=>{if(!mbActive||mbRemote||!mesh||!mbKinds.has(mesh.userData.kind))return;mesh.userData.mbId||='o'+crypto.randomUUID().replace(/-/g,'');mesh.userData.mbLocalOwner=true;mesh.userData.mbPlacedAt??=Date.now();mbPublish?.(mesh.userData.mbId,{kind:mesh.userData.kind,name:mesh.name.slice(0,80),color:'#'+mesh.material.color.getHexString(),position:mesh.position.toArray(),rotation:[mesh.rotation.x,mesh.rotation.y,mesh.rotation.z].map(v=>Math.round(v/(Math.PI/2))*(Math.PI/2)),scale:mesh.scale.toArray(),...(mesh.userData.kind==='imported'?{yeepsPath:mesh.userData.yeepsPath}: {})});};
 window.addEventListener('mb-connected',e=>{
  // Joining a room must not destroy blocks already placed in the local scene.
  // Remote objects arrive separately through mb-object events.
@@ -100,7 +100,7 @@ function flushSharedYeeps(){
 }
 window.addEventListener('mb-object',e=>{
  if(!mbActive)return;const {id,data}=e.detail;
- if(data===null){mbPendingAssets.delete(id);const mesh=objects.find(o=>o.userData.mbId===id);if(mesh){mbRemote=true;try{remove(mesh);}finally{mbRemote=false;}}return;}
+ if(data===null){mbPendingAssets.delete(id);const mesh=objects.find(o=>o.userData.mbId===id);if(mesh){if(mesh.userData.mbLocalOwner){status.textContent='MultiBuilder: room removed a locally placed block; kept it in your editor';return;}mbRemote=true;try{remove(mesh);}finally{mbRemote=false;}}return;}
  if(!mbKinds.has(data.kind))return;
  if(data.kind==='imported'){
   const existing=objects.find(o=>o.userData.mbId===id);
@@ -114,7 +114,7 @@ window.addEventListener('mb-object',e=>{
   else applySharedTransform(mesh,data);
  }finally{mbRemote=false;}
 });
-window.addEventListener('mb-clear',()=>{mbRemote=true;try{for(const mesh of [...objects])remove(mesh);}finally{mbRemote=false;}});
+window.addEventListener('mb-clear',()=>{mbRemote=true;try{for(const mesh of [...objects]){if(!mesh.userData.mbLocalOwner)remove(mesh);}}finally{mbRemote=false;}});
 
 let yeepsZipArchive=null,yeepsEntries=[],yeepsBusy=false;
 const yeepsZipInput=document.getElementById('yeepsZip'),yeepsSearch=document.getElementById('yeepsSearch'),yeepsBlocks=document.getElementById('yeepsBlocks'),yeepsCount=document.getElementById('yeepsCount');
@@ -211,7 +211,7 @@ async function placeYeepsBlock(item,options={}){
    for(const part of combined.slice(1)){objects=objects.filter(o=>o!==part);main.attach(part);}
   }
   if(!options.remote)select(combined[0]);
-  if(!options.remote){mbNotify(combined[0]);}
+  if(!options.remote){combined[0].userData.mbPlacedAt=Date.now();mbNotify(combined[0]);}
   if(!options.remote)status.textContent='Placed '+item.label+' · '+dims[0]+'×'+dims[2]+' grid · '+combined.length+' mesh(es)';
   return combined[0];
  }catch(error){console.error(error);status.textContent='Could not place block: '+error.message;return null;}finally{yeepsBusy=false;if(mbPendingAssets.size)setTimeout(flushSharedYeeps,100);}
