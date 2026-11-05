@@ -75,11 +75,11 @@ async function loadYeepsArchive(source){
   const entries=Object.values(archive.files).filter(item=>!item.dir&&/\.glb$/i.test(item.name)).map(item=>({path:item.name,label:item.name.split('/').pop().replace(/\.glb$/i,'').replace(/_/g,' ')})).sort((a,b)=>a.label.localeCompare(b.label));
   if(!entries.length)throw Error('invalid');
   yeepsZipArchive=archive;yeepsEntries=entries;
-  showYeepsEntries();status.textContent='Yeeps block library ready';
+  showYeepsEntries();status.textContent='Yeeps block library ready';if(typeof refreshYeepsBubbleAssets==='function')refreshYeepsBubbleAssets();
  }catch(error){
   yeepsZipArchive=null;yeepsEntries=[];
   yeepsCount.textContent='Unable to load block library.';
-  status.textContent='Unable to load block library.';
+  status.textContent='Missing Assets (Error 13)';
  }
 }
 yeepsZipInput.addEventListener('change',async event=>{
@@ -617,21 +617,36 @@ function makePhysicalBubble(label,x,y,z,r,action){
  const text=bubbleLabel(label);text.position.z=r+.035;root.add(text);
  root.scale.setScalar(.001);physicalBubbles.add(root);bubbleMeshes.push(root);return root;
 }
+let yeepsBubbleChoice=null;
+function missingYeepsAssets(){status.textContent='Missing Assets (Error 13)';window.alert('Missing Assets (Error 13)\\nLoad your Yeeps blocks ZIP file or use Load blocks from release.');}
+function refreshYeepsBubbleAssets(){
+ yeepsBubbleChoice=yeepsEntries[0]||null;previewChoice=null;
+ if(bubbleOpen)populatePhysicalBubbles();
+}
 function populatePhysicalBubbles(){
  clearPhysicalBubbles();
- const cats=Object.keys(bubbleCatalog);
- cats.forEach((name,i)=>makePhysicalBubble(name,(i-1)*.69,.42,-1.85,.28,()=>{bubbleCategory=name;bubbleChoice=bubbleCatalog[name][0];bubbleRender();populatePhysicalBubbles();}));
- const items=bubbleCatalog[bubbleCategory];
- items.forEach((item,i)=>{const count=items.length,columns=Math.min(4,count),row=Math.floor(i/columns),col=i%columns;
-  makePhysicalBubble(item[0]+' '+item[1],(col-(Math.min(columns,count-row*columns)-1)/2)*.61,-.18-row*.59,-1.85,.255,()=>{
-   bubbleChoice=item;bubbleRender();status.textContent=item[1]+' selected · press B or tap 🧱 to build';
+ if(!yeepsZipArchive||!yeepsEntries.length){missingYeepsAssets();setPhysicalBubbles(false);return;}
+ // Every selectable bubble is a real .glb entry from the uploaded Yeeps archive.
+ const perPage=12;const pageCount=Math.ceil(yeepsEntries.length/perPage);
+ yeepsBubblePage=Math.min(yeepsBubblePage,pageCount-1);
+ const items=yeepsEntries.slice(yeepsBubblePage*perPage,(yeepsBubblePage+1)*perPage);
+ items.forEach((item,i)=>{
+  const columns=4,row=Math.floor(i/columns),col=i%columns;
+  makePhysicalBubble(item.label,(col-1.5)*.63,.67-row*.62,-2.1,.27,()=>{
+   yeepsBubbleChoice=item;previewChoice=null;
+   status.textContent=item.label+' selected · tap the spinning circle to place';
    setPhysicalBubbles(false);
   });
  });
+ if(pageCount>1){
+  makePhysicalBubble('◀ Prev',-.48,-1.35,-2.1,.25,()=>{yeepsBubblePage=(yeepsBubblePage+pageCount-1)%pageCount;populatePhysicalBubbles();});
+  makePhysicalBubble('Next ▶',.48,-1.35,-2.1,.25,()=>{yeepsBubblePage=(yeepsBubblePage+1)%pageCount;populatePhysicalBubbles();});
+ }
  bubbleOpeningAt=performance.now();
 }
+let yeepsBubblePage=0;
 function setPhysicalBubbles(open){
- bubbleOpen=Boolean(open&&walking);
+ if(open&&(!yeepsZipArchive||!yeepsEntries.length)){missingYeepsAssets();return;}bubbleOpen=Boolean(open&&walking);
  physicalBubbles.visible=bubbleOpen;
  fpBubblePanel.hidden=true;
  fpBubbleToggle.setAttribute('aria-expanded',String(bubbleOpen));
@@ -696,15 +711,24 @@ previewRenderer.setPixelRatio(Math.min(devicePixelRatio||1,2));previewRenderer.s
 const previewScene=new THREE.Scene(),previewCamera=new THREE.PerspectiveCamera(38,1,.1,20);previewCamera.position.set(2.7,2.1,3.7);previewCamera.lookAt(0,0,0);
 previewScene.add(new THREE.AmbientLight(0xffffff,1.6));const previewLight=new THREE.DirectionalLight(0xffffff,2);previewLight.position.set(3,5,4);previewScene.add(previewLight);
 let previewMesh=null,previewChoice=null;
-function refreshBubblePreview(){
- if(previewChoice===bubbleChoice)return;previewChoice=bubbleChoice;
- if(previewMesh){previewScene.remove(previewMesh);previewMesh.geometry.dispose();previewMesh.material.dispose();}
- const kind=bubbleChoice[2],geo=kind==='sphere'?new THREE.SphereGeometry(.8,24,18):kind==='cylinder'?new THREE.CylinderGeometry(.7,.7,1.4,24):kind==='cone'?new THREE.ConeGeometry(.8,1.5,24):kind==='torus'?new THREE.TorusGeometry(.65,.22,12,32):kind==='plane'?new THREE.BoxGeometry(1.7,.13,1.7):new THREE.BoxGeometry(1.3,1.3,1.3);
- previewMesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:0x83dcff,metalness:.24,roughness:.3}));previewScene.add(previewMesh);hudName.textContent=bubbleChoice[1];
+async function refreshBubblePreview(){
+ if(!yeepsBubbleChoice||!yeepsZipArchive){hudName.textContent='No assets';return;}
+ if(previewChoice===yeepsBubbleChoice)return;const requested=yeepsBubbleChoice;previewChoice=requested;
+ if(previewMesh){previewScene.remove(previewMesh);previewMesh=null;}
+ hudName.textContent=requested.label;
+ try{
+  const data=await yeepsZipArchive.file(requested.path).async('arraybuffer');
+  const gltf=await new Promise((resolve,reject)=>new GLTFLoader().parse(data,'',resolve,reject));
+  if(previewChoice!==requested)return;
+  const group=gltf.scene;const bounds=new THREE.Box3().setFromObject(group),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
+  group.position.sub(center);group.scale.setScalar(1.65/Math.max(size.x,size.y,size.z,.001));
+  previewMesh=group;previewScene.add(group);
+ }catch(e){hudName.textContent='Asset failed';status.textContent='Missing Assets (Error 13)';}
+
 }
-function animateBubblePreview(now){if(!walking)return;refreshBubblePreview();previewMesh.rotation.y=now*.00055;previewMesh.rotation.x=.15+Math.sin(now*.0004)*.1;previewRenderer.render(previewScene,previewCamera);}
+function animateBubblePreview(now){if(!walking)return;refreshBubblePreview();if(previewMesh){previewMesh.rotation.y=now*.00055;previewMesh.rotation.x=.15+Math.sin(now*.0004)*.1;}previewRenderer.render(previewScene,previewCamera);}
 const fpBuildButton=document.getElementById('fpBuild');
-function firstPersonBuild(){
+async function firstPersonBuild(){
  if(!walking)return;
  const direction=new THREE.Vector3();camera.getWorldDirection(direction);
  const raycaster=new THREE.Raycaster(camera.position,direction,.1,7);
@@ -713,7 +737,7 @@ function firstPersonBuild(){
  if(hits.length){target.copy(hits[0].point).addScaledVector(hits[0].face?.normal?.clone().transformDirection(hits[0].object.matrixWorld)||direction,.55);}
  else target.copy(camera.position).addScaledVector(direction,3);
  if(yeepsMode){target.x=Math.round(target.x);target.y=Math.max(.5,Math.round(target.y-.5)+.5);target.z=Math.round(target.z);}
- const mesh=add(bubbleChoice[2],{position:target.toArray(),scale:bubbleChoice[3]||[1,1,1]});
+ if(!yeepsZipArchive||!yeepsBubbleChoice){missingYeepsAssets();return;}\n await placeYeepsBlock(yeepsBubbleChoice);\n if(selected){selected.position.copy(target);mbNotify(selected);}
  // Stay in first-person instead of opening the editor transform handles.
  select(null);transform.visible=false;status.textContent='Block placed · Press B or Build to place another';
 }
