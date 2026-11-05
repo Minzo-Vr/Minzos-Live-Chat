@@ -592,8 +592,97 @@ function bubbleRender(){
  for(const category of Object.keys(bubbleCatalog)){const b=document.createElement('button');b.type='button';b.textContent=category;b.style.cssText='border:1px solid #89a9d4;border-radius:20px;padding:7px 10px;color:white;background:'+(category===bubbleCategory?'#247bd4':'#354866');b.onclick=()=>{bubbleCategory=category;bubbleChoice=bubbleCatalog[category][0];bubbleRender();};fpBubbleCategories.append(b);}
  for(const item of bubbleCatalog[bubbleCategory]){const b=document.createElement('button');b.type='button';b.textContent=item[0]+' '+item[1];b.style.cssText='min-height:60px;border:2px solid '+(item===bubbleChoice?'#b9f9ff':'#557299')+';border-radius:18px;background:#28496b;color:white;font-size:13px';b.onclick=()=>{bubbleChoice=item;bubbleRender();fpBubblePanel.hidden=true;fpBubbleToggle.setAttribute('aria-expanded','false');status.textContent=item[1]+' selected · tap 🧱 to build';};fpBubbleItems.append(b);}
 }
+// Real Three.js bubble meshes float in front of the first-person camera.
+const physicalBubbles=new THREE.Group();camera.add(physicalBubbles);scene.add(camera);
+physicalBubbles.visible=false;
+const bubbleRay=new THREE.Raycaster(),bubblePointer=new THREE.Vector2();
+const bubbleMeshes=[];let bubbleOpen=false,bubbleOpeningAt=0,bubbleGrab=null,bubbleGrabStart=null;
+const bubbleGlass=new THREE.MeshPhysicalMaterial({color:0x7acbff,transparent:true,opacity:.43,roughness:.12,metalness:0,clearcoat:1,clearcoatRoughness:.06,depthTest:false,depthWrite:false,side:THREE.FrontSide});
+function bubbleLabel(value){
+ const canvas=document.createElement('canvas');canvas.width=256;canvas.height=128;
+ const ctx=canvas.getContext('2d');ctx.clearRect(0,0,256,128);ctx.fillStyle='#ffffff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 25px system-ui';
+ const words=value.split(' ');if(words.length>1){ctx.fillText(words[0],128,48);ctx.fillText(words.slice(1).join(' '),128,82);}else ctx.fillText(value,128,65);
+ const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+ const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthTest:false,depthWrite:false}));sprite.scale.set(.55,.28,1);sprite.renderOrder=1002;return sprite;
+}
+function clearPhysicalBubbles(){
+ for(const obj of bubbleMeshes){physicalBubbles.remove(obj);obj.traverse(child=>{if(child.geometry)child.geometry.dispose();if(child.material&&child.material!==bubbleGlass){if(child.material.map)child.material.map.dispose();child.material.dispose();}});}
+ bubbleMeshes.length=0;bubbleGrab=null;
+}
+function makePhysicalBubble(label,x,y,z,r,action){
+ const root=new THREE.Group();root.position.set(x,y,z);root.userData={action,baseY:y,phase:Math.random()*6.28,initialX:x,initialY:y};
+ const shell=new THREE.Mesh(new THREE.SphereGeometry(r,28,20),bubbleGlass);shell.renderOrder=1000;root.add(shell);
+ const rim=new THREE.Mesh(new THREE.TorusGeometry(r*.91,.009,6,42),new THREE.MeshBasicMaterial({color:0xd9f6ff,transparent:true,opacity:.75,depthTest:false,depthWrite:false}));rim.renderOrder=1001;root.add(rim);
+ const shine=new THREE.Mesh(new THREE.SphereGeometry(r*.20,12,10),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.55,depthTest:false,depthWrite:false}));shine.position.set(-r*.38,r*.4,r*.76);shine.renderOrder=1001;root.add(shine);
+ const text=bubbleLabel(label);text.position.z=r+.035;root.add(text);
+ root.scale.setScalar(.001);physicalBubbles.add(root);bubbleMeshes.push(root);return root;
+}
+function populatePhysicalBubbles(){
+ clearPhysicalBubbles();
+ const cats=Object.keys(bubbleCatalog);
+ cats.forEach((name,i)=>makePhysicalBubble(name,(i-1)*.69,.42,-1.85,.28,()=>{bubbleCategory=name;bubbleChoice=bubbleCatalog[name][0];bubbleRender();populatePhysicalBubbles();}));
+ const items=bubbleCatalog[bubbleCategory];
+ items.forEach((item,i)=>{const count=items.length,columns=Math.min(4,count),row=Math.floor(i/columns),col=i%columns;
+  makePhysicalBubble(item[0]+' '+item[1],(col-(Math.min(columns,count-row*columns)-1)/2)*.61,-.18-row*.59,-1.85,.255,()=>{
+   bubbleChoice=item;bubbleRender();status.textContent=item[1]+' selected · press B or tap 🧱 to build';
+   setPhysicalBubbles(false);
+  });
+ });
+ bubbleOpeningAt=performance.now();
+}
+function setPhysicalBubbles(open){
+ bubbleOpen=Boolean(open&&walking);
+ physicalBubbles.visible=bubbleOpen;
+ fpBubblePanel.hidden=true;
+ fpBubbleToggle.setAttribute('aria-expanded',String(bubbleOpen));
+ fpBubbleToggle.textContent=bubbleOpen?'✖':'🫧';
+ if(bubbleOpen){populatePhysicalBubbles();if(document.pointerLockElement===renderer.domElement)document.exitPointerLock();}
+ else{bubbleGrab=null;}
+}
+function bubbleHit(clientX,clientY){
+ const rect=renderer.domElement.getBoundingClientRect();
+ bubblePointer.set((clientX-rect.left)/rect.width*2-1,-(clientY-rect.top)/rect.height*2+1);
+ bubbleRay.setFromCamera(bubblePointer,camera);
+ const hits=bubbleRay.intersectObjects(bubbleMeshes,true);
+ if(!hits.length)return null;
+ let obj=hits[0].object;while(obj.parent&&obj.parent!==physicalBubbles)obj=obj.parent;
+ return bubbleMeshes.includes(obj)?obj:null;
+}
+renderer.domElement.addEventListener('pointerdown',e=>{
+ if(!walking||!bubbleOpen)return;
+ const hit=bubbleHit(e.clientX,e.clientY);if(!hit)return;
+ e.preventDefault();e.stopPropagation();bubbleGrab=hit;bubbleGrabStart={x:e.clientX,y:e.clientY,time:performance.now()};
+ renderer.domElement.setPointerCapture?.(e.pointerId);
+},true);
+renderer.domElement.addEventListener('pointermove',e=>{
+ if(!bubbleGrab||!bubbleGrabStart)return;
+ const dx=(e.clientX-bubbleGrabStart.x)/Math.max(1,renderer.domElement.clientWidth);
+ const dy=(e.clientY-bubbleGrabStart.y)/Math.max(1,renderer.domElement.clientHeight);
+ bubbleGrab.position.x=bubbleGrab.userData.initialX+dx*2.2;
+ bubbleGrab.position.y=bubbleGrab.userData.initialY-dy*1.7;
+},true);
+renderer.domElement.addEventListener('pointerup',e=>{
+ if(!bubbleGrab)return;
+ e.preventDefault();e.stopPropagation();
+ const hit=bubbleGrab;const moved=Math.hypot(e.clientX-bubbleGrabStart.x,e.clientY-bubbleGrabStart.y);
+ bubbleGrab=null;bubbleGrabStart=null;
+ if(moved<24)hit.userData.action();
+ else{hit.userData.initialX=hit.position.x;hit.userData.initialY=hit.position.y;hit.userData.baseY=hit.position.y;status.textContent='Bubble moved · tap to open';}
+},true);
+function animatePhysicalBubbles(now){
+ if(!bubbleOpen)return;
+ const t=(now-bubbleOpeningAt)/1000;
+ bubbleMeshes.forEach((b,i)=>{
+  const stagger=Math.max(0,Math.min(1,(t-i*.055)/.36));
+  const eased=1-Math.pow(1-stagger,3);
+  const bounce=1+.16*Math.sin(stagger*Math.PI*2.4)*(1-stagger);
+  b.scale.setScalar(Math.max(.001,eased*bounce));
+  if(b!==bubbleGrab)b.position.y=b.userData.baseY+Math.sin(now*.0018+b.userData.phase)*.025;
+  b.rotation.z=Math.sin(now*.001+b.userData.phase)*.035;
+ });
+}
 bubbleRender();
-fpBubbleToggle.onclick=()=>{fpBubblePanel.hidden=!fpBubblePanel.hidden;fpBubbleToggle.setAttribute('aria-expanded',String(!fpBubblePanel.hidden));};
+fpBubbleToggle.onclick=()=>setPhysicalBubbles(!bubbleOpen);
 fpBubblePlace.onclick=()=>firstPersonBuild();
 const fpBuildButton=document.getElementById('fpBuild');
 function firstPersonBuild(){
@@ -611,12 +700,12 @@ function firstPersonBuild(){
 }
 fpBuildButton.onclick=firstPersonBuild;
 let walking=false,yaw=0,pitch=0,lastWalk=performance.now();const keys=new Set(),fpButton=document.getElementById('firstPerson');
-function exitWalk(){walking=false;fpBuildButton.hidden=true;fpBubbleUI.hidden=true;fpBubblePanel.hidden=true;playerView.visible=false;keys.clear();fpButton.textContent='🎮 First person';if(document.pointerLockElement===renderer.domElement)document.exitPointerLock();resumeFly();}
-fpButton.onclick=()=>{if(walking){exitWalk();return;}if(flying)exitFly();walking=true;fpBuildButton.hidden=false;fpBubbleUI.hidden=false;playerView.visible=true;playerView.position.copy(camera.position);select(null);orbit.enabled=false;transform.visible=false;fpButton.textContent='Exit first person';const direction=new THREE.Vector3();camera.getWorldDirection(direction);yaw=Math.atan2(-direction.x,-direction.z);pitch=Math.asin(Math.max(-1,Math.min(1,direction.y)));camera.position.y=1.7;renderer.domElement.requestPointerLock?.().catch(()=>{status.textContent='Click the 3D view to capture your mouse.';});status.textContent='WASD move · Shift run · Mouse look · Esc exit';};
+function exitWalk(){walking=false;fpBuildButton.hidden=true;fpBubbleUI.hidden=true;setPhysicalBubbles(false);playerView.visible=false;keys.clear();fpButton.textContent='🎮 First person';if(document.pointerLockElement===renderer.domElement)document.exitPointerLock();resumeFly();}
+fpButton.onclick=()=>{if(walking){exitWalk();return;}if(flying)exitFly();walking=true;fpBuildButton.hidden=false;fpBubbleUI.hidden=false;playerView.visible=true;playerView.position.copy(camera.position);select(null);orbit.enabled=false;transform.visible=false;fpButton.textContent='Exit first person';const direction=new THREE.Vector3();camera.getWorldDirection(direction);yaw=Math.atan2(-direction.x,-direction.z);pitch=Math.asin(Math.max(-1,Math.min(1,direction.y)));camera.position.y=1.7;if(!matchMedia('(pointer:coarse)').matches)renderer.domElement.requestPointerLock?.().catch(()=>{status.textContent='Click the 3D view to capture your mouse.';});status.textContent='WASD move · Shift run · Mouse look · Esc exit';};
 document.addEventListener('keydown',e=>{if(walking&&['KeyW','KeyA','KeyS','KeyD','ShiftLeft','ShiftRight'].includes(e.code)){keys.add(e.code);e.preventDefault();}if(walking&&e.code==='KeyB'&&!e.repeat&&!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName)){firstPersonBuild();e.preventDefault();}if(walking&&e.code==='Escape')exitWalk();});
 document.addEventListener('keyup',e=>keys.delete(e.code));
 document.addEventListener('mousemove',e=>{if(!walking||document.pointerLockElement!==renderer.domElement)return;yaw-=e.movementX*.002;pitch=Math.max(-1.45,Math.min(1.45,pitch-e.movementY*.002));});
-document.addEventListener('pointerlockchange',()=>{if(walking&&document.pointerLockElement!==renderer.domElement)exitWalk();});
+document.addEventListener('pointerlockchange',()=>{if(walking&&document.pointerLockElement!==renderer.domElement&&!bubbleOpen&&!matchMedia('(pointer:coarse)').matches)exitWalk();});
 // Clicking the canvas no longer starts mouse capture / click-to-fly. First Person uses its dedicated button.
 window.addEventListener('blur',()=>keys.clear());
 let lastPresence=0;function walkFrame(now){if(now-lastPresence>180&&(walking||flying)){lastPresence=now;window.dispatchEvent(new CustomEvent('mb-presence-position',{detail:{x:camera.position.x,y:camera.position.y,z:camera.position.z,yaw}}));}const dt=Math.min(.05,(now-lastWalk)/1000);lastWalk=now;
@@ -626,7 +715,7 @@ function resize(){const rect=viewport.getBoundingClientRect();const w=Math.max(1
 add('box');orbit.update();
 const diagnostics=document.getElementById('diagnostics');let frames=0,renderError='';
 function updateDiagnostics(){const rect=renderer.domElement.getBoundingClientRect();const gl=renderer.getContext();diagnostics.textContent='3D diagnostic\nObjects: '+objects.length+' | Frames: '+frames+'\nCanvas: '+Math.round(rect.width)+' × '+Math.round(rect.height)+'\nWebGL: '+(gl.isContextLost()?'LOST':'active')+(renderError?'\nError: '+renderError:'');}
-function animate(now){requestAnimationFrame(animate);try{walkFrame(now||performance.now());if(!walking&&!flying)orbit.update();renderer.render(scene,camera);frames++;if(frames%60===0)updateDiagnostics();}catch(err){renderError=err.message;status.textContent='3D rendering error: '+err.message;console.error('Shapes & Colours rendering:',err);updateDiagnostics();}}updateDiagnostics();animate();
+function animate(now){requestAnimationFrame(animate);try{walkFrame(now||performance.now());animatePhysicalBubbles(now||performance.now());if(!walking&&!flying)orbit.update();renderer.render(scene,camera);frames++;if(frames%60===0)updateDiagnostics();}catch(err){renderError=err.message;status.textContent='3D rendering error: '+err.message;console.error('Shapes & Colours rendering:',err);updateDiagnostics();}}updateDiagnostics();animate();
 </script><script>
 (function(){
  const button=document.getElementById('mbToggle'),panel=document.getElementById('multiBuilderPanel');
