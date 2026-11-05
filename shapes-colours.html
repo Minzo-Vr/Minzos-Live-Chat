@@ -51,14 +51,16 @@ scene.add(new THREE.HemisphereLight(0xffffff,0x465675,2));const sun=new THREE.Di
 const grid=new THREE.GridHelper(30,30,0x6b84ad,0x35445d);scene.add(grid);scene.add(new THREE.AxesHelper(2));
 let objects=[],selected=null,serial=0;
 const mbKinds=new Set(['box','sphere','cylinder','cone','torus','plane','imported']);let mbActive=false,mbRemote=false,mbPublish=null,mbRemove=null;
-const mbNotify=mesh=>{if(!mbActive||mbRemote||!mesh||!mbKinds.has(mesh.userData.kind))return;mesh.userData.mbId||='o'+crypto.randomUUID().replace(/-/g,'');mesh.userData.mbLocalOwner=true;mesh.userData.mbPlacedAt??=Date.now();mbPublish?.(mesh.userData.mbId,{kind:mesh.userData.kind,name:mesh.name.slice(0,80),color:'#'+mesh.material.color.getHexString(),position:mesh.position.toArray(),rotation:[mesh.rotation.x,mesh.rotation.y,mesh.rotation.z].map(v=>Math.round(v/(Math.PI/2))*(Math.PI/2)),scale:mesh.scale.toArray(),...(mesh.userData.kind==='imported'?{yeepsPath:mesh.userData.yeepsPath}: {})});};
+const mbNotify=mesh=>{if(!mbActive||mbRemote||!mesh||!mbKinds.has(mesh.userData.kind))return;if(yeepsMode&&mesh.userData.kind==='imported'&&!transform.dragging)snapYeeps(mesh);mesh.userData.mbId||='o'+crypto.randomUUID().replace(/-/g,'');mesh.userData.mbLocalOwner=true;mesh.userData.mbPlacedAt??=Date.now();mbPublish?.(mesh.userData.mbId,{kind:mesh.userData.kind,name:mesh.name.slice(0,80),color:'#'+mesh.material.color.getHexString(),position:mesh.position.toArray(),rotation:[mesh.rotation.x,mesh.rotation.y,mesh.rotation.z].map(v=>Math.round(v/(Math.PI/2))*(Math.PI/2)),scale:mesh.scale.toArray(),...(mesh.userData.kind==='imported'?{yeepsPath:mesh.userData.yeepsPath}: {})});};
 window.addEventListener('mb-connected',e=>{
  // Joining a room must not destroy blocks already placed in the local scene.
  // Remote objects arrive separately through mb-object events.
  mbActive=true;
  mbPublish=e.detail.publish;
  mbRemove=e.detail.remove;
- status.textContent='MultiBuilder connected · existing blocks preserved';
+ status.textContent='MultiBuilder connected · loading shared Yeeps blocks…';
+ if(!yeepsZipArchive)loadReleaseYeepsBlocks().catch(error=>{status.textContent='Shared blocks need the Yeeps ZIP: '+error.message;});
+ else flushSharedYeeps();
 });
 window.addEventListener('mb-disconnected',()=>{mbActive=false;mbPublish=null;mbRemove=null;mbPendingAssets.clear();mbLoadingAssets.clear();});
 const mbPendingAssets=new Map();
@@ -68,6 +70,7 @@ function applySharedTransform(mesh,data){
  mesh.position.fromArray(data.position||[0,1,0]);
  mesh.rotation.set(...(data.rotation||[0,0,0]).map(v=>Math.round(v/(Math.PI/2))*(Math.PI/2)));
  mesh.scale.fromArray(data.scale||[1,1,1]);
+ if(yeepsMode&&mesh.userData.kind==='imported')snapYeeps(mesh);
  refreshList();if(mesh===selected)refreshProperties();
 }
 const mbLoadingAssets=new Set();
@@ -104,8 +107,8 @@ window.addEventListener('mb-object',e=>{
  if(!mbKinds.has(data.kind))return;
  if(data.kind==='imported'){
   const existing=objects.find(o=>o.userData.mbId===id);
-  if(existing){applySharedTransform(existing,data);return;}
-  mbPendingAssets.set(id,data);flushSharedYeeps();return;
+  if(existing){if(!existing.userData.mbLocalOwner)applySharedTransform(existing,data);return;}
+  mbPendingAssets.set(id,data);if(!yeepsZipArchive)loadReleaseYeepsBlocks().catch(error=>{status.textContent='Cannot load shared blocks: '+error.message;});flushSharedYeeps();return;
  }
  mbRemote=true;
  try{
@@ -147,9 +150,12 @@ async function loadYeepsArchive(source){
 yeepsZipInput.addEventListener('change',async event=>{
  const file=event.target.files?.[0];if(file)await loadYeepsArchive(file);
 });
-document.getElementById('loadReleaseBlocks').addEventListener('click',async()=>{
+let releaseBlocksPromise=null;
+async function loadReleaseYeepsBlocks(){
+ if(yeepsZipArchive)return;
+ if(releaseBlocksPromise)return releaseBlocksPromise;
  yeepsCount.textContent='Checking release…';
- try{
+ releaseBlocksPromise=(async()=>{
   const response=await fetch('https://api.github.com/repos/Minzo-Vr/Minzos-Live-Chat/releases/tags/Yeeps-File');
   if(!response.ok)throw Error('unavailable');
   const release=await response.json();
@@ -158,8 +164,11 @@ document.getElementById('loadReleaseBlocks').addEventListener('click',async()=>{
   const download=await fetch(asset.browser_download_url);
   if(!download.ok)throw Error('unavailable');
   await loadYeepsArchive(await download.arrayBuffer());
- }catch(error){yeepsCount.textContent='Unable to load block library.';status.textContent='Unable to load block library.';}
-});
+  if(!yeepsZipArchive)throw Error('ZIP could not be loaded');
+ })();
+ try{await releaseBlocksPromise;}finally{releaseBlocksPromise=null;}
+}
+document.getElementById('loadReleaseBlocks').addEventListener('click',()=>loadReleaseYeepsBlocks().catch(error=>{yeepsCount.textContent='Unable to load block library.';status.textContent='Unable to load block library: '+error.message;}));
 async function placeYeepsBlock(item,options={}){
  if(yeepsBusy||!yeepsZipArchive)return null;yeepsBusy=true;status.textContent='Loading '+item.label+'…';
  try{
@@ -371,7 +380,7 @@ function setYeepsMode(enabled){
  yeepsButton.setAttribute('aria-pressed',String(enabled));
  yeepsButton.textContent='🧱 Yeeps Mode: '+(enabled?'On':'Off');
  if(typeof walking!=='undefined'&&walking){fpBubbleUI.hidden=!enabled;hud.hidden=!enabled;if(!enabled)setPhysicalBubbles(false);}
- if(enabled){objects.forEach(snapYeeps);refreshProperties();}
+ if(enabled){objects.forEach(mesh=>{snapYeeps(mesh);if(mesh.userData.mbLocalOwner)mbNotify(mesh);});refreshProperties();}
  status.textContent=enabled?'Yeeps grid enabled · drag blocks to snap into each square':'Free editing enabled';
 }
 yeepsButton.addEventListener('click',()=>setYeepsMode(!yeepsMode));
