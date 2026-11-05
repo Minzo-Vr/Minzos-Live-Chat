@@ -561,12 +561,35 @@ for(const [leg,side] of [[playerLeftLeg,-1],[playerRightLeg,1]]){
 // Load a real Yeeps GLB into the first-person body slot; keep it local to the user's browser.
 const avatarInput=document.getElementById('fpAvatarFile'),avatarButton=document.getElementById('fpAvatar');
 let customAvatar=null;
-avatarButton.onclick=()=>avatarInput.click();
-avatarInput.onchange=async()=>{
- const file=avatarInput.files?.[0];if(!file)return;
- if(!/\.glb$/i.test(file.name)||file.size>15*1024*1024){status.textContent='Choose a .glb avatar under 15 MB.';return;}
+const avatarStore='shapes-colours-yeeps-avatar';
+function avatarDatabase(){
+ return new Promise((resolve,reject)=>{
+  const request=indexedDB.open(avatarStore,1);
+  request.onupgradeneeded=()=>{request.result.createObjectStore('models');};
+  request.onsuccess=()=>resolve(request.result);
+  request.onerror=()=>reject(request.error);
+ });
+}
+async function saveAvatar(buffer){
+ const db=await avatarDatabase();
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction('models','readwrite');tx.objectStore('models').put(buffer,'player');
+  tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};
+ });
+}
+async function restoreAvatar(){
  try{
-  const buffer=await file.arrayBuffer();
+  const db=await avatarDatabase();
+  const buffer=await new Promise((resolve,reject)=>{
+   const tx=db.transaction('models','readonly');const request=tx.objectStore('models').get('player');
+   request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);
+  });db.close();
+  if(buffer)await applyAvatar(buffer,false);
+ }catch(error){console.warn('Saved avatar unavailable:',error);}
+}
+avatarButton.onclick=()=>avatarInput.click();
+async function applyAvatar(buffer,persist=true){
+ try{
   const gltf=await new Promise((resolve,reject)=>new GLTFLoader().parse(buffer,'',resolve,reject));
   const model=gltf.scene;
   model.updateMatrixWorld(true);
@@ -576,13 +599,20 @@ avatarInput.onchange=async()=>{
   const fitted=new THREE.Box3().setFromObject(model),center=fitted.getCenter(new THREE.Vector3());
   model.position.x-=center.x;model.position.z-=center.z;model.position.y+=-1.65-fitted.min.y;
   if(customAvatar)playerView.remove(customAvatar);
-  customAvatar=model;customAvatar.visible=false;playerView.add(model);
+  customAvatar=model;customAvatar.visible=true;playerView.add(model);
   for(const part of [playerLeftArm,playerRightArm])part.visible=true;
   for(const part of [playerLeftLeg,playerRightLeg])part.visible=false;
   playerView.children.forEach(child=>{if(child.isMesh&&child!==model)child.visible=false;});
-  status.textContent='Avatar loaded; first-person view shows arms and hands only.';
+  if(persist){try{await saveAvatar(buffer);}catch(error){console.warn('Could not save avatar locally:',error);}}
+  status.textContent='Your Yeeps player model is ready'+(persist?' and saved on this device.':'.');
  }catch(error){status.textContent='Could not load Yeeps avatar: '+error.message;}
+}
+avatarInput.onchange=async()=>{
+ const file=avatarInput.files?.[0];if(!file)return;
+ if(!/\.glb$/i.test(file.name)||file.size>15*1024*1024){status.textContent='Choose a .glb avatar under 15 MB.';return;}
+ await applyAvatar(await file.arrayBuffer());
 };
+restoreAvatar();
 const fpBubbleUI=document.getElementById('fpBubbleUI'),fpBubblePanel=document.getElementById('fpBubblePanel'),fpBubbleToggle=document.getElementById('fpBubbleToggle'),fpBubblePlace=document.getElementById('fpBubblePlace');
 const fpBubbleCategories=document.getElementById('fpBubbleCategories'),fpBubbleItems=document.getElementById('fpBubbleItems');
 const bubbleCatalog={
