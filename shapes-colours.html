@@ -737,7 +737,9 @@ async function firstPersonBuild(){
  if(hits.length){target.copy(hits[0].point).addScaledVector(hits[0].face?.normal?.clone().transformDirection(hits[0].object.matrixWorld)||direction,.55);}
  else target.copy(camera.position).addScaledVector(direction,3);
  if(yeepsMode){target.x=Math.round(target.x);target.y=Math.max(.5,Math.round(target.y-.5)+.5);target.z=Math.round(target.z);}
- if(!yeepsZipArchive||!yeepsBubbleChoice){missingYeepsAssets();return;}\n await placeYeepsBlock(yeepsBubbleChoice);\n if(selected){selected.position.copy(target);mbNotify(selected);}
+ if(!yeepsZipArchive||!yeepsBubbleChoice){missingYeepsAssets();return;}
+ await placeYeepsBlock(yeepsBubbleChoice);
+ if(selected){selected.position.copy(target);mbNotify(selected);}
  // Stay in first-person instead of opening the editor transform handles.
  select(null);transform.visible=false;status.textContent='Block placed · Press B or Build to place another';
 }
