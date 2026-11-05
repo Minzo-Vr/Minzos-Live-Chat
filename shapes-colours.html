@@ -598,10 +598,11 @@ async function applyAvatar(buffer,persist=true){
   const scale=1.55/size.y;model.scale.multiplyScalar(scale);model.updateMatrixWorld(true);
   const fitted=new THREE.Box3().setFromObject(model),center=fitted.getCenter(new THREE.Vector3());
   model.position.x-=center.x;model.position.z-=center.z;model.position.y+=-1.65-fitted.min.y;
+  // Keep the imported body slightly behind the eye point so the camera does not clip through its face.
+  model.position.z-=.18;
   if(customAvatar)playerView.remove(customAvatar);
   customAvatar=model;customAvatar.visible=true;playerView.add(model);
-  for(const part of [playerLeftArm,playerRightArm])part.visible=true;
-  for(const part of [playerLeftLeg,playerRightLeg])part.visible=false;
+  for(const part of [playerLeftArm,playerRightArm,playerLeftLeg,playerRightLeg])part.visible=false;
   playerView.children.forEach(child=>{if(child.isMesh&&child!==model)child.visible=false;});
   if(persist){try{await saveAvatar(buffer);}catch(error){console.warn('Could not save avatar locally:',error);}}
   status.textContent='Your Yeeps player model is ready'+(persist?' and saved on this device.':'.');
