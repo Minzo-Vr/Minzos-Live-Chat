@@ -74,6 +74,8 @@ async function receiveSharedYeeps(id,data){
  try{
   const mesh=await placeYeepsBlock(item,{remote:true});
   if(!mesh)return;
+  // An object may have been removed while its GLB was loading.
+  if(!mbActive||mbPendingAssets.get(id)===null){remove(mesh);return;}
   mesh.userData.mbId=id;applySharedTransform(mesh,data);
   mbPendingAssets.delete(id);
  }finally{mbRemote=false;}
@@ -85,11 +87,15 @@ window.addEventListener('mb-object',e=>{
  if(!mbActive)return;const {id,data}=e.detail;
  if(data===null){mbPendingAssets.delete(id);const mesh=objects.find(o=>o.userData.mbId===id);if(mesh){mbRemote=true;try{remove(mesh);}finally{mbRemote=false;}}return;}
  if(!mbKinds.has(data.kind))return;
- if(data.kind==='imported'){receiveSharedYeeps(id,data).catch(console.error);return;}
+ if(data.kind==='imported'){
+  const existing=objects.find(o=>o.userData.mbId===id);
+  if(existing){applySharedTransform(existing,data);return;}
+  mbPendingAssets.set(id,data);flushSharedYeeps();return;
+ }
  mbRemote=true;
  try{
   let mesh=objects.find(o=>o.userData.mbId===id);
-  if(!mesh){mesh=add(data.kind,data);mesh.userData.mbId=id;}
+  if(!mesh){mesh=add(data.kind,data);mesh.userData.mbId=id;mesh.visible=!yeepsMode;}
   else applySharedTransform(mesh,data);
  }finally{mbRemote=false;}
 });
@@ -190,7 +196,7 @@ async function placeYeepsBlock(item,options={}){
    for(const part of combined.slice(1)){objects=objects.filter(o=>o!==part);main.attach(part);}
   }
   if(!options.remote)select(combined[0]);
-  if(!options.remote)mbNotify(combined[0]);
+  if(!options.remote){mbNotify(combined[0]);}
   if(!options.remote)status.textContent='Placed '+item.label+' · '+dims[0]+'×'+dims[2]+' grid · '+combined.length+' mesh(es)';
   return combined[0];
  }catch(error){console.error(error);status.textContent='Could not place block: '+error.message;return null;}finally{yeepsBusy=false;if(mbPendingAssets.size)setTimeout(flushSharedYeeps,100);}
@@ -346,6 +352,7 @@ function setYeepsMode(enabled){
  // Switching build palettes must never delete existing shared or local objects.
  yeepsMode=enabled;document.body.classList.toggle("yeeps-font-mode",enabled);yeepsGrid.visible=enabled;yeepsScenery.visible=enabled;
  document.getElementById('yeepsLibrary').hidden=!enabled;
+ for(const mesh of objects){if(mbKinds.has(mesh.userData.kind)&&mesh.userData.kind!=='imported')mesh.visible=!enabled;}
  yeepsButton.setAttribute('aria-pressed',String(enabled));
  yeepsButton.textContent='🧱 Yeeps Mode: '+(enabled?'On':'Off');
  if(typeof walking!=='undefined'&&walking){fpBubbleUI.hidden=!enabled;hud.hidden=!enabled;if(!enabled)setPhysicalBubbles(false);}
@@ -799,9 +806,9 @@ async function firstPersonBuild(){
  else target.copy(camera.position).addScaledVector(direction,3);
  if(yeepsMode){target.x=Math.round(target.x);target.y=Math.max(.5,Math.round(target.y-.5)+.5);target.z=Math.round(target.z);}
  if(yeepsMode){
-  if(yeepsZipArchive&&yeepsBubbleChoice){await placeYeepsBlock(yeepsBubbleChoice);if(selected){selected.position.copy(target);mbNotify(selected);}}
-  else{const item=bubbleChoice;const mesh=add(item[2],{position:target.toArray()});if(item[3])mesh.scale.set(...item[3]);snapYeeps(mesh);mbNotify(mesh);}
- }else add('box',{position:target.toArray()});
+  if(yeepsZipArchive&&yeepsBubbleChoice){const mesh=await placeYeepsBlock(yeepsBubbleChoice);if(mesh){mesh.position.copy(target);snapYeeps(mesh);mbNotify(mesh);}}
+  else{status.textContent='Load the Yeeps asset library to place Yeeps blocks.';return;}
+ }else{status.textContent='Enable Yeeps Mode to build with Yeeps assets.';return;}
  // Stay in first-person instead of opening the editor transform handles.
  select(null);transform.visible=false;status.textContent='Block placed · Press B or Build to place another';
 }
