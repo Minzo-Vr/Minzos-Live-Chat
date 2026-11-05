@@ -493,18 +493,18 @@ function exitFly(){flying=false;flyLooking=false;flyKeys.clear();}
 function resumeFly(){flying=true;flyLooking=false;flyKeys.clear();syncFlyAngles();orbit.enabled=false;transform.visible=true;}
 renderer.domElement.addEventListener('contextmenu',e=>e.preventDefault());
 // Left-drag or right-drag to look; a simple left click still selects objects.
-let lookPointer=null,lookStartX=0,lookStartY=0,lookLastX=0,lookLastY=0;
+let flyLookPointer=null,lookStartX=0,lookStartY=0,lookLastX=0,lookLastY=0;
 renderer.domElement.addEventListener('pointerdown',e=>{
  if(!flying||(e.button!==0&&e.button!==2)||e.pointerType==='touch')return;
- lookPointer=e.pointerId;lookStartX=lookLastX=e.clientX;lookStartY=lookLastY=e.clientY;
+ flyLookPointer=e.pointerId;lookStartX=lookLastX=e.clientX;lookStartY=lookLastY=e.clientY;
  flyLooking=e.button===2;
  if(e.button===2)e.preventDefault();
 });
-renderer.domElement.addEventListener('pointerup',e=>{if(e.pointerId===lookPointer){lookPointer=null;flyLooking=false;}});
-renderer.domElement.addEventListener('lostpointercapture',()=>{lookPointer=null;flyLooking=false;});
-document.addEventListener('pointerup',e=>{if(e.pointerId===lookPointer){lookPointer=null;flyLooking=false;}});
+renderer.domElement.addEventListener('pointerup',e=>{if(e.pointerId===flyLookPointer){flyLookPointer=null;flyLooking=false;}});
+renderer.domElement.addEventListener('lostpointercapture',()=>{flyLookPointer=null;flyLooking=false;});
+document.addEventListener('pointerup',e=>{if(e.pointerId===flyLookPointer){flyLookPointer=null;flyLooking=false;}});
 renderer.domElement.addEventListener('pointermove',e=>{
- if(!flying||e.pointerId!==lookPointer)return;
+ if(!flying||e.pointerId!==flyLookPointer)return;
  const dx=e.clientX-lookLastX,dy=e.clientY-lookLastY;
  if(!flyLooking&&Math.hypot(e.clientX-lookStartX,e.clientY-lookStartY)>5)flyLooking=true;
  if(flyLooking){flyYaw-=dx*.003;flyPitch=Math.max(-1.55,Math.min(1.55,flyPitch-dy*.003));e.preventDefault();}
