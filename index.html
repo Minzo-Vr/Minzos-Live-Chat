@@ -852,6 +852,19 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
 #hubAccountClose{float:right;background:#324363;color:white;border:1px solid #8293b6;border-radius:9px;padding:7px 12px}
 #hubAccountCard h2{margin-top:6px}
 @media(max-width:620px){#gatewayAccountButton{top:9px;right:9px;padding:8px 10px;font-size:12px}.gateway-main{padding-top:65px}}
+/* Mobile gateway: prevent overlays, narrow columns and scroll containers from blocking taps. */
+.gateway-options{position:relative;z-index:2;-webkit-overflow-scrolling:touch}
+.gateway-option:is(button,a){position:relative;touch-action:manipulation;pointer-events:auto;min-height:66px;flex-shrink:0;text-decoration:none;-webkit-tap-highlight-color:#a5d8ff55}
+@media(max-width:620px){
+ #interfaceGateway{padding:0;overflow:hidden}
+ #gatewaySelection{width:100%;height:100%;min-height:0;overflow:hidden}
+ .gateway-sidebar{width:54px!important;padding:12px 5px!important}
+ .gateway-sidebar:not(.is-collapsed){width:min(42vw,190px)!important}
+ .gateway-main{min-height:0;justify-content:flex-start;overflow-y:auto;padding:78px 12px 18px!important}
+ .gateway-options{width:100%;max-height:none;overflow-y:visible;padding:6px 3px 24px}
+ .gateway-option:is(button,a){font-size:16px;padding:15px 12px}
+ .gateway-icon{font-size:23px}
+}
 </style>
 </head>
 <body>
@@ -883,8 +896,8 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
    <div class="gateway-options" tabindex="0" aria-label="Scroll through interfaces">
     <button class="gateway-option" type="button" id="gatewayOpenChat"><span class="gateway-icon">💬</span><span>Chats<small>Enter Community Chat</small></span></button>
     <button class="gateway-option" type="button" id="gatewayOpenAI"><span class="gateway-icon">🤖</span><span>AI (Admin Only)<small>Ask AI questions or import a conversation</small></span></button>
-    <button class="gateway-option" type="button" id="gatewayOpenShapes" onclick="location.href='shapes-colours.html'"><span class="gateway-icon">🎨</span><span>Shapes &amp; Colours<small>Build and colour 3D objects</small></span></button>
-    <button class="gateway-option" type="button" id="gatewayOpenUpdates" onclick="location.href='update-centre.html'"><span class="gateway-icon">📦</span><span>Update Centre<small>Downloads, update history &amp; file uploads</small></span></button>
+    <a class="gateway-option" id="gatewayOpenShapes" href="shapes-colours.html"><span class="gateway-icon">🎨</span><span>Shapes &amp; Colours<small>Build and colour 3D objects</small></span></a>
+    <a class="gateway-option" id="gatewayOpenUpdates" href="update-centre.html"><span class="gateway-icon">📦</span><span>Update Centre<small>Downloads, update history &amp; file uploads</small></span></a>
     <div class="gateway-option" aria-disabled="true"><span class="gateway-icon">🔒</span><span>???<small>Coming soon</small></span></div>
    </div>
   </main>
