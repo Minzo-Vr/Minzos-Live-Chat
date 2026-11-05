@@ -353,17 +353,15 @@ function setYeepsMode(enabled){
  status.textContent=enabled?'Yeeps grid enabled · drag blocks to snap into each square':'Free editing enabled';
 }
 yeepsButton.addEventListener('click',()=>setYeepsMode(!yeepsMode));
-// Snap continuously while dragging, not just after releasing the mouse.
-let snappingYeeps=false;
-transform.addEventListener('objectChange',()=>{
- if(!yeepsMode||!selected||snappingYeeps||transform.getMode()!=='translate')return;
- snappingYeeps=true;
+// Let TransformControls follow the pointer continuously. Snapping the mesh inside
+// objectChange caused its drag origin to shift on every mouse movement, producing
+// exaggerated motion and pointer drift. Snap once after releasing instead.
+transform.addEventListener('mouseUp',()=>{
+ if(!selected||!yeepsMode||transform.getMode()!=='translate')return;
  snapYeeps(selected);
  refreshProperties();
- snappingYeeps=false;
+ mbNotify(selected);
 });
-transform.addEventListener('mouseUp',()=>{if(selected&&yeepsMode){snapYeeps(selected);refreshProperties();}});
-
 
 const geometry=kind=>({box:()=>new THREE.BoxGeometry(1.5,1.5,1.5),sphere:()=>new THREE.SphereGeometry(1,32,20),cylinder:()=>new THREE.CylinderGeometry(.9,.9,1.8,32),cone:()=>new THREE.ConeGeometry(1,2,32),torus:()=>new THREE.TorusGeometry(1,.3,16,64),plane:()=>new THREE.PlaneGeometry(2,2)})[kind]?.();
 function add(kind,data){const mesh=new THREE.Mesh(geometry(kind),new THREE.MeshStandardMaterial({color:data?.color||'#7c9cff',roughness:.6,side:THREE.DoubleSide}));mesh.userData.kind=kind;mesh.name=data?.name||kind[0].toUpperCase()+kind.slice(1)+' '+(++serial);mesh.position.fromArray(data?.position||[0,kind==='plane'?.01:1,0]);mesh.rotation.set(...(data?.rotation||[kind==='plane'?-Math.PI/2:0,0,0]).map(v=>Math.round(v/(Math.PI/2))*(Math.PI/2)));mesh.scale.fromArray(data?.scale||[1,1,1]);scene.add(mesh);objects.push(mesh);snapYeeps(mesh);select(mesh);mbNotify(mesh);return mesh;}
