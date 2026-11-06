@@ -55,7 +55,7 @@ transform.addEventListener('dragging-changed',e=>{
  if(e.value){transformDraggingObject=selected;transformDragMoved=false;return;}
  const mesh=transformDraggingObject;transformDraggingObject=null;
  if(!mesh||!transformDragMoved)return;
- if(yeepsMode&&gridSnapEnabled&&transform.getMode()==='translate')snapYeeps(mesh);
+ if(gridSnapEnabled&&transform.getMode()==='translate')snapYeeps(mesh);
  mesh.updateMatrixWorld(true);
  mesh.userData.mbStarter=false;
  if(mesh===selected)refreshProperties();
@@ -68,6 +68,10 @@ transform.addEventListener('objectChange',()=>{
  if(transform.getMode()==='rotate'){
   for(const axis of ['x','y','z'])selected.rotation[axis]=Math.round(selected.rotation[axis]/(Math.PI/2))*(Math.PI/2);
  }
+ // TransformControls' built-in snapping rounds mesh centres to integers,
+ // which misaligns 1x1 Yeeps footprints. Snap the actual block footprint
+ // instead, without publishing intermediate drag positions to Firebase.
+ if(transform.getMode()==='translate'&&gridSnapEnabled)snapYeeps(selected);
  selected.updateMatrixWorld(true);
  refreshProperties();
  if(transform.dragging)transformDragMoved=true;
@@ -315,20 +319,21 @@ const yeepsButton=document.getElementById('yeepsMode');
 const gridSnapButton=document.getElementById('gridSnap');
 let gridSnapEnabled=true;
 function updateGridSnap(){
- // Three.js performs translation snapping inside TransformControls, so
- // moving the gizmo never depends on manually rewriting object.position.
- transform.setTranslationSnap(yeepsMode&&gridSnapEnabled?1:null);
- gridSnapButton.disabled=!yeepsMode;
+ // A centre-aligned 1-unit translation snap is not correct for odd-width
+ // Yeeps blocks, so use the footprint-aware snapYeeps function instead.
+ transform.setTranslationSnap(null);
+ gridSnapButton.disabled=false;
  gridSnapButton.textContent='🧲 Snap: '+(gridSnapEnabled?'On':'Off');
  gridSnapButton.setAttribute('aria-pressed',String(gridSnapEnabled));
- gridSnapButton.title=yeepsMode?'Snap while dragging; final placement aligns the whole block to the Yeeps grid':'Enable Yeeps Mode to use grid snapping';
+ gridSnapButton.title=gridSnapEnabled?'Snap to grid cells as you drag (click to turn off)':'Move freely (click to turn snapping on)';
 }
 gridSnapButton.addEventListener('click',()=>{
  gridSnapEnabled=!gridSnapEnabled;
  updateGridSnap();
- if(gridSnapEnabled&&yeepsMode&&selected){snapYeeps(selected);refreshProperties();mbNotify(selected);}
- status.textContent='Yeeps grid snapping '+(gridSnapEnabled?'enabled':'disabled');
+ if(gridSnapEnabled&&selected){snapYeeps(selected);refreshProperties();mbNotify(selected);}
+ status.textContent='Grid snapping '+(gridSnapEnabled?'enabled':'disabled');
 });
+updateGridSnap();
 const yeepsGrid=new THREE.GridHelper(40,40,0x69d6ff,0x2a7b91);
 yeepsGrid.position.y=0.035;yeepsGrid.visible=false;scene.add(yeepsGrid);
 // Decorative Yeeps-inspired landscape: separate from editable blocks.
@@ -458,17 +463,28 @@ function yeepsDimensions(mesh){
  return match?[Number(match[1]),Number(match[3]||1),Number(match[2])]:[1,1,1];
 }
 function snapYeeps(mesh){
- if(!yeepsMode||!gridSnapEnabled||!mesh)return;
- const [w,h,d]=yeepsDimensions(mesh);
- // Snap to whole grid cells, then clamp the complete block footprint
- // inside the 40x40 Yeeps grid (from -20 to +20 on both axes).
- const halfGrid=20;
+ if(!gridSnapEnabled||!mesh)return;
+ const gridLimit=20;
+ if(!yeepsMode){
+  // Standard Shapes & Colours mode: ordinary 1-unit grid points.
+  mesh.position.x=THREE.MathUtils.clamp(Math.round(mesh.position.x),-gridLimit,gridLimit);
+  mesh.position.z=THREE.MathUtils.clamp(Math.round(mesh.position.z),-gridLimit,gridLimit);
+  mesh.position.y=Math.max(0,Math.round(mesh.position.y));
+  return;
+ }
+ const dims=yeepsDimensions(mesh);
+ let [w,h,d]=dims;
+ // Rotate 1x2, 2x3 etc footprints correctly through 90-degree Y turns.
+ const quarterTurns=Math.round(mesh.rotation.y/(Math.PI/2));
+ if(Math.abs(quarterTurns)%2===1)[w,d]=[d,w];
+ // Cells are bounded at -20..20, but block CENTRES can land on half-cells
+ // for odd-sized footprints. Do not round block centres to whole integers.
  const snapInside=(value,size)=>{
   const footprint=Math.max(1,Math.ceil(size));
-  if(footprint>=halfGrid*2)return 0;
-  const firstCell=Math.round(value-size/2);
-  const boundedCell=THREE.MathUtils.clamp(firstCell,-halfGrid,halfGrid-footprint);
-  return boundedCell+size/2;
+  if(footprint>=gridLimit*2)return 0;
+  const cellStart=Math.round(value-size/2);
+  const clamped=THREE.MathUtils.clamp(cellStart,-gridLimit,gridLimit-footprint);
+  return clamped+size/2;
  };
  mesh.position.x=snapInside(mesh.position.x,w);
  mesh.position.z=snapInside(mesh.position.z,d);
@@ -483,7 +499,7 @@ function setYeepsMode(enabled){
  yeepsButton.textContent='🧱 Yeeps Mode: '+(enabled?'On':'Off');
  if(typeof walking!=='undefined'&&walking){fpBubbleUI.hidden=!enabled;hud.hidden=!enabled;if(!enabled)setPhysicalBubbles(false);}
  if(enabled){objects.forEach(mesh=>{snapYeeps(mesh);if(mesh.userData.mbLocalOwner)mbNotify(mesh);});refreshProperties();}
- status.textContent=enabled?(gridSnapEnabled?'Yeeps grid enabled · snapping ON while dragging':'Yeeps grid enabled · snapping OFF'):'Free editing enabled';
+ status.textContent=enabled?(gridSnapEnabled?'Yeeps grid enabled · snapping ON while dragging':'Yeeps grid enabled · snapping OFF'):'Standard editor · snapping '+(gridSnapEnabled?'ON':'OFF');
 }
 yeepsButton.addEventListener('click',()=>setYeepsMode(!yeepsMode));
 // Drag completion is handled by dragging-changed above; do not modify the
@@ -518,7 +534,7 @@ document.getElementById('combineParts').onclick=()=>{
 };
 function refreshList(){const root=document.getElementById('objects');root.replaceChildren();objects.forEach(mesh=>{const b=document.createElement('button');b.textContent=mesh.name;b.className=mesh===selected?'active':'';b.onclick=()=>select(mesh);root.append(b);});}
 function refreshProperties(){if(!selected)return;document.getElementById('name').value=selected.name;document.getElementById('color').value='#'+selected.material.color.getHexString();updatePaletteSelection();for(const [key,vec] of [['position',selected.position],['rotation',selected.rotation],['scale',selected.scale]]){for(let i=0;i<3;i++){const input=document.querySelector('[data-prop="'+key+'"][data-axis="'+i+'"]');if(input)input.value=Number((key==='rotation'?vec[['x','y','z'][i]]*180/Math.PI:vec[['x','y','z'][i]]).toFixed(3));}}}
-for(const key of ['position','rotation','scale']){const parent=document.getElementById(key);for(let i=0;i<3;i++){const label=document.createElement('label');label.textContent=['X','Y','Z'][i];const input=document.createElement('input');input.type='number';input.step=key==='rotation'?'5':'0.1';input.dataset.prop=key;input.dataset.axis=i;input.addEventListener('change',()=>{if(!selected)return;let value=Number(input.value);if(!Number.isFinite(value))return;if(key==='scale')value=Math.max(.01,value);if(key==='rotation')value=Math.round(value/90)*(Math.PI/2);selected[key][['x','y','z'][i]]=value;if(key==='position'&&yeepsMode){snapYeeps(selected);refreshProperties();}mbNotify(selected);});label.append(input);parent.append(label);}}
+for(const key of ['position','rotation','scale']){const parent=document.getElementById(key);for(let i=0;i<3;i++){const label=document.createElement('label');label.textContent=['X','Y','Z'][i];const input=document.createElement('input');input.type='number';input.step=key==='rotation'?'5':'0.1';input.dataset.prop=key;input.dataset.axis=i;input.addEventListener('change',()=>{if(!selected)return;let value=Number(input.value);if(!Number.isFinite(value))return;if(key==='scale')value=Math.max(.01,value);if(key==='rotation')value=Math.round(value/90)*(Math.PI/2);selected[key][['x','y','z'][i]]=value;if(key==='position'&&gridSnapEnabled){snapYeeps(selected);refreshProperties();}mbNotify(selected);});label.append(input);parent.append(label);}}
 document.getElementById('name').onchange=e=>{if(selected){selected.name=e.target.value.trim()||'Object';refreshList();mbNotify(selected);}};
 const yeepsColours=["#de5454","#dd6f53","#de9d53","#deb850","#88462c","#9e634e","#f3c48c","#b59b8f","#90766a","#423732","#83ba44","#479641","#2e594f","#38876c","#5cc69f","#5cc2c4","#45692d","#669941","#397d88","#81b7dc","#5d6bbc","#566078","#3364ad","#7360b0","#da89ad","#d077c2","#927edc","#bdb1f5","#babdc2","#f1f1f1","#151415","#747679","#cbcbfd","#fbfbcd","#f4c030"];
 const palette=document.getElementById('yeepsPalette');
