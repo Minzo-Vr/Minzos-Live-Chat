@@ -15,7 +15,7 @@ body.yeeps-font-mode,body.yeeps-font-mode *,body.yeeps-font-mode *::before,body.
 @media(pointer:coarse), (max-width:700px){
  header{height:auto;min-height:58px;flex-wrap:wrap;gap:6px;padding:7px}header button{min-height:42px}header h1{font-size:16px}main{height:calc(100dvh - 110px);min-height:350px;display:block;position:relative}#viewport{height:100%;min-height:0}main>aside{display:none!important;position:absolute!important;top:0!important;bottom:0!important;width:min(84vw,310px)!important;z-index:20!important;box-shadow:0 8px 28px #0009;background:#171e30!important}main>aside:first-child{left:0!important;right:auto!important}main>aside:last-child{right:0!important;left:auto!important}main>aside.mobile-open{display:block!important}#mobileBar{display:flex;position:absolute;top:8px;left:8px;right:8px;z-index:10;gap:8px;pointer-events:none}#mobileBar button{pointer-events:auto;min-height:44px;background:#243b63ee}#mobileBar button:last-child{margin-left:auto}#touchControls{display:block;position:absolute;inset:0;z-index:5;pointer-events:none}#touchStick{position:absolute;bottom:25px;left:22px;width:112px;height:112px;border-radius:50%;border:2px solid #a8bfe777;background:#263b5a99;pointer-events:auto;touch-action:none}#touchKnob{position:absolute;left:35px;top:35px;width:38px;height:38px;border-radius:50%;background:#b9d8ffbb;pointer-events:none}#touchLook{position:absolute;right:0;top:70px;width:48%;bottom:135px;touch-action:none;pointer-events:auto}#touchVertical{position:absolute;right:14px;bottom:20px;display:flex;gap:8px;pointer-events:auto}#touchVertical button{min-width:50px;min-height:52px;background:#243b63e8;touch-action:none}#hint{display:none}#toggleDiagnostics{top:62px!important;left:8px!important}#diagnosticBox{top:108px!important}button,input,select{font-size:16px}#multiBuilderPanel{top:10px!important;right:10px!important;max-height:80dvh!important}
 }
-</style></head><body><header><button id="back">← Interfaces</button><h1>🎨 Shapes &amp; Colours</h1><button id="save">Save</button><button id="load">Load JSON</button><button id="importModel" title="Import OBJ, STL, PLY, FBX, GLB, glTF or DAE models">📦 Import 3D</button><button id="yeepsMode" type="button" aria-pressed="false" title="Enable the Yeeps building grid">🧱 Yeeps Mode: Off</button><button id="gridSnap" type="button" aria-pressed="true" title="Snap Yeeps blocks to the 1-unit grid as you drag" disabled>🧲 Snap: On</button><button id="reset">New scene</button><button id="firstPerson" type="button">🎮 First person</button><button id="fpBuild" type="button" hidden title="Place a block in front of you (B)">🧱 Build (B)</button><button id="fpAvatar" type="button" title="Use your own Yeeps GLB avatar">👤 Load Yeeps avatar</button><input id="fpAvatarFile" type="file" accept=".glb,model/gltf-binary" hidden><button id="mbToggle" type="button" aria-expanded="false" aria-controls="multiBuilderPanel">🌐 MultiBuilder</button><span id="status">Ready</span><input id="file" type="file" accept=".json,application/json" hidden><input id="modelFile" type="file" accept=".obj,.stl,.ply,.fbx,.glb,.gltf,.dae" hidden></header><main><aside><section id="multiBuilderPanel" hidden role="dialog" aria-label="MultiBuilder room controls" style="position:fixed;top:70px;right:12px;width:min(340px,calc(100vw - 24px));max-height:calc(100dvh - 82px);overflow:auto;z-index:50;background:#171e30;box-shadow:0 16px 40px #0009;border:1px solid #536382;border-radius:12px;padding:14px"><h2>🌐 MultiBuilder</h2><p class="muted">Live collaborative basic-shape building. Google sign-in required.</p><label>Room code<input id="mbRoom" type="text" maxlength="16" placeholder="MYBUILD24"></label><div style="display:flex;gap:6px;flex-wrap:wrap"><button id="mbJoin" type="button">Join / Create</button><button id="mbLeave" type="button" disabled>Leave</button><button id="mbCopy" type="button">Copy link</button></div><p id="mbStatus" class="muted" role="status">Offline — local editing.</p><p id="mbMembers" class="muted"></p></section><p class="muted">🧱 Yeeps Mode: load your ZIP to build with blocks such as <strong>1x1_wooden.glb</strong>.</p><section id="yeepsLibrary" hidden><h2>Yeeps blocks</h2><p class="muted">Load blocks from the latest release or choose a ZIP below.</p><p><a href="https://github.com/Minzo-Vr/Minzos-Live-Chat/releases/tag/Yeeps-File" target="_blank" rel="noopener noreferrer" style="color:#8bd9ff">📦 Open block releases</a></p><button id="loadReleaseBlocks" type="button">Load blocks from release</button><input id="yeepsZip" type="file" accept=".zip,application/zip" style="max-width:100%"><input id="yeepsSearch" type="search" placeholder="Search blocks e.g. 1x1 wood" style="width:100%;margin:8px 0;padding:8px;background:#101827;color:white;border:1px solid #475569;border-radius:6px"><div id="yeepsCount" class="muted">Choose your Yeeps ZIP to begin.</div><div id="yeepsBlocks" class="stack" style="max-height:48vh;overflow:auto"></div></section><h2>Objects</h2><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px"><button id="separateParts" type="button" disabled>Separate parts</button><button id="combineParts" type="button" disabled>Combine parts</button></div><div id="objects"></div><p class="muted">Click an object to select it. Use the tools to move, rotate or resize.</p><h2>Import models</h2><p class="muted">Use <strong>📦 Import 3D</strong> above, or drag a model file into the 3D viewport.</p><p class="muted"><strong>Supported:</strong> .glb, .gltf, .obj, .fbx, .stl, .ply, .dae</p><p class="muted">For best results, export a single self-contained <strong>.glb</strong> from Blender. Native .blend, Alembic, USD and animation-only formats are not supported yet.</p></aside><div id="viewport"><div id="mobileBar"><button id="mobileBlocks" type="button" aria-expanded="false">☰ Blocks</button><button id="mobileTools" type="button" aria-expanded="false">🛠 Tools</button></div><div id="fpBubbleUI" hidden style="position:absolute;z-index:12;right:12px;bottom:108px;display:flex;flex-direction:column;align-items:flex-end;gap:9px;max-width:min(90vw,340px);font:14px system-ui">
+</style></head><body><header><button id="back">← Interfaces</button><h1>🎨 Shapes &amp; Colours</h1><button id="save">Save</button><button id="load">Load JSON</button><button id="importModel" title="Import OBJ, STL, PLY, FBX, GLB, glTF or DAE models">📦 Import 3D</button><button id="yeepsMode" type="button" aria-pressed="false" title="Enable the Yeeps building grid">🧱 Yeeps Mode: Off</button><button id="reset">New scene</button><button id="firstPerson" type="button">🎮 First person</button><button id="fpBuild" type="button" hidden title="Place a block in front of you (B)">🧱 Build (B)</button><button id="fpAvatar" type="button" title="Use your own Yeeps GLB avatar">👤 Load Yeeps avatar</button><input id="fpAvatarFile" type="file" accept=".glb,model/gltf-binary" hidden><button id="mbToggle" type="button" aria-expanded="false" aria-controls="multiBuilderPanel">🌐 MultiBuilder</button><span id="status">Ready</span><input id="file" type="file" accept=".json,application/json" hidden><input id="modelFile" type="file" accept=".obj,.stl,.ply,.fbx,.glb,.gltf,.dae" hidden></header><main><aside><section id="multiBuilderPanel" hidden role="dialog" aria-label="MultiBuilder room controls" style="position:fixed;top:70px;right:12px;width:min(340px,calc(100vw - 24px));max-height:calc(100dvh - 82px);overflow:auto;z-index:50;background:#171e30;box-shadow:0 16px 40px #0009;border:1px solid #536382;border-radius:12px;padding:14px"><h2>🌐 MultiBuilder</h2><p class="muted">Live collaborative basic-shape building. Google sign-in required.</p><label>Room code<input id="mbRoom" type="text" maxlength="16" placeholder="MYBUILD24"></label><div style="display:flex;gap:6px;flex-wrap:wrap"><button id="mbJoin" type="button">Join / Create</button><button id="mbLeave" type="button" disabled>Leave</button><button id="mbCopy" type="button">Copy link</button></div><p id="mbStatus" class="muted" role="status">Offline — local editing.</p><p id="mbMembers" class="muted"></p></section><p class="muted">🧱 Yeeps Mode: load your ZIP to build with blocks such as <strong>1x1_wooden.glb</strong>.</p><section id="yeepsLibrary" hidden><h2>Yeeps blocks</h2><p class="muted">Load blocks from the latest release or choose a ZIP below.</p><p><a href="https://github.com/Minzo-Vr/Minzos-Live-Chat/releases/tag/Yeeps-File" target="_blank" rel="noopener noreferrer" style="color:#8bd9ff">📦 Open block releases</a></p><button id="loadReleaseBlocks" type="button">Load blocks from release</button><input id="yeepsZip" type="file" accept=".zip,application/zip" style="max-width:100%"><input id="yeepsSearch" type="search" placeholder="Search blocks e.g. 1x1 wood" style="width:100%;margin:8px 0;padding:8px;background:#101827;color:white;border:1px solid #475569;border-radius:6px"><div id="yeepsCount" class="muted">Choose your Yeeps ZIP to begin.</div><div id="yeepsBlocks" class="stack" style="max-height:48vh;overflow:auto"></div></section><h2>Objects</h2><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px"><button id="separateParts" type="button" disabled>Separate parts</button><button id="combineParts" type="button" disabled>Combine parts</button></div><div id="objects"></div><p class="muted">Click an object to select it. Use the tools to move, rotate or resize.</p><h2>Import models</h2><p class="muted">Use <strong>📦 Import 3D</strong> above, or drag a model file into the 3D viewport.</p><p class="muted"><strong>Supported:</strong> .glb, .gltf, .obj, .fbx, .stl, .ply, .dae</p><p class="muted">For best results, export a single self-contained <strong>.glb</strong> from Blender. Native .blend, Alembic, USD and animation-only formats are not supported yet.</p></aside><div id="viewport"><div id="mobileBar"><button id="mobileBlocks" type="button" aria-expanded="false">☰ Blocks</button><button id="mobileTools" type="button" aria-expanded="false">🛠 Tools</button></div><div id="fpBubbleUI" hidden style="position:absolute;z-index:12;right:12px;bottom:108px;display:flex;flex-direction:column;align-items:flex-end;gap:9px;max-width:min(90vw,340px);font:14px system-ui">
 <button id="fpBubbleToggle" type="button" aria-expanded="false" style="border:2px solid #c4e9ff;border-radius:50%;width:68px;height:68px;background:#227bd8;color:white;font-size:25px;box-shadow:0 4px 16px #0008">🫧</button>
 <div id="fpBubblePanel" hidden style="background:#13233bea;border:1px solid #9dc8ff;border-radius:20px;padding:12px;max-height:45vh;overflow:auto;width:min(86vw,310px);box-shadow:0 8px 22px #0009">
 <strong style="color:white">🫧 Build bubbles</strong><div id="fpBubbleCategories" style="display:flex;gap:6px;flex-wrap:wrap;margin:9px 0"></div><div id="fpBubbleItems" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px"></div>
@@ -55,7 +55,7 @@ transform.addEventListener('dragging-changed',e=>{
  if(e.value){transformDraggingObject=selected;transformDragMoved=false;return;}
  const mesh=transformDraggingObject;transformDraggingObject=null;
  if(!mesh||!transformDragMoved)return;
- if(gridSnapEnabled&&transform.getMode()==='translate')snapYeeps(mesh);
+ if(yeepsMode&&transform.getMode()==='translate')snapYeeps(mesh);
  mesh.updateMatrixWorld(true);
  mesh.userData.mbStarter=false;
  if(mesh===selected)refreshProperties();
@@ -71,7 +71,7 @@ transform.addEventListener('objectChange',()=>{
  // TransformControls' built-in snapping rounds mesh centres to integers,
  // which misaligns 1x1 Yeeps footprints. Snap the actual block footprint
  // instead, without publishing intermediate drag positions to Firebase.
- if(transform.getMode()==='translate'&&gridSnapEnabled)snapYeeps(selected);
+ if(transform.getMode()==='translate'&&yeepsMode)snapYeeps(selected);
  selected.updateMatrixWorld(true);
  refreshProperties();
  if(transform.dragging)transformDragMoved=true;
@@ -316,24 +316,8 @@ async function placeYeepsBlock(item,options={}){
 }
 let yeepsMode=false;
 const yeepsButton=document.getElementById('yeepsMode');
-const gridSnapButton=document.getElementById('gridSnap');
-let gridSnapEnabled=true;
-function updateGridSnap(){
- // A centre-aligned 1-unit translation snap is not correct for odd-width
- // Yeeps blocks, so use the footprint-aware snapYeeps function instead.
- transform.setTranslationSnap(null);
- gridSnapButton.disabled=false;
- gridSnapButton.textContent='🧲 Snap: '+(gridSnapEnabled?'On':'Off');
- gridSnapButton.setAttribute('aria-pressed',String(gridSnapEnabled));
- gridSnapButton.title=gridSnapEnabled?'Snap to grid cells as you drag (click to turn off)':'Move freely (click to turn snapping on)';
-}
-gridSnapButton.addEventListener('click',()=>{
- gridSnapEnabled=!gridSnapEnabled;
- updateGridSnap();
- if(gridSnapEnabled&&selected){snapYeeps(selected);refreshProperties();mbNotify(selected);}
- status.textContent='Grid snapping '+(gridSnapEnabled?'enabled':'disabled');
-});
-updateGridSnap();
+// Yeeps Mode alone controls grid snapping; no separate Snap toggle.
+transform.setTranslationSnap(null);
 const yeepsGrid=new THREE.GridHelper(40,40,0x69d6ff,0x2a7b91);
 yeepsGrid.position.y=0.035;yeepsGrid.visible=false;scene.add(yeepsGrid);
 // Decorative Yeeps-inspired landscape: separate from editable blocks.
@@ -463,15 +447,8 @@ function yeepsDimensions(mesh){
  return match?[Number(match[1]),Number(match[3]||1),Number(match[2])]:[1,1,1];
 }
 function snapYeeps(mesh){
- if(!gridSnapEnabled||!mesh)return;
+ if(!yeepsMode||!mesh)return;
  const gridLimit=20;
- if(!yeepsMode){
-  // Standard Shapes & Colours mode: ordinary 1-unit grid points.
-  mesh.position.x=THREE.MathUtils.clamp(Math.round(mesh.position.x),-gridLimit,gridLimit);
-  mesh.position.z=THREE.MathUtils.clamp(Math.round(mesh.position.z),-gridLimit,gridLimit);
-  mesh.position.y=Math.max(0,Math.round(mesh.position.y));
-  return;
- }
  const dims=yeepsDimensions(mesh);
  let [w,h,d]=dims;
  // Rotate 1x2, 2x3 etc footprints correctly through 90-degree Y turns.
@@ -492,14 +469,14 @@ function snapYeeps(mesh){
 }
 function setYeepsMode(enabled){
  // Switching build palettes must never delete existing shared or local objects.
- yeepsMode=enabled;document.body.classList.toggle("yeeps-font-mode",enabled);yeepsGrid.visible=enabled;yeepsScenery.visible=enabled;updateGridSnap();
+ yeepsMode=enabled;document.body.classList.toggle("yeeps-font-mode",enabled);yeepsGrid.visible=enabled;yeepsScenery.visible=enabled;
  document.getElementById('yeepsLibrary').hidden=!enabled;
  for(const mesh of objects){if(mbKinds.has(mesh.userData.kind)&&mesh.userData.kind!=='imported')mesh.visible=!enabled;}
  yeepsButton.setAttribute('aria-pressed',String(enabled));
  yeepsButton.textContent='🧱 Yeeps Mode: '+(enabled?'On':'Off');
  if(typeof walking!=='undefined'&&walking){fpBubbleUI.hidden=!enabled;hud.hidden=!enabled;if(!enabled)setPhysicalBubbles(false);}
  if(enabled){objects.forEach(mesh=>{snapYeeps(mesh);if(mesh.userData.mbLocalOwner)mbNotify(mesh);});refreshProperties();}
- status.textContent=enabled?(gridSnapEnabled?'Yeeps grid enabled · snapping ON while dragging':'Yeeps grid enabled · snapping OFF'):'Standard editor · snapping '+(gridSnapEnabled?'ON':'OFF');
+ status.textContent=enabled?'Yeeps Mode · grid snapping ON':'Standard editor · free movement';
 }
 yeepsButton.addEventListener('click',()=>setYeepsMode(!yeepsMode));
 // Drag completion is handled by dragging-changed above; do not modify the
@@ -534,7 +511,7 @@ document.getElementById('combineParts').onclick=()=>{
 };
 function refreshList(){const root=document.getElementById('objects');root.replaceChildren();objects.forEach(mesh=>{const b=document.createElement('button');b.textContent=mesh.name;b.className=mesh===selected?'active':'';b.onclick=()=>select(mesh);root.append(b);});}
 function refreshProperties(){if(!selected)return;document.getElementById('name').value=selected.name;document.getElementById('color').value='#'+selected.material.color.getHexString();updatePaletteSelection();for(const [key,vec] of [['position',selected.position],['rotation',selected.rotation],['scale',selected.scale]]){for(let i=0;i<3;i++){const input=document.querySelector('[data-prop="'+key+'"][data-axis="'+i+'"]');if(input)input.value=Number((key==='rotation'?vec[['x','y','z'][i]]*180/Math.PI:vec[['x','y','z'][i]]).toFixed(3));}}}
-for(const key of ['position','rotation','scale']){const parent=document.getElementById(key);for(let i=0;i<3;i++){const label=document.createElement('label');label.textContent=['X','Y','Z'][i];const input=document.createElement('input');input.type='number';input.step=key==='rotation'?'5':'0.1';input.dataset.prop=key;input.dataset.axis=i;input.addEventListener('change',()=>{if(!selected)return;let value=Number(input.value);if(!Number.isFinite(value))return;if(key==='scale')value=Math.max(.01,value);if(key==='rotation')value=Math.round(value/90)*(Math.PI/2);selected[key][['x','y','z'][i]]=value;if(key==='position'&&gridSnapEnabled){snapYeeps(selected);refreshProperties();}mbNotify(selected);});label.append(input);parent.append(label);}}
+for(const key of ['position','rotation','scale']){const parent=document.getElementById(key);for(let i=0;i<3;i++){const label=document.createElement('label');label.textContent=['X','Y','Z'][i];const input=document.createElement('input');input.type='number';input.step=key==='rotation'?'5':'0.1';input.dataset.prop=key;input.dataset.axis=i;input.addEventListener('change',()=>{if(!selected)return;let value=Number(input.value);if(!Number.isFinite(value))return;if(key==='scale')value=Math.max(.01,value);if(key==='rotation')value=Math.round(value/90)*(Math.PI/2);selected[key][['x','y','z'][i]]=value;if(key==='position'&&yeepsMode){snapYeeps(selected);refreshProperties();}mbNotify(selected);});label.append(input);parent.append(label);}}
 document.getElementById('name').onchange=e=>{if(selected){selected.name=e.target.value.trim()||'Object';refreshList();mbNotify(selected);}};
 const yeepsColours=["#de5454","#dd6f53","#de9d53","#deb850","#88462c","#9e634e","#f3c48c","#b59b8f","#90766a","#423732","#83ba44","#479641","#2e594f","#38876c","#5cc69f","#5cc2c4","#45692d","#669941","#397d88","#81b7dc","#5d6bbc","#566078","#3364ad","#7360b0","#da89ad","#d077c2","#927edc","#bdb1f5","#babdc2","#f1f1f1","#151415","#747679","#cbcbfd","#fbfbcd","#f4c030"];
 const palette=document.getElementById('yeepsPalette');
