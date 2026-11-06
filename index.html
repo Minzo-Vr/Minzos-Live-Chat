@@ -633,6 +633,25 @@
     #chatProtected.dm-main-active > #dmSection .dm-log{flex:1;height:auto;min-height:180px;overflow-y:auto}
     .dm-main-header{display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--theme-border,#e2e8f0);padding-bottom:10px}
     .dm-main-header h3{margin:0;font-size:16px}
+
+    /* DMs use General Chat's message layout and existing profile system. */
+    #dmSection .dm-log{display:flex;flex-direction:column;gap:12px;align-content:normal;background:var(--theme-page,#f4f6fb);margin:10px 0}
+    #dmSection .dm-message.msg{width:100%;max-width:100%;align-self:stretch;flex-shrink:0}
+    #dmSection .dm-message .message-main{min-width:0}
+    #dmSection .dm-message .bubble{display:table;width:auto;max-width:100%;overflow-wrap:anywhere}
+    #dmSideFriends .dm-side-friend .message-avatar{width:36px;height:36px;margin:0;border:1px solid #68748d}
+    .dm-side-friend-info{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+    .dm-side-friend-info strong,.dm-side-friend-info small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .dm-side-friend-info small{color:#b7bed5;font-size:11px}
+    .dm-profile-header{flex-wrap:wrap;gap:10px}
+    .dm-profile-summary{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+    .dm-profile-summary #dmHeaderAvatar{width:48px;height:48px;margin:0;border:2px solid var(--theme-border,#dce1ec)}
+    .dm-profile-summary-text{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+    .dm-main-header #dmTitle.dm-profile-name{padding:0;border:0;background:transparent!important;color:var(--theme-text,#202437)!important;font-size:16px;font-weight:800;text-align:left;white-space:normal;overflow-wrap:anywhere}
+    .dm-profile-bio{margin:0;font-size:12px;color:var(--theme-secondary,#667085);overflow-wrap:anywhere}
+    .dm-main-header #dmViewProfile{font-size:12px;white-space:nowrap}
+    @media(max-width:700px){.dm-main-header #dmBackToGeneral{font-size:12px;padding:6px 8px}.dm-profile-summary{flex-basis:170px}.dm-main-header #dmViewProfile{padding:7px 9px}}
+
     .dm-main-header button{padding:8px 11px;border-radius:8px;cursor:pointer}
     @media(max-width:700px){.chat.dm-sidebar-layout{padding-left:0}#dmSidebar{z-index:65;width:min(260px,85vw);box-shadow:0 0 0 100vw #0006,4px 0 20px #0007}.chat:fullscreen.dm-sidebar-layout{padding-left:0}}
     
@@ -1520,7 +1539,7 @@ document.addEventListener("click",function(event){
     <p class="error" id="error" role="alert"></p>
     <div id="chatSearchBar" class="chat-search-bar" hidden><label for="chatSearchInput">🔎 Search messages in this room</label><div class="chat-search-row"><input id="chatSearchInput" type="search" placeholder="Search usernames or messages…" autocomplete="off"><button type="button" id="chatSearchClear">Clear</button></div><small id="chatSearchCount">Searches recent loaded messages only.</small></div>
         <section id="dmSection" hidden>
-          <div class="dm-main-header"><button type="button" id="dmBackToGeneral">← General Chat</button><h3 id="dmTitle">💬 Direct Messages</h3></div>
+          <div class="dm-main-header dm-profile-header"><button type="button" id="dmBackToGeneral">← General Chat</button><div class="dm-profile-summary"><img class="message-avatar profile-click" id="dmHeaderAvatar" alt="Friend profile picture" referrerpolicy="no-referrer"><div class="dm-profile-summary-text"><button type="button" id="dmTitle" class="dm-profile-name">Direct Messages</button><p id="dmHeaderBio" class="dm-profile-bio">Select a friend to see their bio.</p></div></div><button type="button" id="dmViewProfile">View profile</button></div>
           <div id="dmLog" class="dm-log" role="log" aria-live="polite"></div>
           <form id="dmForm" class="dm-form"><input id="dmInput" maxlength="500" placeholder="Write a private message…" required><button type="submit">Send</button></form>
           <div class="friends-toolbar" style="margin-top:10px"><input id="giftAmount" type="number" min="4" max="100000" step="4" placeholder="XP to gift (multiple of 4)"><button type="button" id="giftXpButton">🎁 Gift XP</button></div>
@@ -3317,9 +3336,15 @@ try{
       if(!friendsForSide.length){const empty=document.createElement("p");empty.className="friends-note";empty.textContent="No friends yet. Open Friends & Requests to add someone!";side.append(empty);}
       for(const uid of friendsForSide){
         const button=document.createElement("button");button.type="button";button.className="dm-side-friend"+(activeDmUid===uid?" active":"");
-        const symbol=document.createElement("span");symbol.textContent="💜";
-        const label=document.createElement("span");label.textContent=friendName(uid);
-        button.append(symbol,label);button.addEventListener("click",()=>openDm(uid));side.append(button);
+        const avatar=document.createElement("img");avatar.className="message-avatar";
+        avatar.src=avatarUrls.get(uid)||avatarFallback;avatar.dataset.uid=uid;
+        avatar.alt="";avatar.referrerPolicy="no-referrer";avatar.loading="lazy";
+        ensureAvatarSubscription(uid);
+        const info=document.createElement("span");info.className="dm-side-friend-info";
+        const label=document.createElement("strong");label.textContent=friendName(uid);
+        const hint=document.createElement("small");hint.textContent="Private message";
+        info.append(label,hint);button.append(avatar,info);
+        button.addEventListener("click",()=>openDm(uid));side.append(button);
       }
       const requests=$("friendRequests"),list=$("friendList");requests.replaceChildren();list.replaceChildren();
       const incoming=Object.entries(friendRequests);
@@ -3441,6 +3466,59 @@ try{
       $("friendsOverlay").hidden=false;drawFriends();
       if($("myFriendCode").textContent==="Unavailable")void ensureFriendCode();
     }
+    // Display private messages with the same avatar, username and bubble UI as General Chat.
+    function renderDmChatMessage(msg,friendUid){
+      if(!msg||typeof msg.text!=="string")return null;
+      const from=msg.from===user.uid?user.uid:friendUid;
+      const name=from===user.uid?(username||user.displayName||"You"):friendName(friendUid);
+      const article=document.createElement("article");article.className="msg dm-message";
+      const avatar=document.createElement("img");avatar.className="message-avatar profile-click";
+      avatar.src=avatarUrls.get(from)||avatarFallback;avatar.dataset.uid=from;
+      avatar.alt=name+"'s profile picture";avatar.referrerPolicy="no-referrer";avatar.loading="lazy";
+      ensureAvatarSubscription(from);
+      const viewProfile=()=>openUserProfile(from,name);
+      avatar.tabIndex=0;avatar.setAttribute("role","button");avatar.setAttribute("aria-label","View "+name+"'s profile");
+      avatar.addEventListener("click",viewProfile);
+      avatar.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();viewProfile();}});
+      const main=document.createElement("div");main.className="message-main";
+      const meta=document.createElement("div");meta.className="meta profile-click";
+      meta.tabIndex=0;meta.setAttribute("role","button");meta.setAttribute("aria-label","View "+name+"'s profile");
+      meta.addEventListener("click",viewProfile);
+      meta.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();viewProfile();}});
+      const usernameSpan=document.createElement("span");usernameSpan.textContent=name;usernameSpan.dataset.authorUid=from;
+      const effect=displayedRoleEffect(from);
+      for(const [role,cls] of [["admin","admin-rgb-name"],["moderator","moderator-blue-name"],["plus","plus-gold-name"],["testsubject","testsubject-metal-name"]])
+        usernameSpan.classList.toggle(cls,effect===role);
+      if(customRoles[effect]){usernameSpan.style.color=customRoles[effect].color;usernameSpan.style.fontWeight="800";}
+      const time=document.createElement("span");
+      time.textContent=" · "+new Date(msg.at||Date.now()).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+      meta.append(usernameSpan,time);
+      const bubble=document.createElement("div");bubble.className="bubble";renderTextWithEmbed(bubble,msg.text);
+      main.append(meta,bubble);article.append(avatar,main);return article;
+    }
+    async function refreshDmProfile(uid){
+      const avatar=$("dmHeaderAvatar"),name=$("dmTitle"),bio=$("dmHeaderBio");
+      avatar.dataset.uid=uid;avatar.src=avatarUrls.get(uid)||avatarFallback;
+      name.textContent=friendName(uid);bio.textContent="Loading bio…";
+      ensureAvatarSubscription(uid);
+      try{
+        const privacySnap=await get(ref(db,privacyPath(uid)));
+        if(activeDmUid!==uid)return;
+        const privacy=privacySnap.val()||"everyone";
+        if(privacy==="none"){bio.textContent="Private profile · View profile for details";return;}
+        if(privacy==="friends"&&!friendMap[uid]){bio.textContent="Only friends can see this profile.";return;}
+        const [bioSnap,nameSnap]=await Promise.all([get(ref(db,bioPath(uid))),get(ref(db,profilePath(uid)))]);
+        if(activeDmUid!==uid)return;
+        bio.textContent=String(bioSnap.val()||"No bio yet · View profile for details").slice(0,160);
+        if(typeof nameSnap.val()==="string"&&nameSnap.val().trim())name.textContent=normalizeName(nameSnap.val());
+      }catch(e){if(activeDmUid===uid)bio.textContent="View profile to see their bio.";}
+    }
+    function showCurrentDmProfile(){
+      if(activeDmUid&&friendMap[activeDmUid])openUserProfile(activeDmUid,$("dmTitle").textContent||friendName(activeDmUid));
+    }
+    $("dmTitle").addEventListener("click",showCurrentDmProfile);
+    $("dmHeaderAvatar").addEventListener("click",showCurrentDmProfile);
+    $("dmViewProfile").addEventListener("click",showCurrentDmProfile);
     function openDm(uid){
       if(!user||!friendMap[uid]){friendStatus("Accept a friend request first.");return;}
       $("friendsOverlay").hidden=true;openDmSidebar();if(dmUnsub){dmUnsub();dmUnsub=null;}
@@ -3449,16 +3527,14 @@ try{
       if(groupMessagesUnsub){groupMessagesUnsub();groupMessagesUnsub=null;}
       $("groupSection").hidden=true;drawGroups();
       activeDmUid=uid;$("dmSection").hidden=false;$("chatProtected").classList.add("dm-main-active");drawFriends();
-      $("dmTitle").textContent="💬 DM with "+friendName(uid);
+      void refreshDmProfile(uid);
       $("dmLog").replaceChildren();
-      dmUnsub=onValue(query(ref(db,`chatDMs/${user.uid}/${uid}`),limitToLast(80)),snap=>{
+      const viewerUid=user.uid;
+      dmUnsub=onValue(query(ref(db,`chatDMs/${viewerUid}/${uid}`),limitToLast(80)),snap=>{
+        if(activeDmUid!==uid||user?.uid!==viewerUid)return;
         const log=$("dmLog");log.replaceChildren();
-        snap.forEach(child=>{
-          const msg=child.val();if(!msg||typeof msg.text!=="string")return;
-          const line=document.createElement("div");line.className="dm-line"+(msg.from===user.uid?" mine":"");
-          const who=msg.from===user.uid?"You":friendName(uid);
-          line.textContent=who+": "+msg.text;log.append(line);
-        });log.scrollTop=log.scrollHeight;
+        snap.forEach(child=>{const msg=renderDmChatMessage(child.val(),uid);if(msg)log.append(msg);});
+        log.scrollTop=log.scrollHeight;
       },err=>friendStatus("DMs unavailable: "+(err.code||err.message)));
     }
     $("friendsToggle").addEventListener("click",()=>$("dmSidebar").hidden?openDmSidebar():closeDmSidebar());
