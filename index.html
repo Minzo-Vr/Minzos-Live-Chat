@@ -423,8 +423,11 @@
     .admin p {font-size:12px}
     .admin-controls {padding:10px;border:1px solid #ddd;border-radius:10px}
     /* Give the admin controls their own scroll area instead of clipping lower settings. */
-    #adminPanel {max-height:min(72dvh,720px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable;}
-    #adminPanel:focus-within {scroll-behavior:auto;}
+    #adminArea[open] {max-height:85dvh;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable;}
+    #adminArea[open] > summary {position:sticky;top:0;z-index:3;background:inherit;}
+    #adminPanel {max-height:none;overflow:visible;}
+    #adminUsernameSearch {display:block;position:sticky;top:28px;z-index:2;background:var(--panel-bg,#fff);padding:12px;border:1px solid #ddd;border-radius:10px;margin:10px 0;}
+    #adminUsernameSearch[hidden] {display:none;}
     .admin-controls button {margin:3px;background:#6b7280}
     .lockdown-banner { margin:0; padding:10px 14px; background:#fff2d9; color:#713d00; font-size:13px; }
     .attach-wrap {position:relative;display:flex;align-items:center}
