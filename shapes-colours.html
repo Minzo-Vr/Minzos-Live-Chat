@@ -46,15 +46,44 @@ const scene=new THREE.Scene();scene.background=new THREE.Color('#121a2b');
 const camera=new THREE.PerspectiveCamera(55,1,.1,1000);camera.position.set(7,6,9);
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setClearColor(0x121a2b,1);viewport.prepend(renderer.domElement);renderer.domElement.style.pointerEvents='auto';renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();status.textContent='3D graphics context lost — reload this page';});
 const orbit=new OrbitControls(camera,renderer.domElement);orbit.enableDamping=true;orbit.target.set(0,1,0);
-const transform=new TransformControls(camera,renderer.domElement);scene.add(transform);transform.setRotationSnap(Math.PI/2);transform.addEventListener('dragging-changed',e=>orbit.enabled=!e.value);transform.addEventListener('objectChange',()=>{if(selected&&transform.getMode()==='rotate'){for(const axis of ['x','y','z'])selected.rotation[axis]=Math.round(selected.rotation[axis]/(Math.PI/2))*(Math.PI/2);}refreshProperties();mbNotify(selected);});
+const transform=new TransformControls(camera,renderer.domElement);
+scene.add(transform);transform.setRotationSnap(Math.PI/2);
+let transformDraggingObject=null,transformDragMoved=false;
+transform.addEventListener('dragging-changed',e=>{
+ // Free-fly uses its own camera controls. Do not re-enable OrbitControls after a drag.
+ orbit.enabled=!e.value&&!flying&&!walking;
+ if(e.value){transformDraggingObject=selected;transformDragMoved=false;return;}
+ const mesh=transformDraggingObject;transformDraggingObject=null;
+ if(!mesh||!transformDragMoved)return;
+ if(yeepsMode&&transform.getMode()==='translate')snapYeeps(mesh);
+ mesh.updateMatrixWorld(true);
+ mesh.userData.mbStarter=false;
+ if(mesh===selected)refreshProperties();
+ // Commit a single final drag transform so Firebase cannot fight the user's pointer.
+ mbNotify(mesh);
+ status.textContent='Moved '+mesh.name+' · '+mesh.position.toArray().map(n=>n.toFixed(2)).join(', ');
+});
+transform.addEventListener('objectChange',()=>{
+ if(!selected)return;
+ if(transform.getMode()==='rotate'){
+  for(const axis of ['x','y','z'])selected.rotation[axis]=Math.round(selected.rotation[axis]/(Math.PI/2))*(Math.PI/2);
+ }
+ selected.updateMatrixWorld(true);
+ refreshProperties();
+ if(transform.dragging)transformDragMoved=true;
+ else{selected.userData.mbStarter=false;mbNotify(selected);}
+});
 scene.add(new THREE.HemisphereLight(0xffffff,0x465675,2));const sun=new THREE.DirectionalLight(0xffffff,2);sun.position.set(5,9,7);scene.add(sun);
 const grid=new THREE.GridHelper(30,30,0x6b84ad,0x35445d);scene.add(grid);scene.add(new THREE.AxesHelper(2));
 let objects=[],selected=null,serial=0;
-const mbKinds=new Set(['box','sphere','cylinder','cone','torus','plane','imported']);let mbActive=false,mbRemote=false,mbPublish=null,mbRemove=null;
-// Only snap on drag release. Publishing must never mutate a mesh while it is being dragged.
+const mbKinds=new Set(['box','sphere','cylinder','cone','torus','plane','imported']);let mbActive=false,mbRemote=false,mbPublish=null,mbRemove=null,mbRoomCode='';
+// Publish snapshots, never re-position objects inside a Firebase update.
 const mbNotify=mesh=>{
- if(!mbActive||mbRemote||!mesh||!mbKinds.has(mesh.userData.kind))return;
- if(transform.dragging){const now=Date.now();if(now-(mesh.userData.mbLastPublish||0)<90)return;mesh.userData.mbLastPublish=now;}
+ if(!mbActive||mbRemote||!mesh||!mbKinds.has(mesh.userData.kind)||mesh.userData.mbStarter||transform.dragging)return;
+ if(mesh.userData.mbRoom!==mbRoomCode){
+  mesh.userData.mbId='o'+crypto.randomUUID().replace(/-/g,'');
+  mesh.userData.mbRoom=mbRoomCode;
+ }
  mesh.userData.mbId||='o'+crypto.randomUUID().replace(/-/g,'');
  mesh.userData.mbLocalOwner=true;
  mesh.userData.mbPlacedAt??=Date.now();
@@ -71,15 +100,23 @@ window.addEventListener('mb-connected',e=>{
  // Joining a room must not destroy blocks already placed in the local scene.
  // Remote objects arrive separately through mb-object events.
  mbActive=true;
+ mbRoomCode=e.detail.room;
  mbPublish=e.detail.publish;
  mbRemove=e.detail.remove;
  status.textContent='MultiBuilder connected · loading shared Yeeps blocks…';
- // Blocks made before joining must be sent to the room too.
- for(const mesh of objects){if(!mesh.userData.mbPlaceholder&&(!mesh.userData.mbId||mesh.userData.mbLocalOwner))mbNotify(mesh);}
+ // Do not publish the starter cube: it caused a stack of identical cubes whenever
+ // several players entered the same room. Keep genuinely built local objects.
+ for(const mesh of [...objects]){
+  if(mesh.userData.mbStarter){
+   mbRemote=true;try{remove(mesh);}finally{mbRemote=false;}
+   continue;
+  }
+  if(!mesh.userData.mbPlaceholder&&(!mesh.userData.mbId||mesh.userData.mbLocalOwner))mbNotify(mesh);
+ }
  if(!yeepsZipArchive)loadReleaseYeepsBlocks().catch(error=>{status.textContent='Shared blocks need the Yeeps ZIP: '+error.message;});
  else flushSharedYeeps();
 });
-window.addEventListener('mb-disconnected',()=>{mbActive=false;mbPublish=null;mbRemove=null;mbPendingAssets.clear();mbLoadingAssets.clear();});
+window.addEventListener('mb-disconnected',()=>{mbActive=false;mbRoomCode='';mbPublish=null;mbRemove=null;mbPendingAssets.clear();mbLoadingAssets.clear();});
 const mbPendingAssets=new Map();
 function applySharedTransform(mesh,data){
  mesh.name=data.name||mesh.name;
@@ -99,6 +136,7 @@ function showSharedPlaceholder(id,data){
  const mesh=new THREE.Mesh(geo,material);
  mesh.userData.kind='imported';
  mesh.userData.mbId=id;
+ mesh.userData.mbRoom=mbRoomCode;
  mesh.userData.mbPlaceholder=true;
  mesh.userData.yeepsFile=file;
  mesh.userData.yeepsPath=data.yeepsPath;
@@ -127,6 +165,7 @@ async function receiveSharedYeeps(id,data){
   const wasSelected=placeholder===selected;
   if(placeholder){mbRemote=true;try{remove(placeholder);}finally{mbRemote=false;}}
   mesh.userData.mbId=id;
+  mesh.userData.mbRoom=mbRoomCode;
   mesh.userData.mbLocalOwner=false;
   applySharedTransform(mesh,mbPendingAssets.get(id));
   if(wasSelected)select(mesh);
@@ -159,7 +198,7 @@ window.addEventListener('mb-object',e=>{
  mbRemote=true;
  try{
   let mesh=objects.find(o=>o.userData.mbId===id);
-  if(!mesh){mesh=add(data.kind,data,{remote:true});mesh.userData.mbId=id;mesh.visible=!yeepsMode;}
+  if(!mesh){mesh=add(data.kind,data,{remote:true});mesh.userData.mbId=id;mesh.userData.mbRoom=mbRoomCode;mesh.visible=!yeepsMode;}
   else applySharedTransform(mesh,data);
  }finally{mbRemote=false;}
 });
@@ -430,16 +469,8 @@ function setYeepsMode(enabled){
  status.textContent=enabled?'Yeeps grid enabled · drag blocks to snap into each square':'Free editing enabled';
 }
 yeepsButton.addEventListener('click',()=>setYeepsMode(!yeepsMode));
-// Let TransformControls follow the pointer continuously. Snapping the mesh inside
-// objectChange caused its drag origin to shift on every mouse movement, producing
-// exaggerated motion and pointer drift. Snap once after releasing instead.
-transform.addEventListener('mouseUp',()=>{
- if(!selected)return;
- if(yeepsMode&&transform.getMode()==='translate')snapYeeps(selected);
- refreshProperties();
- // Always send the final position/rotation/scale, even after throttled drags.
- mbNotify(selected);
-});
+// Drag completion is handled by dragging-changed above; do not modify the
+// selected object's position or send Firebase updates during pointer movement.
 
 const geometry=kind=>({box:()=>new THREE.BoxGeometry(1.5,1.5,1.5),sphere:()=>new THREE.SphereGeometry(1,32,20),cylinder:()=>new THREE.CylinderGeometry(.9,.9,1.8,32),cone:()=>new THREE.ConeGeometry(1,2,32),torus:()=>new THREE.TorusGeometry(1,.3,16,64),plane:()=>new THREE.PlaneGeometry(2,2)})[kind]?.();
 function add(kind,data,options={}){const mesh=new THREE.Mesh(geometry(kind),new THREE.MeshStandardMaterial({color:data?.color||'#7c9cff',roughness:.6,side:THREE.DoubleSide}));mesh.userData.kind=kind;mesh.name=data?.name||kind[0].toUpperCase()+kind.slice(1)+' '+(++serial);mesh.position.fromArray(data?.position||[0,kind==='plane'?.01:1,0]);mesh.rotation.set(...(data?.rotation||[kind==='plane'?-Math.PI/2:0,0,0]).map(v=>Math.round(v/(Math.PI/2))*(Math.PI/2)));mesh.scale.fromArray(data?.scale||[1,1,1]);scene.add(mesh);objects.push(mesh);if(!options.remote){snapYeeps(mesh);select(mesh);mbNotify(mesh);}else refreshList();return mesh;}
@@ -501,7 +532,7 @@ document.getElementById('propertyTabs').addEventListener('click',event=>{
 document.getElementById('color').oninput=e=>setSelectedColour(e.target.value);
 
 document.getElementById('modes').onclick=e=>{const mode=e.target.closest('[data-mode]')?.dataset.mode;if(!mode)return;transform.setMode(mode);document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));};
-function remove(mesh){if(!mesh)return;if(mbActive&&!mbRemote&&mesh.userData.mbId)mbRemove?.(mesh.userData.mbId);const wasSelected=selected===mesh;if(wasSelected)transform.detach();scene.remove(mesh);objects=objects.filter(o=>o!==mesh);mesh.traverse(part=>{part.geometry?.dispose();part.material?.dispose();});if(wasSelected)select(null);else refreshList();}
+function remove(mesh){if(!mesh)return;if(mbActive&&!mbRemote&&mesh.userData.mbId&&mesh.userData.mbRoom===mbRoomCode)mbRemove?.(mesh.userData.mbId);const wasSelected=selected===mesh;if(wasSelected)transform.detach();scene.remove(mesh);objects=objects.filter(o=>o!==mesh);mesh.traverse(part=>{part.geometry?.dispose();part.material?.dispose();});if(wasSelected)select(null);else refreshList();}
 document.getElementById('delete').onclick=()=>remove(selected);
 function duplicateSelection(){if(!selected)return;const data=serialize(selected);data.name+=' Copy';data.position[0]+=1;if(data.kind==='imported'){const clone=selected.clone();clone.geometry=selected.geometry.clone();clone.material=selected.material.clone();clone.name=data.name;clone.position.x+=1;scene.add(clone);objects.push(clone);snapYeeps(clone);select(clone);}else add(data.kind,data);}
 document.getElementById('duplicate').onclick=duplicateSelection;
@@ -569,7 +600,7 @@ document.getElementById('modelFile').onchange=async event=>{
 document.getElementById('reset').onclick=()=>{if(!confirm('Clear the scene?'))return;for(const o of [...objects])remove(o);status.textContent='New scene';};
 document.getElementById('back').onclick=()=>{location.href='./?interface=selection';};
 const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();let down=null;
-renderer.domElement.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY};});
+renderer.domElement.addEventListener('pointerdown',e=>{down=transform.dragging?null:{x:e.clientX,y:e.clientY};});
 renderer.domElement.addEventListener('pointerup',e=>{if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>5||e.button!==0)return;const rect=renderer.domElement.getBoundingClientRect();mouse.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);ray.setFromCamera(mouse,camera);if(walking||flyLooking)return;const hits=ray.intersectObjects(objects,true);select(hits.length?(objects.find(o=>o===hits[0].object||o.children.includes(hits[0].object))||null):null);});
 const yeepAccountColours=['#CCCEFF','#FFC5BF','#FFB9F7'];
 function yeepColourForUid(uid){let hash=2166136261;for(const char of uid){hash=Math.imul(hash^char.charCodeAt(0),16777619)>>>0;}return yeepAccountColours[hash%yeepAccountColours.length];}
@@ -897,7 +928,7 @@ let lastPresence=0;function walkFrame(now){if(now-lastPresence>180&&(walking||fl
  if(flying){const forward=Number(flyKeys.has('KeyW'))-Number(flyKeys.has('KeyS'))-stickY,side=Number(flyKeys.has('KeyD'))-Number(flyKeys.has('KeyA'))+stickX,vertical=Number(flyKeys.has('Space'))-Number(flyKeys.has('ControlLeft')||flyKeys.has('ControlRight'));const speed=(flyKeys.has('ShiftLeft')||flyKeys.has('ShiftRight')?16:7)*dt/(Math.hypot(forward,side,vertical)||1);camera.position.x+=(-Math.sin(flyYaw)*forward+Math.cos(flyYaw)*side)*speed;camera.position.z+=(-Math.cos(flyYaw)*forward-Math.sin(flyYaw)*side)*speed;camera.position.y+=vertical*speed;camera.rotation.order='YXZ';camera.rotation.set(flyPitch,flyYaw,0);return;}
  if(!walking)return;const f=Number(keys.has('KeyW'))-Number(keys.has('KeyS')),r=Number(keys.has('KeyD'))-Number(keys.has('KeyA')),speed=(keys.has('ShiftLeft')||keys.has('ShiftRight')?8:4)*dt/(Math.hypot(f,r)||1);camera.position.x+=(-Math.sin(yaw)*f+Math.cos(yaw)*r)*speed;camera.position.z+=(-Math.cos(yaw)*f-Math.sin(yaw)*r)*speed;camera.position.y=1.7;playerView.position.copy(camera.position);playerView.rotation.set(0,yaw,0);const stride=Math.hypot(f,r)>0?Math.sin(now*.013)*.36:0;playerLeftArm.rotation.x=stride;playerRightArm.rotation.x=-stride;playerLeftLeg.rotation.x=-stride;playerRightLeg.rotation.x=stride;camera.rotation.order='YXZ';camera.rotation.set(pitch,yaw,0);}
 function resize(){const rect=viewport.getBoundingClientRect();const w=Math.max(1,Math.floor(rect.width)),h=Math.max(1,Math.floor(rect.height));camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false);}new ResizeObserver(resize).observe(viewport);window.addEventListener('resize',resize);resize();
-add('box');orbit.update();
+const demoBox=add('box');demoBox.userData.mbStarter=true;orbit.update();
 const diagnostics=document.getElementById('diagnostics');let frames=0,renderError='';
 function updateDiagnostics(){const rect=renderer.domElement.getBoundingClientRect();const gl=renderer.getContext();diagnostics.textContent='3D diagnostic\nObjects: '+objects.length+' | Frames: '+frames+'\nCanvas: '+Math.round(rect.width)+' × '+Math.round(rect.height)+'\nWebGL: '+(gl.isContextLost()?'LOST':'active')+(renderError?'\nError: '+renderError:'');}
 function animate(now){requestAnimationFrame(animate);try{walkFrame(now||performance.now());animatePhysicalBubbles(now||performance.now());animateBubblePreview(now||performance.now());if(!walking&&!flying)orbit.update();renderer.render(scene,camera);frames++;if(frames%60===0)updateDiagnostics();}catch(err){renderError=err.message;status.textContent='3D rendering error: '+err.message;console.error('Shapes & Colours rendering:',err);updateDiagnostics();}}updateDiagnostics();animate();
@@ -919,7 +950,7 @@ function animate(now){requestAnimationFrame(animate);try{walkFrame(now||performa
 </script><script type="module" id="multibuilder-firebase">
 import {initializeApp,getApps} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {getAuth,GoogleAuthProvider,signInWithPopup} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import {getDatabase,ref,set,remove,onChildAdded,onChildChanged,onChildRemoved,onValue,onDisconnect} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+import {getDatabase,ref,get,set,remove,onChildAdded,onChildChanged,onChildRemoved,onValue,onDisconnect} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 const config={apiKey:"AIzaSyB4wOgGUTR-fgweHtsJiK9XyykU_PND0GE",authDomain:"website-chat-80038.firebaseapp.com",databaseURL:"https://website-chat-80038-default-rtdb.firebaseio.com/",projectId:"website-chat-80038",appId:"1:42470201717:web:890e9ebf1f0865c8ea9b3c"};
 const app=getApps().find(a=>a.name==="[DEFAULT]")||initializeApp(config),auth=getAuth(app),db=getDatabase(app);
 const $=id=>document.getElementById(id),status=$('mbStatus'),roomInput=$('mbRoom');let room='',unsubs=[],session=0,memberRef=null,memberUid='';
@@ -932,15 +963,35 @@ const clean=()=>{status.style.color='';if(memberRef)remove(memberRef).catch(()=>
 $('mbLeave').onclick=()=>{clean();status.textContent='Left room. Your current scene is now local.';};
 $('mbCopy').onclick=async()=>{const code=room||roomInput.value.trim().toUpperCase();if(!/^[A-Z0-9_-]{4,16}$/.test(code)){status.textContent='Enter a 4–16 character room code first.';return;}const url=new URL(location.href);url.searchParams.set('build',code);try{await navigator.clipboard.writeText(url.href);status.textContent='Room link copied.';}catch{status.textContent=url.href;}};
 const requested=new URLSearchParams(location.search).get('build');if(requested)roomInput.value=requested.slice(0,16);
+function describeJoinError(error){
+ const code=String(error?.code||'').toLowerCase(),message=String(error?.message||error||'Unknown error');
+ if(/permission.denied|permission-denied/.test(code+' '+message))return 'Firebase denied room access. MultiBuilder read/write rules must allow your Google account. Details: '+message;
+ if(/unauthorized.domain/.test(code+' '+message))return 'This website needs to be added to Firebase Authentication → Authorized domains: minzo-vr.github.io. Details: '+message;
+ if(/popup.blocked/.test(code+' '+message))return 'Google login popup blocked. Enable popups for this site, or sign in using Google in Community Hub and return here.';
+ if(/popup.closed|cancelled.popup/.test(code+' '+message))return 'Google login was cancelled. Press Join / Create to try again.';
+ if(/network.request.failed|disconnected/.test(code+' '+message))return 'Network connection failed. Check your internet connection and try again. Details: '+message;
+ return 'Could not join room ('+(code||'error')+'): '+message;
+}
 $('mbJoin').onclick=async()=>{
  const code=roomInput.value.trim().toUpperCase();if(!/^[A-Z0-9_-]{4,16}$/.test(code)){status.textContent='Use 4–16 letters, numbers, _ or -.';return;}
  clean();const ticket=session;$('mbJoin').disabled=true;status.textContent='Signing in…';
  try{
-  let user=auth.currentUser;if(!user)user=(await signInWithPopup(auth,new GoogleAuthProvider())).user;
+  let user=auth.currentUser;
+  // Community Hub may have signed in with Discord/custom auth, whereas the
+  // MultiBuilder database rules require a real Google sign-in.
+  if(user){
+   const token=await user.getIdTokenResult();
+   if(token.signInProvider!=='google.com')user=null;
+  }
+  if(!user){
+   status.textContent='Google sign-in required for MultiBuilder…';
+   user=(await signInWithPopup(auth,new GoogleAuthProvider())).user;
+  }
   if(ticket!==session)return;
-  const root=ref(db,'multiBuilderRooms/'+code),items=ref(db,'multiBuilderRooms/'+code+'/objects'),members=ref(db,'multiBuilderRooms/'+code+'/members'),member=ref(db,'multiBuilderRooms/'+code+'/members/'+user.uid);
-  // Check room permissions without clearing the local scene.
-  await new Promise((resolve,reject)=>{let stop=()=>{};stop=onValue(items,()=>{stop();resolve();},reject,{onlyOnce:true});});
+  const items=ref(db,'multiBuilderRooms/'+code+'/objects'),members=ref(db,'multiBuilderRooms/'+code+'/members'),member=ref(db,'multiBuilderRooms/'+code+'/members/'+user.uid);
+  status.textContent='Checking room permissions…';
+  // A one-shot Firebase get gives a definite error instead of hanging in a listener.
+  await get(items);
   if(ticket!==session)return;
   memberJoinedAt=Date.now();await set(member,{name:(user.displayName||'Builder').slice(0,40),joinedAt:memberJoinedAt});memberRef=member;memberUid=user.uid;
   onDisconnect(member).remove().catch(()=>{});
@@ -952,6 +1003,6 @@ $('mbJoin').onclick=async()=>{
   unsubs.push(onChildChanged(items,receive,e=>status.textContent='Room read failed: '+e.message));
   unsubs.push(onChildRemoved(items,snap=>{if(ticket===session)notify('mb-object',{id:snap.key,data:null});}));
   unsubs.push(onValue(members,snap=>{const list=snap.val()||{};$('mbMembers').textContent=Object.keys(list).length+' builder(s) online';notify('mb-members',{members:list,selfUid:user.uid});}));
- }catch(e){if(ticket!==session)return;clean();status.textContent='Cannot join: '+e.message+'. Firebase MultiBuilder rules must be installed.';}
+ }catch(e){if(ticket!==session)return;const message=describeJoinError(e);clean();status.textContent=message;notify('mb-error',{message});console.error('MultiBuilder join:',e);}
 };
 </script></body></html>
