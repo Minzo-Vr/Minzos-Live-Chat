@@ -73,6 +73,91 @@ async function finishSupportInteraction(data,env){
  }
 }
 
+
+/**
+ * /applications form control.
+ * The Apps Script Web App runs as the form owner, and independently verifies an
+ * HMAC signature and short-lived nonce. Cloudflare secrets never go to Discord.
+ * Never announce that responses opened/closed before the form confirms it.
+ */
+async function setApplicationFormState(type,status,env){
+ const endpoint=env.APPLICATIONS_WEBHOOK_URL,secret=env.APPLICATIONS_WEBHOOK_SECRET;
+ if(!endpoint||!secret)throw Error("Google Forms automation is not connected. Configure the Apps Script bridge and Cloudflare Worker secrets first.");
+ let url;
+ try{url=new URL(endpoint);}catch{throw Error("The Google Forms bridge URL is invalid.");}
+ if(url.protocol!=="https:"||url.hostname!=="script.google.com"||!/^\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(url.pathname))
+  throw Error("Google Forms bridge URL must be the deployed Apps Script /exec URL.");
+ const ts=Date.now(),nonce=crypto.randomUUID();
+ const canonical=ts+"."+nonce+"."+type+"."+status;
+ const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
+ const signature=Array.from(new Uint8Array(await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(canonical))),b=>b.toString(16).padStart(2,"0")).join("");
+ const response=await fetch(url.toString(),{
+  method:"POST",headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({type,status,ts,nonce,signature}),
+  redirect:"follow",signal:AbortSignal.timeout(20000)
+ });
+ if(!response.ok)throw Error("Google Forms bridge returned HTTP "+response.status+".");
+ let result;
+ try{result=await response.json();}catch{throw Error("Google Forms bridge did not return JSON. Check its deployment permissions.");}
+ if(!result?.ok||result.type!==type||result.status!==status||result.acceptingResponses!==(status==="open"))
+  throw Error("Google Form was not confirmed "+status+": "+String(result?.error||"bridge verification failed").slice(0,200));
+ return {formTitle:String(result.formTitle||"Application form").slice(0,100),responderUrl:String(result.responderUrl||"")};
+}
+async function finishApplicationsInteraction(data,env){
+ const replyUrl="https://discord.com/api/v10/webhooks/"+encodeURIComponent(env.DISCORD_APPLICATION_ID)+"/"+encodeURIComponent(data.token)+"/messages/@original";
+ const privately=async message=>{
+  const response=await fetch(replyUrl,{method:"PATCH",headers:{"content-type":"application/json"},
+   body:JSON.stringify({content:String(message).slice(0,2000),allowed_mentions:{parse:[]}})});
+  if(!response.ok)console.error("Could not update /applications result",response.status);
+ };
+ const o=Object.fromEntries((data.data?.options||[]).map(x=>[x.name,x.value]));
+ const validUrl=x=>{try{return typeof x==="string"&&x.length<=500&&new URL(x).protocol==="https:"}catch{return false}};
+ if(!["moderator","test_subjects"].includes(o.type)||!["open","closed"].includes(o.status)||!/^\d{15,22}$/.test(String(o.role))){
+  await privately("Choose a valid status, application type and Discord role.");return;
+ }
+ if(o.status==="open"&&(!validUrl(o.info_url)||(o.apply_url&&!validUrl(o.apply_url)))){
+  await privately("Opening applications requires an HTTPS info URL; the application form URL will come from the connected Google Form.");return;
+ }
+ const lab=o.type==="test_subjects";
+ const category=lab?"🧪 Test Subject / Lab Rat":"🛡️ Moderator";
+ let form;
+ try{
+  form=await setApplicationFormState(o.type,o.status,env);
+ }catch(err){
+  console.error("/applications form sync failed",err);
+  await privately("❌ **Form NOT updated; no Discord announcement was sent.**\n"+String(err?.message||"Google Forms automation failed.").slice(0,700));return;
+ }
+ const responderUrl=validUrl(form.responderUrl)?form.responderUrl:validUrl(o.apply_url)?o.apply_url:"";
+ let content;
+ if(o.status==="closed"){
+  content=["# "+category+" Applications are now CLOSED","<@&"+o.role+">",
+   "Thank you to everyone who applied!","The Google Form is no longer accepting responses.",
+   o.results?"**Results announced:** "+String(o.results).slice(0,100):"Keep an eye on announcements for updates."].join("\n");
+ }else{
+  const notes=lab?"• Test subjects test features early; they do NOT receive free items or extra rewards.\n• Applying does NOT guarantee acceptance.\n• **Do NOT apply if rejection would cause physical or mental stress.**":"• Applying does NOT guarantee acceptance.\n• Moderators must follow server rules and treat members fairly.\n• **Do NOT apply if rejection would cause physical or mental stress.**";
+  const timeline=[o.starts&&"• Applications open: "+String(o.starts).slice(0,100),o.closes&&"• Applications close: "+String(o.closes).slice(0,100),o.results&&"• Results announced: "+String(o.results).slice(0,100)].filter(Boolean);
+  content=["# "+category+" Applications are now OPEN","<@&"+o.role+">",
+   "Check "+o.info_url+" for info.","## Important Notes",notes,
+   ...(timeline.length?["## Timeline",...timeline]:[]),
+   responderUrl?"Apply at: "+responderUrl:"The form is accepting responses; contact an administrator for the form link."].join("\n");
+ }
+ if(content.length>2000){
+  await privately("The Google Form is "+o.status+" but the Discord announcement exceeds 2,000 characters. Shorten the optional fields and post the announcement separately.");return;
+ }
+ try{
+  const channel=env.APPLICATIONS_CHANNEL_ID||"1564929036243968010";
+  const sent=await fetch("https://discord.com/api/v10/channels/"+encodeURIComponent(channel)+"/messages",{
+   method:"POST",headers:{"Authorization":"Bot "+env.DISCORD_BOT_TOKEN,"content-type":"application/json"},
+   body:JSON.stringify({content,allowed_mentions:{parse:["roles"]}})
+  });
+  if(!sent.ok)throw Error("Discord HTTP "+sent.status);
+  await privately("✅ **"+category+" applications "+o.status+"!**\nGoogle Form response status verified, and the Discord announcement was posted.");
+ }catch(err){
+  console.error("/applications announcement failed after Google Form update",err);
+  await privately("⚠️ **Google Form successfully "+o.status+", but Discord announcement failed.** The form status has changed; check the bot's message permissions before retrying.");
+ }
+}
+
 const enc = new TextEncoder();
 function json(data, status=200) { return new Response(JSON.stringify(data), {status, headers:{"content-type":"application/json"}}); }
 function reply(content, ephemeral=false) {return json({type:4,data:{content,flags:ephemeral?64:0,allowed_mentions:{parse:[]}}});}
@@ -423,25 +508,11 @@ export default {
    }catch(err){console.error("Setup applications",err);return reply("Could not set up application reviews. Check Worker logs.",true);}
  }
  if(name==="applications"){
-   const admin=(BigInt(data.member?.permissions||"0")&8n)!==0n;
-   if(!admin||data.guild_id!==env.DISCORD_GUILD_ID)return reply("Only server administrators can post applications.",true);
-   const o=Object.fromEntries((data.data?.options||[]).map(x=>[x.name,x.value]));
-   const validUrl=x=>{try{return typeof x==="string"&&x.length<=500&&new URL(x).protocol==="https:"}catch{return false}};
-   if(!["moderator","test_subjects"].includes(o.type)||!["open","closed"].includes(o.status)||!/^\d{15,22}$/.test(String(o.role)))return reply("Choose a valid status, category and Discord role.",true);
-   if(o.status==="open"&&(!validUrl(o.apply_url)||!validUrl(o.info_url)))return reply("Opening applications requires both HTTPS links.",true);
-   const lab=o.type==="test_subjects";
-   const category=lab?"🧪 Test Subject / Lab Rat":"🛡️ Moderator";
-   let content;
-   if(o.status==="closed"){
-     content=["# "+category+" Applications are now CLOSED","<@&"+o.role+">","Thank you to everyone who applied!","Applications are no longer being accepted.",o.results?"**Results announced:** "+String(o.results).slice(0,100):"Keep an eye on announcements for updates."].join("\n");
-   }else{
-     const notes=lab?"• Test subjects test features early; they do NOT receive free items or extra rewards.\n• Applying does NOT guarantee acceptance.\n• **Do NOT apply if rejection would cause physical or mental stress.**":"• Applying does NOT guarantee acceptance.\n• Moderators must follow server rules and treat members fairly.\n• **Do NOT apply if rejection would cause physical or mental stress.**";
-     const timeline=[o.starts&&"• Applications open: "+String(o.starts).slice(0,100),o.closes&&"• Applications close: "+String(o.closes).slice(0,100),o.results&&"• Results announced: "+String(o.results).slice(0,100)].filter(Boolean);
-     content=["# "+category+" Applications are now OPEN","<@&"+o.role+">","Check "+o.info_url+" for info.","## Important Notes",notes,...(timeline.length?["## Timeline",...timeline]:[]),"Apply at: "+o.apply_url].join("\n");
-   }
-   if(content.length>2000)return reply("Announcement too long.",true);
-   const sent=await fetch("https://discord.com/api/v10/channels/"+"1564929036243968010"+"/messages",{method:"POST",headers:{"Authorization":"Bot "+env.DISCORD_BOT_TOKEN,"content-type":"application/json"},body:JSON.stringify({content,allowed_mentions:{parse:["roles"]}})});
-   return sent.ok?reply("Application "+o.status+" announcement posted!",true):reply("Could not post applications. Check bot channel permissions.",true);
+   // Only an Administrator in the configured server may change a real Google Form.
+   const admin=data.guild_id===env.DISCORD_GUILD_ID&&(BigInt(data.member?.permissions||"0")&8n)!==0n;
+   if(!admin)return reply("Only server administrators can open or close application forms.",true);
+   ctx.waitUntil(finishApplicationsInteraction(data,env));
+   return json({type:5,data:{flags:64}});
  }
  if(name==="announce"){
    const admin=(BigInt(data.member?.permissions||"0") & 8n)!==0n;
