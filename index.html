@@ -3718,7 +3718,8 @@ try{
           break;
         case "clear":case "cls":consoleOutput.replaceChildren();break;
         case "whoami":consolePrint(user?`Signed in: ${user.displayName||user.email||user.uid}`:"Not signed in");break;
-        case "finduser":void consoleFindUserByEmail(args.join(" "));break;\n        case "findusername":void consoleFindUsername(args.join(" "));break;
+        case "finduser":void consoleFindUserByEmail(args.join(" "));break;
+        case "findusername":void consoleFindUsername(args.join(" "));break;
         case "role":consolePrint(user?`Roles: ${userRoles(user.uid).join(", ")||"Member"}`:"Sign in to view roles");break;
         case "version":consolePrint("Community Chat v0.3 (draft release)");break;
         case "status":consolePrint($("status").textContent||"Status unavailable");break;
