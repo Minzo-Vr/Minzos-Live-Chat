@@ -21,6 +21,25 @@ for(const name of names){
     integration_types:[0,1],
     contexts:[0,1,2]
   };
+  if(name==="ask"){
+    command.description="Ask Community Hub AI about any app or general topic";
+    command.options=[
+      {type:3,name:"question",description:"What would you like to ask?",required:true,max_length:1200},
+      {type:3,name:"category",description:"Choose the app or topic",required:true,choices:[
+        {name:"Chats",value:"chats"},
+        {name:"User",value:"user"},
+        {name:"Login",value:"login"},
+        {name:"Shapes and Colors",value:"shapes_and_colors"},
+        {name:"Update Centre",value:"update_centre"},
+        {name:"Ai (Admin Only)",value:"ai_admin"},
+        {name:"All",value:"all"},
+        {name:"Generic Question",value:"generic_question"}
+      ]},
+      {type:3,name:"visibility",description:"Who can see the question and answer?",required:false,choices:[{name:"Everyone",value:"everyone"},{name:"Only Me",value:"only_me"}]}
+    ];
+    // /ask only works in the configured guild support channel, not DMs.
+    command.integration_types=[0];command.contexts=[0];
+  }
   if(name==="sad"){
     command.description="Timed message (requires bot installed to send/delete)";
     const time=command.options?.find(option=>option.name==="time");
