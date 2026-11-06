@@ -1006,16 +1006,16 @@ $('mbJoin').onclick=async()=>{
  clean();const ticket=session;$('mbJoin').disabled=true;status.textContent='Signing in…';
  try{
   let user=auth.currentUser;
-  // Community Hub may have signed in with Discord/custom auth, whereas the
-  // MultiBuilder database rules require a real Google sign-in.
-  if(user){
-   const token=await user.getIdTokenResult();
-   if(token.signInProvider!=='google.com')user=null;
-  }
+  // Checking providerData is synchronous: on iPad a popup started only after
+  // awaiting a token can lose the original tap gesture and be blocked.
+  if(user&&!user.providerData?.some(provider=>provider.providerId==='google.com'))user=null;
   if(!user){
    status.textContent='Google sign-in required for MultiBuilder…';
    user=(await signInWithPopup(auth,new GoogleAuthProvider())).user;
   }
+  // Room rules currently require Google as the actual sign-in provider.
+  const signedInWith=(await user.getIdTokenResult()).signInProvider;
+  if(signedInWith!=='google.com')throw Error('MultiBuilder requires Google sign-in, but the current provider is '+signedInWith+'. Sign in with Google and retry.');
   if(ticket!==session)return;
   const items=ref(db,'multiBuilderRooms/'+code+'/objects'),members=ref(db,'multiBuilderRooms/'+code+'/members'),member=ref(db,'multiBuilderRooms/'+code+'/members/'+user.uid);
   status.textContent='Checking room permissions…';
