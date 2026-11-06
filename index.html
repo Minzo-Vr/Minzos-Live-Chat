@@ -422,11 +422,11 @@
     .admin input {flex:1 1 170px}
     .admin p {font-size:12px}
     .admin-controls {padding:10px;border:1px solid #ddd;border-radius:10px}
-    /* Give the admin controls their own scroll area instead of clipping lower settings. */
-    #adminArea[open] {max-height:85dvh;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable;}
-    #adminArea[open] > summary {position:sticky;top:0;z-index:3;background:inherit;}
-    #adminPanel {max-height:none;overflow:visible;}
-    #adminUsernameSearch {display:block;position:sticky;top:28px;z-index:2;background:var(--panel-bg,#fff);padding:12px;border:1px solid #ddd;border-radius:10px;margin:10px 0;}
+    /* Make the expanded admin details a definite, touch-scrollable viewport. */
+    #adminArea[open] {display:block;height:85dvh;max-height:85dvh;min-height:0;overflow-y:scroll!important;overflow-x:hidden!important;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;scrollbar-gutter:stable;}
+    #adminArea[open] > summary {position:sticky;top:0;z-index:3;background:var(--theme-panel,#f8faff);}
+    #adminPanel {height:auto;max-height:none;overflow:visible;min-height:0;}
+    #adminUsernameSearch {display:block;position:sticky;top:28px;z-index:2;background:var(--theme-panel,#fff);padding:12px;border:1px solid var(--theme-border,#ddd);border-radius:10px;margin:10px 0;}
     #adminUsernameSearch[hidden] {display:none;}
     .admin-controls button {margin:3px;background:#6b7280}
     .lockdown-banner { margin:0; padding:10px 14px; background:#fff2d9; color:#713d00; font-size:13px; }
