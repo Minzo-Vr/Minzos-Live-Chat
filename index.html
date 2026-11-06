@@ -1435,12 +1435,7 @@ document.addEventListener("click",function(event){
           <div class="username-search-row"><input id="friendUsernameInput" maxlength="24" placeholder="Enter exact username" required autocomplete="off"><button type="submit">Search</button></div>
           <div id="friendUsernameResults" class="friends-list" aria-live="polite"></div>
         </form>
-        <div id="adminUsernameSearch" hidden class="username-search-box">
-          <strong>Admin / moderator user lookup</strong>
-          <p class="friends-note">Search an exact username to open the member’s existing profile and authorised moderation controls.</p>
-          <form id="adminUsernameForm"><div class="username-search-row"><input id="adminUsernameInput" maxlength="24" placeholder="Exact username" required autocomplete="off"><button type="submit">Find user</button></div></form>
-          <div id="adminUsernameResults" class="friends-list" aria-live="polite"></div>
-        </div><h3>📨 Friend requests</h3><div id="friendRequests" class="friends-list"></div>
+<h3>📨 Friend requests</h3><div id="friendRequests" class="friends-list"></div>
         <h3>💜 Your friends</h3><div id="friendList" class="friends-list"></div>
         <p id="friendsFeedback" role="status" class="friends-note"></p>
         <button type="button" id="friendsClose">Close</button>
@@ -1660,6 +1655,12 @@ document.addEventListener("click",function(event){
       </section>
       <section id="adminPanel" class="admin-controls" hidden>
         <strong>Verified admin ✓</strong>
+        <div id="adminUsernameSearch" hidden class="username-search-box">
+          <strong>Admin / moderator user lookup</strong>
+          <p class="friends-note">Search an exact username to open the member’s existing profile and authorised moderation controls.</p>
+          <form id="adminUsernameForm"><div class="username-search-row"><input id="adminUsernameInput" maxlength="24" placeholder="Exact username" required autocomplete="off"><button type="submit">Find user</button></div></form>
+          <div id="adminUsernameResults" class="friends-list" aria-live="polite"></div>
+        </div>
         <details id="auditCollapsible" class="admin-audit-panel" hidden>
           <summary>🔒 Admin Activity Log <span style="opacity:.7;font-size:12px">— click to expand</span></summary>
           <p>View logged actions in a searchable full-screen window.</p>
@@ -2036,6 +2037,7 @@ try{
         isAdmin=baseAdminClaim||hasRole(uid,"admin");
         myRole=actualRole(uid);
         $("adminPanel").hidden=!isAdmin;
+        $("adminUsernameSearch").hidden=!isAdmin;
         $("adminLogin").hidden=isAdmin;
         updateRoleUI();
         $("auditCollapsible").hidden=!isAdmin;
@@ -3400,13 +3402,10 @@ try{
     $("adminUsernameForm").addEventListener("submit",async e=>{
       e.preventDefault();
       const results=$("adminUsernameResults");results.textContent="Searching…";
-      if(!user||!isModerator()){results.textContent="Admins and moderators only.";return;}
+      if(!user||!isAdmin){results.textContent="Admins only.";return;}
       try{renderUsernameMatches(results,await lookupUsernameExact($("adminUsernameInput").value),{admin:true});}
       catch(err){results.textContent="Admin username lookup unavailable: "+(err.code||err.message)+". Check chatProfiles read permissions and the name index.";}
     });
-    function refreshAdminUsernameSearch(){
-      $("adminUsernameSearch").hidden=!isModerator();
-    }
     async function sendFriendRequest(uid){
       if(!user||!joined||!uid||uid===user.uid)return friendStatus("Join the chat first, then select another member.");
       if(friendMap[uid])return friendStatus("You're already friends!");
@@ -3457,7 +3456,7 @@ try{
     $("dmSideRequests").addEventListener("click",()=>openFriends());
     function openFriends(){
       if(!user||!joined){showError("Sign in and join before opening Friends.");return;}
-      $("friendsOverlay").hidden=false;drawFriends();refreshAdminUsernameSearch();
+      $("friendsOverlay").hidden=false;drawFriends();
     }
     function openDm(uid){
       if(!user||!friendMap[uid]){friendStatus("Accept a friend request first.");return;}
