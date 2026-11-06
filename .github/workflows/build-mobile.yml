@@ -3,16 +3,9 @@ on:
   workflow_dispatch:
   release:
     types: [published]
+  # Rebuild the IPA and APK for every update on main, including new apps.
   push:
     branches: [main]
-    paths:
-      - 'mobile/**'
-      - 'index.html'
-      - 'app-icon.svg'
-      - 'manifest.webmanifest'
-      - 'service-worker.js'
-      - 'music/**'
-      - '.github/workflows/build-mobile.yml'
 permissions:
   contents: write
 jobs:
