@@ -3,7 +3,19 @@ const {DISCORD_BOT_TOKEN:token,DISCORD_APPLICATION_ID:app,DISCORD_GUILD_ID:guild
 if(!token||!app||!guild)throw Error("Set DISCORD_BOT_TOKEN, DISCORD_APPLICATION_ID and DISCORD_GUILD_ID");
 const commands=[
 {name:"ping",description:"Check Community Chat bot"},
-{name:"ask",description:"Ask AI for Community Chat support",options:[{type:3,name:"question",description:"Question about Community Chat",required:true,max_length:1200}]},
+{name:"ask",description:"Ask Community Hub AI about any app or general topic",options:[
+ {type:3,name:"question",description:"What would you like to ask?",required:true,max_length:1200},
+ {type:3,name:"category",description:"Choose the app or topic",required:true,choices:[
+  {name:"Chats",value:"chats"},
+  {name:"User",value:"user"},
+  {name:"Login",value:"login"},
+  {name:"Shapes and Colors",value:"shapes_and_colors"},
+  {name:"Update Centre",value:"update_centre"},
+  {name:"Ai (Admin Only)",value:"ai_admin"},
+  {name:"All",value:"all"},
+  {name:"Generic Question",value:"generic_question"}]},
+ {type:3,name:"visibility",description:"Who can see the question and answer?",required:false,choices:[{name:"Everyone",value:"everyone"},{name:"Only Me",value:"only_me"}]}
+]},
 {name:"sad",description:"Send a message that automatically deletes",options:[{type:3,name:"time",description:"Duration: 1m, 10m, 1h, 1d",required:true},{type:3,name:"message",description:"Message to send",required:true,max_length:1500}]},
 {name:"help",description:"List Community Chat bot commands"},
 {name:"latest",description:"Show the latest published Community Chat update"},
