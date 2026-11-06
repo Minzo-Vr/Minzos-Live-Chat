@@ -77,7 +77,7 @@ function doPost(e){
     }
     var accepting=form.isAcceptingResponses();
     if(accepting!==shouldOpen)throw Error('The form did not confirm its response status.');
-    return output_({ok:true,type:type,status:status,acceptingResponses:accepting,formTitle:form.getTitle()});
+    return output_({ok:true,type:type,status:status,acceptingResponses:accepting,formTitle:form.getTitle(),responderUrl:form.getPublishedUrl()});
   }catch(error){
     console.error('Application form bridge error:',String(error));
     return output_({ok:false,error:String(error&&error.message||'Form update failed.')});
