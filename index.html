@@ -790,7 +790,7 @@
     #communityGameHub .game-card small{display:block;font-size:11px;color:#cbd5e1;margin-top:8px}
     #communityGameHub #gamePlayFrame{width:100%;flex:1;border:0;background:#fff;min-height:0}
     #communityGameHub .game-note{padding:8px 16px;background:#111827;color:#cbd5e1;font-size:12px}
-.friend-code-box{padding:14px;border-radius:12px;background:rgba(127,127,127,.09);border:1px solid rgba(127,127,127,.2);margin:12px 0}.friend-code-row{display:flex;gap:8px;margin-top:8px}.friend-code-row input{min-width:0;flex:1}
+.username-search-box{padding:14px;border-radius:12px;background:rgba(127,127,127,.09);border:1px solid rgba(127,127,127,.2);margin:12px 0}.username-search-row{display:flex;gap:8px;margin-top:8px}.username-search-row input{min-width:0;flex:1}
 </style>
 <style id="interface-gateway-style">
 #interfaceGateway{position:fixed;inset:0;width:100vw;height:100dvh;z-index:2147483000;background:radial-gradient(circle at 50% 10%,#253b7c 0%,#12172d 48%,#090d19 100%);color:#fff;display:grid;place-items:center;padding:20px;font-family:"Lilita One",system-ui,sans-serif;transition:opacity .35s ease,visibility .35s}
@@ -1430,15 +1430,15 @@ document.addEventListener("click",function(event){
       <div class="settings-dialog friends-dialog" role="dialog" aria-modal="true" aria-labelledby="friendsTitle">
         <h2 id="friendsTitle">👥 Friends & Direct Messages</h2>
         <p class="friends-note">Send a request from someone's profile in General Chat. Both people must accept friendship before private messages work.</p>
-        <form id="friendUsernameForm" class="friend-code-box">
+        <form id="friendUsernameForm" class="username-search-box">
           <label for="friendUsernameInput">Find someone by username</label>
-          <div class="friend-code-row"><input id="friendUsernameInput" maxlength="24" placeholder="Enter exact username" required autocomplete="off"><button type="submit">Search</button></div>
+          <div class="username-search-row"><input id="friendUsernameInput" maxlength="24" placeholder="Enter exact username" required autocomplete="off"><button type="submit">Search</button></div>
           <div id="friendUsernameResults" class="friends-list" aria-live="polite"></div>
         </form>
-        <div id="adminUsernameSearch" hidden class="friend-code-box">
+        <div id="adminUsernameSearch" hidden class="username-search-box">
           <strong>Admin / moderator user lookup</strong>
           <p class="friends-note">Search an exact username to open the member’s existing profile and authorised moderation controls.</p>
-          <form id="adminUsernameForm"><div class="friend-code-row"><input id="adminUsernameInput" maxlength="24" placeholder="Exact username" required autocomplete="off"><button type="submit">Find user</button></div></form>
+          <form id="adminUsernameForm"><div class="username-search-row"><input id="adminUsernameInput" maxlength="24" placeholder="Exact username" required autocomplete="off"><button type="submit">Find user</button></div></form>
           <div id="adminUsernameResults" class="friends-list" aria-live="polite"></div>
         </div><h3>📨 Friend requests</h3><div id="friendRequests" class="friends-list"></div>
         <h3>💜 Your friends</h3><div id="friendList" class="friends-list"></div>
