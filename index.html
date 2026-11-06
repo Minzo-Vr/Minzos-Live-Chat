@@ -422,8 +422,11 @@
     .admin input {flex:1 1 170px}
     .admin p {font-size:12px}
     .admin-controls {padding:10px;border:1px solid #ddd;border-radius:10px}
-    /* Make the expanded admin details a definite, touch-scrollable viewport. */
-    #adminArea[open] {display:block;height:85dvh;max-height:85dvh;min-height:0;overflow-y:scroll!important;overflow-x:hidden!important;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;scrollbar-gutter:stable;}
+    /* Let the document grow and scroll so the final admin controls are never clipped. */
+    html,body {height:auto;min-height:100%;overflow-y:auto!important;}
+    body>main.chat {height:auto!important;min-height:100dvh!important;max-height:none!important;overflow:visible!important;}
+    #adminArea {flex:0 0 auto;min-height:0;width:100%;}
+    #adminArea[open] {display:block;height:auto;max-height:70dvh;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;scrollbar-gutter:stable;}
     #adminArea[open] > summary {position:sticky;top:0;z-index:3;background:var(--theme-panel,#f8faff);}
     #adminPanel {height:auto;max-height:none;overflow:visible;min-height:0;}
     #adminUsernameSearch {display:block;position:sticky;top:28px;z-index:2;background:var(--theme-panel,#fff);padding:12px;border:1px solid var(--theme-border,#ddd);border-radius:10px;margin:10px 0;}
