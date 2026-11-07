@@ -31,6 +31,7 @@ console.log("Prepared Community Chat web assets in mobile/www");
 // The native file bridge manages iOS/Android document picking and import storage.
 copyFileSync(resolve(import.meta.dirname,"../sideload-tool.js"),join(dest,"sideload-tool.js"));
 copyFileSync(resolve(import.meta.dirname,"../native-files.js"),join(dest,"native-files.js"));
+copyFileSync(resolve(import.meta.dirname,"../native-billing.js"),join(dest,"native-billing.js"));
 for(const name of publicFiles){
   if(!/\.html?$/i.test(name))continue;
   const destFile=join(dest,name);
