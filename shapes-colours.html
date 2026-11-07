@@ -555,7 +555,21 @@ document.addEventListener('keydown',e=>{
  else if(copiedShape){const d=structuredClone(copiedShape);d.position[0]+=1;d.name+=' Copy';if(d.kind==='imported'&&d.geometry){const geo=new THREE.BufferGeometryLoader().parse(d.geometry);const m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:d.color,side:THREE.DoubleSide}));m.userData.kind='imported';m.name=d.name;m.position.fromArray(d.position);m.rotation.set(...d.rotation);m.scale.fromArray(d.scale);scene.add(m);objects.push(m);select(m);}else if(mbKinds.has(d.kind))add(d.kind,d);status.textContent='Pasted '+d.name;}
  e.preventDefault();
 });
-document.getElementById('save').onclick=()=>{const blob=new Blob([JSON.stringify({version:1,objects:objects.map(serialize)},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='shapes-and-colours.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status.textContent='Scene saved';};
+document.getElementById('save').onclick=async()=>{
+ const json=JSON.stringify({version:1,objects:objects.map(serialize)},null,2);
+ if(window.CommunityNativeFiles?.saveScene){
+  try{
+   status.textContent='Saving scene to device…';
+   await window.CommunityNativeFiles.saveScene(json);
+   status.textContent='Scene saved in 📂 My Imports'+(window.Capacitor?.getPlatform?.()==='ios'?' · Files app':'');
+  }catch(error){status.textContent='Save failed: '+(error?.message||String(error));}
+  return;
+ }
+ // Preserve the existing browser JSON download outside the installed apps.
+ const blob=new Blob([json],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download='shapes-and-colours.json';a.click();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);status.textContent='Scene saved';
+};
 document.getElementById('load').onclick=()=>document.getElementById('file').click();
 document.getElementById('file').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const data=JSON.parse(await file.text());if(!Array.isArray(data.objects)||data.objects.length>500)throw Error('Invalid scene');for(const o of [...objects])remove(o);for(const o of data.objects){if(o.kind==='imported'&&o.geometry){const geo=new THREE.BufferGeometryLoader().parse(o.geometry.data?o.geometry:o.geometry);const mesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:o.color||'#7c9cff',side:THREE.DoubleSide,vertexColors:!!geo.getAttribute('color')}));mesh.name=o.name||'Imported';mesh.userData.kind='imported';mesh.position.fromArray(o.position||[0,0,0]);mesh.rotation.set(...(o.rotation||[0,0,0]));mesh.scale.fromArray(o.scale||[1,1,1]);scene.add(mesh);objects.push(mesh);if(Array.isArray(o.parts)){for(const partData of o.parts){if(partData.kind!=='imported'||!partData.geometry)continue;const partGeo=new THREE.BufferGeometryLoader().parse(partData.geometry);const part=new THREE.Mesh(partGeo,new THREE.MeshStandardMaterial({color:partData.color||'#ffffff',side:THREE.DoubleSide}));part.name=partData.name||'Part';part.userData.kind='imported';part.position.fromArray(partData.position||[0,0,0]);part.rotation.set(...(partData.rotation||[0,0,0]));part.scale.fromArray(partData.scale||[1,1,1]);mesh.add(part);}mesh.userData.yeepsParts=mesh.children.some(c=>c.isMesh);}continue;}if(!geometry(o.kind))continue;add(o.kind,o);}select(null);status.textContent='Scene loaded';}catch(err){alert('Could not load scene: '+err.message);}e.target.value='';};
 
