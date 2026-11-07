@@ -1,4 +1,5 @@
 // Community Hub Discord bot. Keep OAuth, Firebase, roles and existing commands unchanged.
+import {TICKET_TYPES,ticketAction,ensureTicketPanels,completeTicketInteraction,completeTicketSetupInteraction} from "./tickets.js";
 // Support categories are deliberately selected server-side; a label alone does not grant permissions.
 const SUPPORT_CATEGORIES=Object.freeze({
  chats:{label:"Chats",focus:"Support chat messages, rooms, mentions, friends, DMs, notifications, music and moderation."},
@@ -390,6 +391,16 @@ async function registerGlobalCommandsOnce(env){
 export default {
  async scheduled(event,env,ctx){
    try{await registerGlobalCommandsOnce(env);}catch(e){console.error('Global command registration:',e);}
+   // Auto-post the three ticket panels once, using the existing scheduled cron.
+   if(env.SAD_MESSAGES){
+     try{
+       if(!await env.SAD_MESSAGES.get("ticket-panels:installed-v1")){
+         const panels=await ensureTicketPanels(env);
+         if(panels.ready.length===Object.keys(TICKET_TYPES).length&&panels.failed.length===0)
+           await env.SAD_MESSAGES.put("ticket-panels:installed-v1",new Date().toISOString());
+       }
+     }catch(err){console.error("Automatic ticket panel installation",err);}
+   }
    if(!env.SAD_MESSAGES)return;
    let cursor;
    do{
@@ -414,6 +425,13 @@ export default {
  let data;try{data=JSON.parse(raw);}catch{return new Response("Bad request",{status:400});}
  if(data.type===1)return json({type:1});
  if(data.type===3&&String(data.data?.custom_id||"").startsWith("role-retry:")){try{return await retryRoleRequest(data,env);}catch(e){console.error("Role retry",e);return reply("Could not retry right now. Please try later.",true);}}
+ if(data.type===3){
+   const ticket=ticketAction(data.data?.custom_id);
+   if(!ticket)return reply("Unsupported button.",true);
+   if(String(data.guild_id)!==String(env.DISCORD_GUILD_ID))return reply("Tickets only work in the configured server.",true);
+   ctx.waitUntil(completeTicketInteraction(data,env,ticket));
+   return json({type:5,data:{flags:64}});
+ }
  if(data.type!==2)return reply("Unsupported interaction.",true);
  const name=data.data?.name;
  if(name==="ask"){
@@ -479,8 +497,13 @@ export default {
    return reply(dm?"The user isn't linked. I sent them a DM with the missed role and a Retry button.":"The user isn't linked, but I couldn't DM them (their DMs may be closed). No role was assigned.",true);
   }catch(e){console.error("Assign Community Chat role",e);return reply("Couldn't check or assign the Community Chat role. Check Worker logs and Firebase permissions.",true);}
  }
+ if(name==="setup_tickets"){
+   if(!isSupportAdmin(data,env))return reply("Only server administrators can set up the ticket panels.",true);
+   ctx.waitUntil(completeTicketSetupInteraction(data,env));
+   return json({type:5,data:{flags:64}});
+ }
  if(name==="ping")return reply("🏓 Pong! Community Chat bot is online.");
- if(name==="help")return reply("**Community Hub commands**\n/ask — select an app category or Generic Question\n/ping — bot health\n/sad — timed self-deleting message\n/help — commands\n/latest — latest published update\n/updates — three recent updates\n/status — website link\n/announce — admin-only Discord announcement\n/applications — admin-only application open/closed announcements\n/setup_applications — create private application review channel\n/add-role-to-user — server-admin-only linked Community Chat role assignment");
+ if(name==="help")return reply("**Community Hub commands**\n/ask — select an app category or Generic Question\n/ping — bot health\n/sad — timed self-deleting message\n/help — commands\n/latest — latest published update\n/updates — three recent updates\n/status — website link\n/announce — admin-only Discord announcement\n/applications — admin-only application open/closed announcements\n/setup_applications — create private application review channel\n/setup_tickets — install/repair private ticket panels\n/add-role-to-user — server-admin-only linked Community Chat role assignment");
  if(name==="status")return reply("Community Chat: https://minzo-vr.github.io/Minzos-Live-Chat/ (open to check availability)");
 
  if(name==="setup_applications"){
