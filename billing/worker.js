@@ -16,7 +16,7 @@ const fromB64=s=>Uint8Array.from(atob(s.replaceAll("-","+").replaceAll("_","/")+
 function fail(status,message){const e=Error(message);e.status=status;throw e;}
 function same(a,b){if(typeof a!=="string"||typeof b!=="string")return false;const x=textEncoder.encode(a),y=textEncoder.encode(b);let diff=x.length^y.length;for(let i=0;i<Math.max(x.length,y.length);i++)diff|=(x[i]||0)^(y[i]||0);return diff===0}
 function appUrl(env){return String(env.PUBLIC_SITE_URL||"https://minzo-vr.github.io/Minzos-Live-Chat/")}
-function originHeaders(origin){return origin===WEB_ORIGIN?{"access-control-allow-origin":WEB_ORIGIN,"vary":"Origin","access-control-allow-headers":"authorization, content-type","access-control-allow-methods":"GET, POST, OPTIONS"}:{}}
+function originHeaders(origin){return [WEB_ORIGIN,"capacitor://localhost","http://localhost"].includes(origin)?{"access-control-allow-origin":origin,"vary":"Origin","access-control-allow-headers":"authorization, content-type","access-control-allow-methods":"GET, POST, OPTIONS"}:{}}
 function isStripeConfigured(env){
  return !!(env.BILLING_FIREBASE_RULES_READY==="true"&&env.STRIPE_SECRET_KEY&&env.STRIPE_WEBHOOK_SECRET&&/^price_/.test(env.STRIPE_PRICE_ID||"")&&env.FIREBASE_SERVICE_ACCOUNT);
 }
