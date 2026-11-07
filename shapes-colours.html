@@ -713,8 +713,25 @@ window.addEventListener('blur',()=>{flyKeys.clear();flyLooking=false;});
 // Touchscreen navigation: left joystick moves, right swipe looks, up/down buttons change altitude.
 const mobileBlocks=document.getElementById('mobileBlocks'),mobileTools=document.getElementById('mobileTools');
 const sidePanels=document.querySelectorAll('main>aside');
-function toggleMobilePanel(index){sidePanels.forEach((panel,i)=>panel.classList.toggle('mobile-open',i===index&&!panel.classList.contains('mobile-open')));mobileBlocks.setAttribute('aria-expanded',String(sidePanels[0].classList.contains('mobile-open')));mobileTools.setAttribute('aria-expanded',String(sidePanels[1].classList.contains('mobile-open')));flyKeys.clear();}
-mobileBlocks.addEventListener('click',()=>toggleMobilePanel(0));mobileTools.addEventListener('click',()=>toggleMobilePanel(1));
+function closeMobilePanels(){
+ sidePanels.forEach(panel=>panel.classList.remove('mobile-open'));
+ mobileBlocks.setAttribute('aria-expanded','false');
+ mobileTools.setAttribute('aria-expanded','false');
+ flyKeys.clear();
+}
+function toggleMobilePanel(index){
+ const shouldOpen=!sidePanels[index].classList.contains('mobile-open');
+ closeMobilePanels();
+ if(shouldOpen)sidePanels[index].classList.add('mobile-open');
+ mobileBlocks.setAttribute('aria-expanded',String(sidePanels[0].classList.contains('mobile-open')));
+ mobileTools.setAttribute('aria-expanded',String(sidePanels[1].classList.contains('mobile-open')));
+}
+mobileBlocks.addEventListener('click',()=>toggleMobilePanel(0));
+mobileTools.addEventListener('click',()=>toggleMobilePanel(1));
+document.getElementById('mobileBlocksBack').addEventListener('click',()=>{
+ closeMobilePanels();
+ mobileBlocks.focus({preventScroll:true});
+});
 const stick=document.getElementById('touchStick'),knob=document.getElementById('touchKnob'),lookPad=document.getElementById('touchLook');let stickX=0,stickY=0,stickPointer=null,lookPointer=null,lastTouchX=0,lastTouchY=0;
 // A transparent overlay used to block touches to editor gizmos on iPad.
 // Keep it disabled during normal editing; drag empty canvas to look instead.
