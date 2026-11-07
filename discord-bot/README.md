@@ -20,3 +20,10 @@ The bot now automatically posts ticket buttons to the **App Reports**, **Direct 
 For the three requested channel IDs, Discord permissions, optional staff invitations, and `/setup_tickets` recovery, read [TICKETS.md](./TICKETS.md). The bot must have **Create Private Threads**, **View Channel**, **Send Messages**, **Send Messages in Threads**, and **Manage Threads**. Members need **View Channel** and **Send Messages in Threads**.
 
 The implementation uses the existing `SAD_MESSAGES` KV namespace with separate ticket key prefixes. It does not require an extra database or expose ticket messages to the website.
+
+
+## 1 Word Stories
+
+The bot also supports a dedicated **#1-word-stories** channel: only one word per message, no consecutive turns by the same person, and no hyphen/underscore tricks such as `he-liked-her`. The Cloudflare Worker creates the channel automatically when it has Manage Channels permission and removes invalid messages on its minute-by-minute cron. The separate Discord Gateway listener can remove them immediately when running. Admins can use **`/setup_one_word_stories`** to create or repair the channel.
+
+See [ONE_WORD_STORIES.md](./ONE_WORD_STORIES.md) for rules, Discord permissions, and deployment requirements.
