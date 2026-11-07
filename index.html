@@ -1369,9 +1369,11 @@ document.addEventListener("click",function(event){
         </details>
         <section id="chatPlusBillingTest" class="plus-preview" data-setting-label="chat plus subscription stripe billing monthly one dollar test checkout" aria-label="Chat+ Subscription">
           <strong>✦ Chat+ — A$1.00 / month</strong>
-          <small>Stripe test mode • No real charges. Checkout will be enabled after the Stripe test account and secure billing Worker are connected.</small>
+          <small id="chatPlusBillingDescription">Web: Stripe test checkout. iPhone/iPad app: Apple In-App Purchase. Subscriptions only activate after server verification.</small>
           <button type="button" id="chatPlusBillingTestButton" disabled>Subscribe for A$1.00/month (Test)</button>
-          <small id="chatPlusBillingTestStatus" role="status">Setup pending — test payments are not connected yet.</small>
+          <button type="button" id="chatPlusBillingManageButton" hidden>Manage subscription</button>
+          <button type="button" id="chatPlusBillingRestoreButton" hidden>Restore Apple purchases</button>
+          <small id="chatPlusBillingTestStatus" role="status">Checking billing availability…</small>
         </section>
         <section id="chatPlusDownloads" class="plus-preview" data-setting-label="chat plus downloads apk windows ios chromebook" aria-label="Chat+ Downloads">
           <strong>⬇ Chat+ Downloads (Test)</strong>
@@ -1917,6 +1919,88 @@ try{
     const appearancePath = uid => `chatRoleAppearance/${uid}`;
     const validEffects=new Set(["none","member","plus","moderator","admin","testsubject"]);
     let appearanceByUid={},appearanceUnsub=null;
+    // Payments: a Cloudflare Worker verifies Stripe/Apple before changing Firebase roles.
+    // Configure only after the Worker and Firebase billing security rules are deployed.
+    const CHAT_PLUS_BILLING_WORKER_URL=""; // e.g. https://community-chat-billing.<account>.workers.dev
+    const nativeAppleBilling=()=>window.CommunityAppleBilling?.isNativeApple===true;
+    const chatPlusBillButton=$("chatPlusBillingTestButton"),chatPlusBillStatus=$("chatPlusBillingTestStatus");
+    const chatPlusBillManage=$("chatPlusBillingManageButton"),chatPlusBillRestore=$("chatPlusBillingRestoreButton");
+    let billingHealth=null,billingChecking=false;
+    function billingMessage(message){chatPlusBillStatus.textContent=message;}
+    function billingEndpoint(path){return CHAT_PLUS_BILLING_WORKER_URL.replace(/\/+$/,"")+path;}
+    async function billingRequest(path){
+      if(!CHAT_PLUS_BILLING_WORKER_URL||!user)throw Error("Billing service is not connected yet.");
+      const token=await user.getIdToken();
+      const response=await fetch(billingEndpoint(path),{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:"{}"});
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok||!result.url)throw Error(result.error||"Could not open checkout.");
+      if(!/^https:\/\/(?:checkout\.stripe\.com|billing\.stripe\.com)\//.test(result.url))throw Error("Untrusted billing redirect");
+      window.location.assign(result.url);
+    }
+    async function refreshChatPlusBilling(){
+      if(!chatPlusBillButton)return;
+      const isApple=nativeAppleBilling();
+      chatPlusBillRestore.hidden=!isApple;
+      chatPlusBillManage.hidden=isApple||!CHAT_PLUS_BILLING_WORKER_URL;
+      chatPlusBillButton.textContent=isApple?"Subscribe with Apple": "Subscribe for A$1.00/month (Stripe Test)";
+      $("chatPlusBillingDescription").textContent=isApple
+        ?"Apple App Store subscription. Your Apple purchase price and terms appear on the App Store purchase sheet. Purchases can be restored."
+        :"Stripe test checkout — A$1.00/month, no real charges. Chat+ is unlocked only after server verification.";
+      if(!user){
+        chatPlusBillButton.disabled=true;chatPlusBillRestore.disabled=true;chatPlusBillManage.disabled=true;
+        billingMessage("Sign in to purchase Chat+.");return;
+      }
+      if(isApple){
+        chatPlusBillButton.disabled=false;chatPlusBillRestore.disabled=false;chatPlusBillManage.disabled=true;
+        billingMessage("Apple purchases require an App Store Connect subscription and configured RevenueCat SDK.");
+        return;
+      }
+      chatPlusBillRestore.disabled=true;
+      if(!CHAT_PLUS_BILLING_WORKER_URL){
+        chatPlusBillButton.disabled=true;chatPlusBillManage.disabled=true;
+        billingMessage("Stripe checkout is not yet connected. No payments will be taken.");return;
+      }
+      if(billingChecking)return;
+      billingChecking=true;
+      try{
+        const res=await fetch(billingEndpoint("/health"),{cache:"no-store"});
+        const health=await res.json();billingHealth=!!(res.ok&&health.configured===true&&health.mode==="test");
+        chatPlusBillButton.disabled=!billingHealth;
+        chatPlusBillManage.disabled=!billingHealth;
+        billingMessage(billingHealth?"Stripe sandbox ready — no real charges.":"Checkout configuration is incomplete.");
+      }catch{
+        chatPlusBillButton.disabled=true;chatPlusBillManage.disabled=true;
+        billingMessage("Billing service is unavailable.");
+      }finally{billingChecking=false;}
+    }
+    chatPlusBillButton?.addEventListener("click",async()=>{
+      if(!user)return billingMessage("Please sign in first.");
+      chatPlusBillButton.disabled=true;billingMessage("Opening secure purchase…");
+      try{
+        if(nativeAppleBilling()){
+          await window.CommunityAppleBilling.purchase(user.uid);
+          billingMessage("Purchase submitted. Chat+ activates after the server verifies your Apple subscription.");
+        }else{
+          if(!billingHealth)throw Error("Stripe checkout is not configured.");
+          await billingRequest("/checkout");
+        }
+      }catch(error){billingMessage(String(error?.message||error).slice(0,240));}
+      finally{void refreshChatPlusBilling();}
+    });
+    chatPlusBillManage?.addEventListener("click",async()=>{
+      chatPlusBillManage.disabled=true;
+      try{await billingRequest("/portal");}catch(error){billingMessage(String(error?.message||error).slice(0,240));}
+      finally{void refreshChatPlusBilling();}
+    });
+    chatPlusBillRestore?.addEventListener("click",async()=>{
+      if(!user||!nativeAppleBilling())return;
+      chatPlusBillRestore.disabled=true;
+      try{
+        await window.CommunityAppleBilling.restore(user.uid);
+        billingMessage("Restore checked. Verified subscriptions will unlock Chat+ shortly.");
+      }catch(error){billingMessage(String(error?.message||error).slice(0,240));}
+      finally{chatPlusBillRestore.disabled=false;}
+    });
     const BUILTIN_ROLES=["admin","moderator","plus","testsubject"];
     let customRoles={},customRoleUnsub=null;
     function userRoles(uid){
@@ -5051,7 +5135,7 @@ try{
       $("xpStatus").hidden=!account || !hasExperimentalAccess() || !chatPrefs.enableXp;
       if(roleUnsub){roleUnsub();roleUnsub=null;}if(moderationUnsub){moderationUnsub();moderationUnsub=null;}
       if(!account) {
-        stopFriends();isAdmin=false;startAnnouncementListeners();resetChatIdentity();setAuthDisplay(false);
+        stopFriends();isAdmin=false;startAnnouncementListeners();resetChatIdentity();setAuthDisplay(false);void refreshChatPlusBilling();
         $("adminPanel").hidden=true;$("adminLogin").hidden=false;
         status.textContent="Sign in required";
         return;
@@ -5077,7 +5161,7 @@ try{
       else if(emailPassword&&!google&&!isAdmin)$("accountLabel").textContent="✉️ Signed in with email — choose a chat username";
       else if(discordCustomLogin&&!isAdmin)$("accountLabel").textContent="🎮 Signed in with Discord — choose a chat username";
       startAnnouncementListeners();
-      startEconomy();startFriends();startRoleListeners();
+      startEconomy();startFriends();startRoleListeners();void refreshChatPlusBilling();
       $("adminPanel").hidden=!isAdmin;$("adminLogin").hidden=isAdmin;
       status.textContent=isAdmin?"Admin online":account.isAnonymous?"Guest online":"Online";
       listenMessages();subscribeSettings();startPresence();startRoomIndex();
