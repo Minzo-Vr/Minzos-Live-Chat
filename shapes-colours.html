@@ -1074,7 +1074,173 @@ const hud=document.createElement('div');hud.id='fpBubbleHud';hud.style.cssText='
 hud.innerHTML='<button id="bubbleHudMenu" type="button" aria-label="Open build bubbles" style="pointer-events:auto;width:clamp(92px,17vw,130px);height:clamp(92px,17vw,130px);border-radius:50%;border:3px solid #c4efff;background:radial-gradient(circle at 32% 24%,#b5eaffcc,#207cc0cc 55%,#12294c);color:white;font:700 16px system-ui;box-shadow:0 0 22px #4dcaff88,inset 0 0 20px #ffffff55;cursor:pointer">🫧<div style="font-size:13px">Bubbles</div></button><button id="bubbleHudBuild" type="button" aria-label="Place selected block" style="pointer-events:auto;position:relative;width:clamp(92px,17vw,130px);height:clamp(92px,17vw,130px);border-radius:50%;border:3px solid #c4efff;background:radial-gradient(circle at 32% 24%,#a2eaff88,#194b78 60%,#101b36);color:white;box-shadow:0 0 22px #4dcaff88,inset 0 0 20px #ffffff55;cursor:pointer;overflow:hidden"><canvas id="bubbleHudPreview" width="160" height="160" style="position:absolute;inset:0;width:100%;height:100%"></canvas><span id="bubbleHudName" style="position:absolute;bottom:8px;left:0;right:0;text-align:center;font:700 12px system-ui;text-shadow:0 1px 4px #000">Cube</span></button>';
 viewport.append(hud);hud.hidden=true;
 const hudMenu=document.getElementById('bubbleHudMenu'),hudBuild=document.getElementById('bubbleHudBuild'),hudName=document.getElementById('bubbleHudName');
-hudMenu.onclick=()=>setPhysicalBubbles(!bubbleOpen);hudBuild.onclick=()=>firstPersonBuild();
+// The two bubbles remain visible at the bottom of the first-person view.
+// On touch devices, tapping the left one opens a proper tappable Blocks tab;
+// tapping the right places the chosen shape, and HOLDING either opens more blocks.
+hudMenu.setAttribute('aria-label','Open Blocks and Colours. Press and hold for more blocks.');
+hudMenu.title='Tap for blocks · hold for more';
+hudBuild.setAttribute('aria-label','Place selected block. Press and hold for more blocks.');
+hudBuild.title='Tap to build · hold for more';
+const firstPersonBlocksTab=document.createElement('section');
+firstPersonBlocksTab.id='firstPersonBlocksTab';
+firstPersonBlocksTab.hidden=true;
+firstPersonBlocksTab.setAttribute('role','dialog');
+firstPersonBlocksTab.setAttribute('aria-label','Choose a block or colour');
+firstPersonBlocksTab.setAttribute('aria-modal','true');
+firstPersonBlocksTab.innerHTML=
+ '<div class="quick-tab-heading"><button id="firstPersonBlocksBack" type="button">← Back</button><strong id="quickBlocksTitle">🧱 Blocks</strong></div>'+
+ '<p class="quick-help">Tap a block to select it, then tap the bottom block bubble to build. Hold either bubble to reopen this tab.</p>'+
+ '<div class="quick-tab-options" role="tablist" aria-label="Choose blocks or colours">'+
+ '<button id="quickBlocksTab" type="button" role="tab" aria-selected="true">🧱 Blocks</button>'+
+ '<button id="quickColoursTab" type="button" role="tab" aria-selected="false">🎨 Colours</button></div>'+
+ '<div id="quickBlockCategories" class="quick-tab-options"></div>'+
+ '<input id="quickBlockSearch" class="quick-search" type="search" placeholder="Search blocks" aria-label="Search blocks">'+
+ '<div id="quickBlockCount" class="quick-help" aria-live="polite"></div>'+
+ '<div id="quickBlockGrid" class="quick-grid"></div>'+
+ '<button id="quickBlockMore" type="button" style="width:100%;margin-top:12px;min-height:48px" hidden>Show more blocks</button>';
+viewport.append(firstPersonBlocksTab);
+const firstPersonBlocksBack=firstPersonBlocksTab.querySelector('#firstPersonBlocksBack');
+const quickBlocksTab=firstPersonBlocksTab.querySelector('#quickBlocksTab');
+const quickColoursTab=firstPersonBlocksTab.querySelector('#quickColoursTab');
+const quickBlockCategories=firstPersonBlocksTab.querySelector('#quickBlockCategories');
+const quickBlockSearch=firstPersonBlocksTab.querySelector('#quickBlockSearch');
+const quickBlockCount=firstPersonBlocksTab.querySelector('#quickBlockCount');
+const quickBlockGrid=firstPersonBlocksTab.querySelector('#quickBlockGrid');
+const quickBlockMore=firstPersonBlocksTab.querySelector('#quickBlockMore');
+let quickTabMode='blocks',quickBlockCategory='All',quickBlockVisible=48;
+function touchBubbleLayout(){return matchMedia('(pointer:coarse), (max-width:700px)').matches;}
+function closeFirstPersonBlocksTab(){
+ if(firstPersonBlocksTab.hidden)return;
+ firstPersonBlocksTab.hidden=true;
+ if(walking){
+  hud.hidden=false;
+  lookPad.style.pointerEvents=bubbleOpen?'none':'auto';
+  hudMenu.focus({preventScroll:true});
+ }
+}
+function openFirstPersonBlocksTab(){
+ if(!walking)return;
+ if(bubbleOpen)setPhysicalBubbles(false);
+ closeMobilePanels();
+ quickTabMode='blocks';
+ quickBlockCategory='All';
+ quickBlockVisible=48;
+ quickBlockSearch.value='';
+ firstPersonBlocksTab.hidden=false;
+ hud.hidden=true;
+ lookPad.style.pointerEvents='none';
+ if(document.pointerLockElement===renderer.domElement)document.exitPointerLock();
+ renderFirstPersonBlocksTab();
+ firstPersonBlocksBack.focus({preventScroll:true});
+}
+function renderFirstPersonBlocksTab(){
+ if(firstPersonBlocksTab.hidden)return;
+ const colours=quickTabMode==='colours';
+ firstPersonBlocksTab.querySelector('#quickBlocksTitle').textContent=colours?'🎨 Colours':'🧱 Blocks';
+ quickBlocksTab.setAttribute('aria-selected',String(!colours));
+ quickColoursTab.setAttribute('aria-selected',String(colours));
+ quickBlockSearch.hidden=colours;
+ quickBlockCategories.hidden=colours||yeepsMode;
+ quickBlockCategories.replaceChildren();
+ quickBlockGrid.replaceChildren();
+ let entries=[];
+ if(colours){
+  entries=yeepsColours.map((hex,i)=>({hex,label:'Colour '+(i+1)}));
+ }else if(yeepsMode){
+  entries=yeepsEntries.map(item=>({item,label:item.label}));
+ }else{
+  for(const [category,choices] of Object.entries(bubbleCatalog)){
+   if(quickBlockCategory==='All'||quickBlockCategory===category)
+    for(const choice of choices)entries.push({choice,label:choice[1]});
+  }
+  for(const category of ['All',...Object.keys(bubbleCatalog)]){
+   const button=document.createElement('button');
+   button.type='button';button.textContent=category;
+   button.setAttribute('aria-pressed',String(quickBlockCategory===category));
+   button.style.background=quickBlockCategory===category?'#287fc2':'#2a3f60';
+   button.onclick=()=>{quickBlockCategory=category;quickBlockVisible=48;renderFirstPersonBlocksTab();};
+   quickBlockCategories.append(button);
+  }
+ }
+ const query=colours?'':quickBlockSearch.value.trim().toLocaleLowerCase();
+ if(query)entries=entries.filter(entry=>entry.label.toLocaleLowerCase().includes(query));
+ const visible=entries.slice(0,quickBlockVisible);
+ quickBlockCount.textContent=colours?'Tap a colour to paint a block or set the next shape colour.':
+  yeepsMode&&!yeepsEntries.length?'Load Yeeps blocks to choose them here.':
+  'Showing '+visible.length+' of '+entries.length+' blocks · tap one to select';
+ if(!colours&&yeepsMode&&!yeepsEntries.length){
+  const load=document.createElement('button');load.type='button';load.textContent='📦 Load Yeeps blocks from release';
+  load.onclick=async()=>{load.disabled=true;load.textContent='Loading Yeeps blocks…';
+   try{await loadReleaseYeepsBlocks();renderFirstPersonBlocksTab();}
+   catch(error){quickBlockCount.textContent='Could not load Yeeps blocks: '+String(error.message||error);}
+   finally{load.disabled=false;}
+  };
+  quickBlockGrid.append(load);
+ }
+ for(const entry of visible){
+  const button=document.createElement('button');button.type='button';
+  if(entry.hex){
+   const sample=document.createElement('span');sample.style.cssText='display:inline-block;width:35px;height:35px;border-radius:50%;border:2px solid #fff9;vertical-align:middle;margin-right:8px;';
+   sample.style.background=entry.hex;button.append(sample,document.createTextNode(entry.label));
+   button.classList.toggle('quick-selected',bubblePaintColor.toLowerCase()===entry.hex.toLowerCase());
+   button.addEventListener('click',()=>{applyBubbleColour(entry.hex);closeFirstPersonBlocksTab();});
+  }else if(entry.item){
+   button.textContent='🧱 '+entry.label;
+   button.classList.toggle('quick-selected',yeepsBubbleChoice?.path===entry.item.path);
+   button.addEventListener('click',()=>{
+    yeepsBubbleChoice=entry.item;previewChoice=null;hudName.textContent=entry.label;
+    status.textContent=entry.label+' selected · tap the second bubble to build';
+    closeFirstPersonBlocksTab();
+   });
+  }else{
+   button.textContent=entry.choice[0]+' '+entry.label;
+   button.classList.toggle('quick-selected',bubbleChoice===entry.choice);
+   button.addEventListener('click',()=>{
+    bubbleChoice=entry.choice;previewChoice=null;hudName.textContent=entry.label;
+    status.textContent=entry.label+' selected · tap the second bubble to build';
+    closeFirstPersonBlocksTab();
+   });
+  }
+  quickBlockGrid.append(button);
+ }
+ quickBlockMore.hidden=colours||entries.length<=quickBlockVisible;
+ quickBlockMore.textContent='Show more blocks ('+(entries.length-quickBlockVisible)+' left)';
+}
+firstPersonBlocksBack.addEventListener('click',closeFirstPersonBlocksTab);
+quickBlocksTab.addEventListener('click',()=>{quickTabMode='blocks';quickBlockVisible=48;renderFirstPersonBlocksTab();});
+quickColoursTab.addEventListener('click',()=>{quickTabMode='colours';quickBlockVisible=48;renderFirstPersonBlocksTab();});
+quickBlockSearch.addEventListener('input',()=>{quickBlockVisible=48;renderFirstPersonBlocksTab();});
+quickBlockMore.addEventListener('click',()=>{quickBlockVisible+=48;renderFirstPersonBlocksTab();});
+// The first pointer tap is reserved for the short action. A 480ms hold on
+// either of the two HUD bubbles opens the block chooser instead, including iPad.
+function bindFirstPersonHudBubble(button,shortPress){
+ let holdTimer=null,held=false,downX=0,downY=0;
+ const cancelHold=()=>{if(holdTimer!==null){clearTimeout(holdTimer);holdTimer=null;}};
+ button.addEventListener('pointerdown',event=>{
+  if(event.button!==0)return;
+  held=false;cancelHold();downX=event.clientX;downY=event.clientY;
+  if(!walking||!touchBubbleLayout())return;
+  holdTimer=setTimeout(()=>{holdTimer=null;held=true;openFirstPersonBlocksTab();},480);
+ });
+ button.addEventListener('pointermove',event=>{
+  if(holdTimer!==null&&Math.hypot(event.clientX-downX,event.clientY-downY)>14)cancelHold();
+ });
+ for(const name of ['pointerup','pointercancel','pointerleave','lostpointercapture'])
+  button.addEventListener(name,cancelHold);
+ button.addEventListener('click',event=>{
+  if(held){event.preventDefault();event.stopPropagation();held=false;return;}
+  shortPress();
+ });
+ button.addEventListener('contextmenu',event=>{
+  if(!walking||!touchBubbleLayout())return;
+  event.preventDefault();cancelHold();held=true;openFirstPersonBlocksTab();
+ });
+}
+bindFirstPersonHudBubble(hudMenu,()=>{
+ if(touchBubbleLayout())openFirstPersonBlocksTab();
+ else setPhysicalBubbles(!bubbleOpen);
+});
+bindFirstPersonHudBubble(hudBuild,()=>firstPersonBuild());
 const previewCanvas=document.getElementById('bubbleHudPreview');
 const previewRenderer=new THREE.WebGLRenderer({canvas:previewCanvas,alpha:true,antialias:true});
 previewRenderer.setPixelRatio(Math.min(devicePixelRatio||1,2));previewRenderer.setSize(160,160,false);
