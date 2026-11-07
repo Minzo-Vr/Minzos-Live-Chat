@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0c12">
+  <meta name="description" content="Minzify — discover and listen to free-to-stream music from independent artists.">
+  <title>Minzify — Your music, your mood</title>
+  <link rel="icon" href="./app-icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./minzify.css">
+  <script src="./minzify.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Minzify navigation">
+      <a class="brand" href="./minzify.html" aria-label="Minzify home"><span class="brand-icon" aria-hidden="true">♫</span><span>minzify<span class="brand-dot">.</span></span></a>
+      <div class="side-title">YOUR SPACE</div>
+      <nav class="side-nav" aria-label="Your music">
+        <button class="nav-link selected" type="button" data-view="home"><span aria-hidden="true">⌂</span> Home</button>
+        <button class="nav-link" type="button" data-view="search"><span aria-hidden="true">⌕</span> Search</button>
+        <button class="nav-link" type="button" data-view="liked"><span aria-hidden="true">♥</span> Liked songs</button>
+        <button class="nav-link" type="button" data-view="recent"><span aria-hidden="true">◷</span> Recently played</button>
+      </nav>
+      <div class="side-library">
+        <div class="library-head"><span>PLAYLISTS</span><button id="newPlaylistSide" type="button" title="New playlist" aria-label="Create a playlist">＋</button></div>
+        <div id="sidebarPlaylists" class="playlist-links" aria-label="Your playlists"></div>
+      </div>
+      <div class="side-bottom">
+        <div class="free-chip"><span class="pulse-dot" aria-hidden="true"></span> FREE TO LISTEN</div>
+        <p>Music by artists on <a href="https://audius.co/" target="_blank" rel="noopener noreferrer">Audius</a>. Not Spotify's entire catalogue.</p>
+        <a class="hub-return" href="./index.html?interface=selection">← Community Hub</a>
+      </div>
+    </aside>
+
+    <div class="main-pane">
+      <header class="topbar">
+        <a class="mobile-brand" href="./minzify.html"><span aria-hidden="true">♫</span> minzify<span class="brand-dot">.</span></a>
+        <form id="searchForm" class="search-bar" role="search" autocomplete="off">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <input id="searchInput" type="search" name="query" placeholder="Artists, songs, genres…" aria-label="Search songs and artists" maxlength="90" enterkeyhint="search">
+          <button id="clearSearch" type="button" aria-label="Clear search" title="Clear search" hidden>✕</button>
+        </form>
+        <a class="top-back" href="./index.html?interface=selection" title="Return to Community Hub">↗ Hub</a>
+      </header>
+
+      <main id="mainContent" tabindex="-1">
+        <section id="homeView" class="view">
+          <div class="hero">
+            <div class="hero-glow"></div>
+            <div class="hero-copy">
+              <span class="eyebrow"><span class="pulse-dot" aria-hidden="true"></span> YOUR SOUNDTRACK. YOUR RULES.</span>
+              <h1>Turn it <em>all</em><br>the way up<span class="hero-stop">.</span></h1>
+              <p>Explore something new. Find your next favourite track. Play music shared by artists for free streaming.</p>
+              <div class="hero-buttons">
+                <button id="heroPlay" class="primary-button" type="button"><span aria-hidden="true">▶</span> Play what's trending</button>
+                <button id="heroExplore" class="glass-button" type="button">Explore genres <span aria-hidden="true">↗</span></button>
+              </div>
+            </div>
+            <div class="hero-disc" aria-hidden="true">
+              <div class="disc-ring disc-ring-one"></div><div class="disc-ring disc-ring-two"></div><div class="disc-ring disc-ring-three"></div>
+              <div class="disc-center">m<span>.</span></div>
+            </div>
+          </div>
+
+          <div class="section-heading"><div><span class="eyebrow">VIBES, SORTED</span><h2>Pick your mood <span class="heading-sparkle">✳</span></h2></div></div>
+          <div id="genreGrid" class="genre-grid" aria-label="Browse by music style">
+            <button type="button" data-genre="Electronic" class="genre-card genre-electronic"><span>Electronic</span><b>⚡</b></button>
+            <button type="button" data-genre="Hip-Hop/Rap" class="genre-card genre-hiphop"><span>Hip-Hop</span><b>✦</b></button>
+            <button type="button" data-genre="Lo-Fi" class="genre-card genre-lofi"><span>Lo-Fi</span><b>☁</b></button>
+            <button type="button" data-genre="Pop" class="genre-card genre-pop"><span>Pop</span><b>♥</b></button>
+            <button type="button" data-genre="Rock" class="genre-card genre-rock"><span>Rock</span><b>★</b></button>
+            <button type="button" data-genre="R&B/Soul" class="genre-card genre-rnb"><span>R&amp;B</span><b>♫</b></button>
+          </div>
+          <div class="section-heading mt"><div><span class="eyebrow">RIGHT NOW</span><h2>On repeat <span class="heading-sparkle">↗</span></h2></div><button id="refreshTrending" class="text-button" type="button">↻ Refresh</button></div>
+          <div id="trendingStatus" class="content-status" role="status" aria-live="polite">Finding your next favourite…</div>
+          <div id="trendingGrid" class="album-grid"></div>
+          <div class="section-heading mt"><div><span class="eyebrow">THE GOOD STUFF</span><h2>Fresh finds</h2></div></div>
+          <div id="freshGrid" class="track-list"></div>
+        </section>
+
+        <section id="resultsView" class="view" hidden>
+          <div class="page-heading"><span class="eyebrow" id="resultEyebrow">DISCOVER MUSIC</span><h1 id="resultsTitle">Search Minzify</h1><p id="resultsSubtitle">Search for an artist, song, or genre to get started.</p></div>
+          <div id="searchStatus" class="content-status" aria-live="polite" role="status"></div>
+          <div id="resultsGrid" class="track-list"></div>
+        </section>
+
+        <section id="libraryView" class="view" hidden>
+          <div class="page-heading page-heading-library"><span class="eyebrow" id="libraryEyebrow">YOUR COLLECTION</span><h1 id="libraryTitle">Liked songs</h1><p id="librarySubtitle">The songs you save live on this device.</p></div>
+          <div class="library-toolbar">
+            <button id="playLibrary" class="primary-button" type="button">▶ Play all</button>
+            <button id="shuffleLibrary" class="glass-button" type="button">⇄ Shuffle</button>
+            <button id="createPlaylistMain" class="glass-button" type="button">＋ Playlist</button>
+            <button id="deletePlaylist" class="danger-button" type="button" hidden>Delete playlist</button>
+          </div>
+          <div id="libraryGrid" class="track-list"></div>
+        </section>
+        <div class="bottom-note">Minzify is an independent Community Hub project. Music streams directly from Audius where the artist has allowed it. Some songs may be unavailable.</div>
+      </main>
+    </div>
+  </div>
+
+  <div class="player" id="player" aria-label="Music player">
+    <div class="now-playing">
+      <div class="now-art" id="nowArt"><span aria-hidden="true">♫</span></div>
+      <div class="now-text"><strong id="nowTitle">Nothing playing yet</strong><span id="nowArtist">Pick a song to start listening</span></div>
+      <button class="icon-button now-heart" id="nowLike" type="button" aria-label="Like current song" title="Like song" disabled>♡</button>
+    </div>
+    <div class="player-center">
+      <div class="transport">
+        <button id="shuffleButton" class="transport-small" type="button" title="Toggle shuffle" aria-label="Shuffle off" aria-pressed="false">⇄</button>
+        <button id="prevButton" class="transport-main" type="button" aria-label="Previous song" title="Previous song">⏮</button>
+        <button id="playButton" class="play-button" type="button" aria-label="Play" title="Play">▶</button>
+        <button id="nextButton" class="transport-main" type="button" aria-label="Next song" title="Next song">⏭</button>
+        <button id="repeatButton" class="transport-small" type="button" title="Repeat off" aria-label="Repeat off" aria-pressed="false">↻</button>
+      </div>
+      <div class="progress"><span id="timeCurrent">0:00</span><input id="seekBar" type="range" min="0" max="1000" value="0" aria-label="Seek through song"><span id="timeTotal">0:00</span></div>
+    </div>
+    <div class="player-right">
+      <a id="audiusLink" href="https://audius.co/" target="_blank" rel="noopener noreferrer" title="View on Audius" aria-label="Open track on Audius">↗</a>
+      <button id="queueToggle" type="button" class="icon-button" aria-label="Show queue" title="Show play queue">☷</button>
+      <button id="muteButton" type="button" class="icon-button" aria-label="Mute" title="Toggle mute">🔊</button>
+      <input id="volumeBar" type="range" min="0" max="100" value="75" aria-label="Volume">
+    </div>
+    <audio id="audioElement" preload="none"></audio>
+  </div>
+
+  <nav class="mobile-nav" aria-label="Minzify mobile navigation">
+    <button type="button" data-view="home" class="mobile-nav-item selected"><span aria-hidden="true">⌂</span> Home</button>
+    <button type="button" data-view="search" class="mobile-nav-item"><span aria-hidden="true">⌕</span> Search</button>
+    <button type="button" data-view="liked" class="mobile-nav-item"><span aria-hidden="true">♥</span> Likes</button>
+    <button type="button" data-view="playlists" class="mobile-nav-item"><span aria-hidden="true">▤</span> Library</button>
+  </nav>
+
+  <div id="queuePanel" class="queue-panel" hidden><div class="queue-header"><strong>Next up</strong><button type="button" id="closeQueue" aria-label="Close queue">✕</button></div><div id="queueItems" class="queue-items"></div></div>
+
+  <dialog id="playlistDialog" class="playlist-dialog" aria-labelledby="playlistDialogTitle">
+    <form method="dialog"><button class="dialog-close" aria-label="Close playlist dialog" value="cancel">✕</button></form>
+    <h2 id="playlistDialogTitle">Add to playlist</h2><p id="playlistDialogSubtitle">Save this track to your collection.</p>
+    <div id="playlistDialogList" class="dialog-list"></div>
+    <form id="newPlaylistForm" class="new-playlist-form"><label for="newPlaylistName">Create a new playlist</label><div><input id="newPlaylistName" maxlength="40" placeholder="Your playlist name" required><button type="submit" class="primary-button">Create ＋</button></div></form>
+  </dialog>
+
+  <div id="toast" role="status" aria-live="polite" class="toast" hidden></div>
+</body>
+</html>
