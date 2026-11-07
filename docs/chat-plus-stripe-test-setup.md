@@ -1,6 +1,6 @@
 # Chat+ billing — Stripe sandbox setup
 
-Status: **UI preview only. No payment endpoint is deployed. No real or test charges can be made from Community Chat yet.**
+Status: **Dedicated Cloudflare billing Worker is deployed with secure routes, but all purchases remain disabled until payment credentials, Firebase entitlement rules and the explicit billing-readiness flag are configured.** The website and iOS UI are connected, but no paid transactions or App Store products have been enabled.
 
 ## Plan
 - Chat+ recurring subscription: **AUD 1.00/month** (Stripe unit amount `100`, currency `aud`, interval `month`).
@@ -25,4 +25,4 @@ Never paste secret keys into website HTML, public GitHub files, or chat. Configu
 ## Sandbox test
 Stripe's test card `4242 4242 4242 4242` with a future expiry and any CVC can simulate a successful checkout. Confirm that a paid subscription grants billing-derived Chat+ access, cancellation/end of paid period removes only that entitlement, and payment failure is handled without granting access.
 
-The existing Settings preview is intentionally disabled until the secure backend is deployed and configured.
+See [billing/README.md](../billing/README.md) for complete activation steps, including the already-deployed Cloudflare billing Worker, the Firebase rule merger, Apple StoreKit, GitHub iOS build variables, and the mandatory `BILLING_FIREBASE_RULES_READY=true` interlock. The subscription button remains disabled until backend readiness checks pass.
