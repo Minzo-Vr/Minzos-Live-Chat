@@ -2,9 +2,11 @@ import {Client, GatewayIntentBits, Events} from "discord.js";
 import {setupRoleSync} from "./role-sync.js";
 import {ONE_WORD_STORIES_CHANNEL_NAME,isStoryMessageValid} from "../one-word-rules.js";
 
-const required=["DISCORD_BOT_TOKEN","HELP_CHANNEL_ID","OPENAI_API_KEY"];
-for(const key of required)if(!process.env[key])throw Error("Missing required environment variable: "+key);
-const client=new Client({intents:[GatewayIntentBits.Guilds,GatewayIntentBits.GuildMessages,GatewayIntentBits.MessageContent,GatewayIntentBits.GuildMembers]});
+// Message moderation can run without the separately configured AI help service.
+if(!process.env.DISCORD_BOT_TOKEN)throw Error("Missing DISCORD_BOT_TOKEN.");
+const gatewayIntents=[GatewayIntentBits.Guilds,GatewayIntentBits.GuildMessages,GatewayIntentBits.MessageContent];
+if(process.env.ROLE_SYNC_MAP)gatewayIntents.push(GatewayIntentBits.GuildMembers);
+const client=new Client({intents:gatewayIntents});
 const cooldowns=new Map();
 const MAX_QUESTION=1200;
 const COOLDOWN_MS=20000;
@@ -46,7 +48,7 @@ async function answer(question){
 
 client.once(Events.ClientReady,ready=>console.log("Community Chat support bot ready as "+ready.user.tag));
 client.on(Events.MessageCreate,async message=>{
- if(message.author.bot||!message.guild||message.channelId!==process.env.HELP_CHANNEL_ID)return;
+ if(message.author.bot||!message.guild||!process.env.HELP_CHANNEL_ID||!process.env.OPENAI_API_KEY||message.channelId!==process.env.HELP_CHANNEL_ID)return;
  if(!message.content.startsWith("$"))return;
  const question=message.content.slice(1).trim();
  if(!question)return void message.reply({content:"Ask a question after $ — for example: $How do I move a block in Shapes & Colours?",allowedMentions:{repliedUser:false}}).catch(console.error);
