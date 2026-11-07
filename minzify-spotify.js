@@ -59,6 +59,7 @@ async function startConnect(){
  const id=clientId();
  if(!validClientId(id)){showStatus("connectStatus","Enter a valid Spotify Client ID (32 letters/numbers).",true);return}
  if(!window.isSecureContext||!crypto?.subtle){showStatus("connectStatus","Spotify PKCE login requires an HTTPS secure page.",true);return}
+ if(!fixedClientId&&!setLocal(CLIENT_KEY,id)){showStatus("connectStatus","Browser storage is blocked, so OAuth cannot remember the Spotify Client ID.",true);return}
  const verifier=randomString(64);
  const hash=new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(verifier)));
  const state=randomString(30);
