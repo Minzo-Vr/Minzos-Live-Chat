@@ -22,6 +22,25 @@ This requires a one-time Apple signing setup with a distribution certificate, ap
 
 **Until signing is configured, the automatically produced IPA is an unsigned build artifact; it is not a ready-to-install iPad app.**
 
+## Import and reuse files inside the installed IPA / Android app
+
+The mobile build now installs the Capacitor 7-compatible native file picker and injects a **native-only Files bridge** into bundled pages. The original GitHub Pages website keeps its browser file picker.
+
+In **Shapes & Colours**:
+
+1. Tap **📦 Import 3D** to pick `.glb`, `.gltf`, `.obj`, `.fbx`, `.stl`, `.ply` or `.dae` from the device Files picker. Use a self-contained `.glb` for best results.
+2. Tap **Load JSON** to load a saved scene; while in Yeeps Mode, tap the **Yeeps ZIP** picker to load `.zip` blocks. The first-person avatar GLB picker also uses native Files.
+3. Tap **📂 My Imports** to reopen or share/delete copied files. The importer tries an on-device file copy first to avoid large base64 transfers. If the OS denies copying, smaller files use a limited in-memory fallback. A file can still be imported into the current scene even if a reusable copy could not be retained.
+4. Tap **Save** to store the current scene as JSON in the app's `Documents/CommunityHubImports/` folder. Saved JSON scenes can be reopened from My Imports or exported with the system Share sheet.
+
+On iPhone/iPad, the generated Xcode `Info.plist` enables **UIFileSharingEnabled** and **LSSupportsOpeningDocumentsInPlace**, making the app's Documents folder available from **Files → On My iPhone/iPad → Community Chat** on supported iOS installations. On Android, app-managed documents are available from the in-app My Imports manager.
+
+**Persistence:** These files remain after normal signed app updates with the same bundle ID, but can be deleted by uninstalling the app or clearing app data. They are stored on that device, **not automatically synced** between the website, iPad and Android. To move files between devices, use the Share button or transfer them through Files.
+
+**Limits:** File selection is limited to supported extensions and at most 200 MB. If direct OS copying fails, only files up to 20 MB can be kept as reusable copies via the fallback. Very large assets can still strain device RAM; external `.gltf` textures/dependencies are not automatically bundled. Local imported 3D models aren't automatically shared to other MultiBuilder users; that needs a separate secure shared-asset system. Existing chat attachments continue to use their platform file input and Cloudinary upload flows.
+
+This feature is part of **new native IPA/APK builds only**. Existing installed builds must be rebuilt/reinstalled as an update. A produced **unsigned IPA still needs Apple signing** before it can run on a real iPhone or iPad.
+
 ## Local native projects
 
 With Node 22 installed, from `mobile/` run:
