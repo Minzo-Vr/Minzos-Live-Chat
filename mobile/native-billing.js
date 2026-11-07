@@ -23,6 +23,7 @@
  }
  window.CommunityAppleBilling={
    isNativeApple:true,
+   isConfigured:()=>!!(config.revenueCatAppleApiKey&&getSDK()),
    async purchase(uid){
      const sdk=await configure(uid);
      const offerings=await sdk.getOfferings();
