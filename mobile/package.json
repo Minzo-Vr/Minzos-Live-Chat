@@ -6,8 +6,8 @@
   "scripts": {
     "prepare:web": "node scripts/prepare-web.mjs",
     "native:android": "npm run prepare:web && npx cap add android && npx cap sync android",
-    "native:ios": "npm run prepare:web && npx cap add ios && npx cap sync ios",
-    "sync": "npm run prepare:web && npx cap sync"
+    "native:ios": "npm run prepare:web && npx cap add ios && npx cap sync ios && node scripts/configure-ios.mjs",
+    "sync": "npm run prepare:web && npx cap sync && node scripts/configure-ios.mjs"
   },
   "dependencies": {
     "@capacitor/core": "^7.4.0",
