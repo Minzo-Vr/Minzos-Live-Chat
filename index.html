@@ -1864,6 +1864,7 @@ try{
  });
 })();
 </script>
+<script src="./chat-plus-config.js"></script>
 <script type="module">
     /*
       SETUP:
@@ -1919,13 +1920,16 @@ try{
     const appearancePath = uid => `chatRoleAppearance/${uid}`;
     const validEffects=new Set(["none","member","plus","moderator","admin","testsubject"]);
     let appearanceByUid={},appearanceUnsub=null;
-    // Payments: a Cloudflare Worker verifies Stripe/Apple before changing Firebase roles.
+    // Payments are verified server-side and stored separately from manually assigned Plus/Admin roles.
     // Configure only after the Worker and Firebase billing security rules are deployed.
-    const CHAT_PLUS_BILLING_WORKER_URL=""; // e.g. https://community-chat-billing.<account>.workers.dev
-    const nativeAppleBilling=()=>window.CommunityAppleBilling?.isNativeApple===true;
+    const CHAT_PLUS_BILLING_WORKER_URL=String(window.COMMUNITY_CHAT_PLUS_BILLING_API||"").replace(/\/+$/,"");
+    const nativeAppleBilling=()=>window.Capacitor?.isNativePlatform?.()===true&&window.Capacitor.getPlatform?.()==="ios";
+    let billingEntitlement=null,billingUnsub=null;
+    const paidBillingActive=source=>billingEntitlement?.[source]?.active===true&&Number(billingEntitlement[source].expiresAt)>Date.now();
+    const paidChatPlus=()=>paidBillingActive("stripe")||paidBillingActive("apple");
     const chatPlusBillButton=$("chatPlusBillingTestButton"),chatPlusBillStatus=$("chatPlusBillingTestStatus");
     const chatPlusBillManage=$("chatPlusBillingManageButton"),chatPlusBillRestore=$("chatPlusBillingRestoreButton");
-    let billingHealth=null,billingChecking=false;
+    let billingHealth=null,billingChecking=false,billingMode="test";
     function billingMessage(message){chatPlusBillStatus.textContent=message;}
     function billingEndpoint(path){return CHAT_PLUS_BILLING_WORKER_URL.replace(/\/+$/,"")+path;}
     async function billingRequest(path){
@@ -1965,10 +1969,10 @@ try{
       billingChecking=true;
       try{
         const res=await fetch(billingEndpoint("/health"),{cache:"no-store"});
-        const health=await res.json();billingHealth=!!(res.ok&&health.configured===true&&health.mode==="test");
+        const health=await res.json();billingHealth=!!(res.ok&&health.checkoutEnabled===true);billingMode=health.stripeMode==="live"?"live":"test";
         chatPlusBillButton.disabled=!billingHealth;
         chatPlusBillManage.disabled=!billingHealth;
-        billingMessage(billingHealth?"Stripe sandbox ready — no real charges.":"Checkout configuration is incomplete.");
+        billingMessage(billingHealth?(billingMode==="live"?"Stripe checkout ready — A$1.00/month (real subscription).":"Stripe sandbox ready — no real charges."):"Checkout configuration is incomplete.");
       }catch{
         chatPlusBillButton.disabled=true;chatPlusBillManage.disabled=true;
         billingMessage("Billing service is unavailable.");
@@ -1976,6 +1980,7 @@ try{
     }
     chatPlusBillButton?.addEventListener("click",async()=>{
       if(!user)return billingMessage("Please sign in first.");
+      if(window.Capacitor?.isNativePlatform?.()===true&&!nativeAppleBilling())return billingMessage("Android app purchase billing is not configured.");
       chatPlusBillButton.disabled=true;billingMessage("Opening secure purchase…");
       try{
         if(nativeAppleBilling()){
@@ -1990,7 +1995,10 @@ try{
     });
     chatPlusBillManage?.addEventListener("click",async()=>{
       chatPlusBillManage.disabled=true;
-      try{await billingRequest("/portal");}catch(error){billingMessage(String(error?.message||error).slice(0,240));}
+      try{
+        if(nativeAppleBilling())window.open("https://apps.apple.com/account/subscriptions","_blank","noopener");
+        else await billingRequest("/portal");
+      }catch(error){billingMessage(String(error?.message||error).slice(0,240));}
       finally{void refreshChatPlusBilling();}
     });
     chatPlusBillRestore?.addEventListener("click",async()=>{
@@ -2008,8 +2016,24 @@ try{
       const raw=roleMap[uid];
       const roles=raw&&typeof raw==="object"?Object.keys(raw).filter(k=>raw[k]===true):typeof raw==="string"?[raw]:[];
       if(uid===user?.uid&&baseAdminClaim&&!roles.includes("admin"))roles.push("admin");
+      if(uid===user?.uid&&paidChatPlus()&&!roles.includes("plus"))roles.push("plus");
       return roles;
     }
+    function stopBillingListener(){if(billingUnsub){billingUnsub();billingUnsub=null;}billingEntitlement=null;}
+    function startBillingListener(){
+      stopBillingListener();if(!db||!user)return;
+      const uid=user.uid;
+      billingUnsub=onValue(ref(db,"chatBillingEntitlements/"+uid),snapshot=>{
+        if(user?.uid!==uid)return;
+        billingEntitlement=snapshot.val()||null;
+        updateRoleUI();refreshChatPlusDownloads();void refreshChatPlusBilling();
+      },error=>{
+        if(user?.uid!==uid)return;
+        console.warn("Chat+ billing entitlement read requires Firebase rules",error);
+        billingEntitlement=null;void refreshChatPlusBilling();
+      });
+    }
+    setInterval(()=>{if(user&&billingEntitlement&&!paidChatPlus()){updateRoleUI();void refreshChatPlusBilling();}},60000);
     function hasRole(uid,role){return userRoles(uid).includes(role);}
     function refreshChatPlusDownloads(){
       const status=document.getElementById("chatPlusDownloadStatus");
@@ -5131,6 +5155,7 @@ try{
       stopChatListeners();
       if(user?.uid!==account?.uid){clearMyTyping().catch(console.warn);if(typingUnsub){typingUnsub();typingUnsub=null;}typingEntries={};drawTyping();}
       user=account;
+      stopBillingListener();
       lastUserActivity=Date.now();
       if(stopEconomy){stopEconomy();stopEconomy=null;}
       $("xpStatus").hidden=!account || !hasExperimentalAccess() || !chatPrefs.enableXp;
@@ -5162,7 +5187,7 @@ try{
       else if(emailPassword&&!google&&!isAdmin)$("accountLabel").textContent="✉️ Signed in with email — choose a chat username";
       else if(discordCustomLogin&&!isAdmin)$("accountLabel").textContent="🎮 Signed in with Discord — choose a chat username";
       startAnnouncementListeners();
-      startEconomy();startFriends();startRoleListeners();void refreshChatPlusBilling();
+      startEconomy();startFriends();startRoleListeners();startBillingListener();void refreshChatPlusBilling();
       $("adminPanel").hidden=!isAdmin;$("adminLogin").hidden=isAdmin;
       status.textContent=isAdmin?"Admin online":account.isAnonymous?"Guest online":"Online";
       listenMessages();subscribeSettings();startPresence();startRoomIndex();
