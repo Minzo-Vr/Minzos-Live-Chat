@@ -23,6 +23,7 @@ const commands=[
 {name:"status",description:"Get the Community Chat website"},
 {name:"setup_applications",description:"Create a private application-reviews channel",default_member_permissions:"8"},
 {name:"setup_tickets",description:"Install or repair App Reports, Direct Support and Bug Support ticket panels",default_member_permissions:"8"},
+{name:"setup_one_word_stories",description:"Create or repair the 1 Word Stories Discord text channel",default_member_permissions:"8"},
 {name:"applications",description:"Post application opening or closing announcements",default_member_permissions:"8",options:[
  {type:3,name:"status",description:"Open or close applications",required:true,choices:[{name:"Open",value:"open"},{name:"Closed",value:"closed"}]},
  {type:3,name:"type",description:"Application category",required:true,choices:[{name:"Moderator",value:"moderator"},{name:"Test Subjects / Lab Rats",value:"test_subjects"}]},
