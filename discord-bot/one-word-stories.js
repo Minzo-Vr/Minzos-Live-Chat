@@ -1,4 +1,4 @@
-import {ONE_WORD_STORIES_CHANNEL_NAME,isStoryMessageValid,storyInstructions} from "./one-word-rules.js";
+import {ONE_WORD_STORIES_CHANNEL_NAME,isStoryMessageValid,storyInstructions} from "./one-word-rules.mjs";
 
 // Discord's Gateway-based listener enforces rules immediately when running.
 // This Cloudflare cron moderator provides a one-minute safety net even when
