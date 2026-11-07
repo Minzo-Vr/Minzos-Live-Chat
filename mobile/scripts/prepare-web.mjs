@@ -39,7 +39,7 @@ for(const name of publicFiles){
   const inject=(name==="index.html"?
     '<script src="./sideload-tool.js"></script>\n':'')+
     '<script src="./native-files.js"></script>\n'+
-    (name==="index.html"?'<script>window.COMMUNITY_CHAT_BILLING={revenueCatAppleApiKey:'+JSON.stringify(process.env.REVENUECAT_APPLE_PUBLIC_KEY||"")+'};</script>\n<script src="./native-billing.js"></script>\n':'');
+    (name==="index.html"?'<script>window.COMMUNITY_CHAT_BILLING='+JSON.stringify({revenueCatAppleApiKey:process.env.REVENUECAT_APPLE_PUBLIC_KEY||"",appleProductId:process.env.REVENUECAT_IOS_PRODUCT_ID||"",entitlementId:process.env.REVENUECAT_ENTITLEMENT_ID||"chat_plus"})+';</script>\n<script src="./native-billing.js"></script>\n':'');
   if(!/<\/body\s*>/i.test(bundled))throw Error("Cannot inject native file handling into "+name+": missing </body>");
   bundled=bundled.replace(/<\/body\s*>/i,inject+"</body>");
   writeFileSync(destFile,bundled);
