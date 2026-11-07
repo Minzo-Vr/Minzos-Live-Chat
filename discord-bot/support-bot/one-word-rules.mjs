@@ -27,6 +27,8 @@ export function storyInstructions(){
   "⛔ **No two turns in a row:** wait until someone else adds a valid word.",
   "⛔ **No tricks:** \`he-liked-her\`, underscores, hidden characters, numbers, links, emojis and attachments are not allowed.",
   "",
-  "The bot removes invalid or consecutive messages. Continue the story below! 📚",
+  "✅ Accepted words receive a ✅ reaction.",
+  "❌ Invalid or consecutive words receive a ❌ reaction before removal.",
+  "Continue the story below! 📚",
  ].join("\n");
 }
