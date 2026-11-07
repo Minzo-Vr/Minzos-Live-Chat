@@ -7,3 +7,19 @@ services:
     plan: free
     healthCheckPath: /
     autoDeployTrigger: off
+
+  - type: web
+    name: community-minzsign
+    runtime: docker
+    rootDir: minzsign-server
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    autoDeployTrigger: off
+    envVars:
+      - key: FIREBASE_PROJECT_ID
+        value: website-chat-80038
+      - key: FRONTEND_ORIGIN
+        value: https://minzo-vr.github.io
+      - key: PUBLIC_BASE_URL
+        sync: false
