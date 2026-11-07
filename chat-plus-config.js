@@ -2,4 +2,4 @@
  * Deploy the separate billing/worker.js Cloudflare Worker first, then replace
  * the empty value with its exact HTTPS /workers.dev or custom-domain origin.
  * Empty means checkout stays safely disabled. */
-window.COMMUNITY_CHAT_PLUS_BILLING_API="";
+window.COMMUNITY_CHAT_PLUS_BILLING_API="https://community-chat-billing.kobefalzon8.workers.dev";
