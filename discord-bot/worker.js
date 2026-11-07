@@ -1,5 +1,6 @@
 // Community Hub Discord bot. Keep OAuth, Firebase, roles and existing commands unchanged.
 import {TICKET_TYPES,ticketAction,ensureTicketPanels,completeTicketInteraction,completeTicketSetupInteraction} from "./tickets.js";
+import {ensureOneWordStories,moderateOneWordStories,finishOneWordSetup} from "./one-word-stories.js";
 // Support categories are deliberately selected server-side; a label alone does not grant permissions.
 const SUPPORT_CATEGORIES=Object.freeze({
  chats:{label:"Chats",focus:"Support chat messages, rooms, mentions, friends, DMs, notifications, music and moderation."},
@@ -401,6 +402,14 @@ export default {
        }
      }catch(err){console.error("Automatic ticket panel installation",err);}
    }
+   if(env.SAD_MESSAGES){
+     try{
+       if(!await env.SAD_MESSAGES.get("oneword:channel:v1"))
+         await ensureOneWordStories(env);
+       const stories=await moderateOneWordStories(env);
+       if(stories.deleted)console.log("1 Word Stories removed",stories.deleted,"rule-breaking messages");
+     }catch(err){console.error("1 Word Stories moderation",err);}
+   }
    if(!env.SAD_MESSAGES)return;
    let cursor;
    do{
@@ -497,13 +506,18 @@ export default {
    return reply(dm?"The user isn't linked. I sent them a DM with the missed role and a Retry button.":"The user isn't linked, but I couldn't DM them (their DMs may be closed). No role was assigned.",true);
   }catch(e){console.error("Assign Community Chat role",e);return reply("Couldn't check or assign the Community Chat role. Check Worker logs and Firebase permissions.",true);}
  }
+ if(name==="setup_one_word_stories"){
+   if(!isSupportAdmin(data,env))return reply("Only server administrators can create the story channel.",true);
+   ctx.waitUntil(finishOneWordSetup(data,env));
+   return json({type:5,data:{flags:64}});
+ }
  if(name==="setup_tickets"){
    if(!isSupportAdmin(data,env))return reply("Only server administrators can set up the ticket panels.",true);
    ctx.waitUntil(completeTicketSetupInteraction(data,env));
    return json({type:5,data:{flags:64}});
  }
  if(name==="ping")return reply("🏓 Pong! Community Chat bot is online.");
- if(name==="help")return reply("**Community Hub commands**\n/ask — select an app category or Generic Question\n/ping — bot health\n/sad — timed self-deleting message\n/help — commands\n/latest — latest published update\n/updates — three recent updates\n/status — website link\n/announce — admin-only Discord announcement\n/applications — admin-only application open/closed announcements\n/setup_applications — create private application review channel\n/setup_tickets — install/repair private ticket panels\n/add-role-to-user — server-admin-only linked Community Chat role assignment");
+ if(name==="help")return reply("**Community Hub commands**\n/ask — select an app category or Generic Question\n/ping — bot health\n/sad — timed self-deleting message\n/help — commands\n/latest — latest published update\n/updates — three recent updates\n/status — website link\n/announce — admin-only Discord announcement\n/applications — admin-only application open/closed announcements\n/setup_applications — create private application review channel\n/setup_tickets — install/repair private ticket panels\n/setup_one_word_stories — create or repair #1-word-stories\n/add-role-to-user — server-admin-only linked Community Chat role assignment");
  if(name==="status")return reply("Community Chat: https://minzo-vr.github.io/Minzos-Live-Chat/ (open to check availability)");
 
  if(name==="setup_applications"){
