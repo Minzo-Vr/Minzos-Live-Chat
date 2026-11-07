@@ -1,6 +1,6 @@
 import {Client, GatewayIntentBits, Events} from "discord.js";
 import {setupRoleSync} from "./role-sync.js";
-import {ONE_WORD_STORIES_CHANNEL_NAME,isStoryMessageValid} from "../one-word-rules.js";
+import {ONE_WORD_STORIES_CHANNEL_NAME,isStoryMessageValid} from "../one-word-rules.mjs";
 
 // Message moderation can run without the separately configured AI help service.
 if(!process.env.DISCORD_BOT_TOKEN)throw Error("Missing DISCORD_BOT_TOKEN.");
