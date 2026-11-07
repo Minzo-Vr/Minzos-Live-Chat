@@ -1951,8 +1951,9 @@ try{
         billingMessage("Sign in to purchase Chat+.");return;
       }
       if(isApple){
-        chatPlusBillButton.disabled=false;chatPlusBillRestore.disabled=false;chatPlusBillManage.disabled=true;
-        billingMessage("Apple purchases require an App Store Connect subscription and configured RevenueCat SDK.");
+        const ready=window.CommunityAppleBilling?.isConfigured?.()===true;
+        chatPlusBillButton.disabled=!ready;chatPlusBillRestore.disabled=!ready;chatPlusBillManage.disabled=true;
+        billingMessage(ready?"Apple purchase sheet is available.":"Apple purchases are not configured in this app build yet.");
         return;
       }
       chatPlusBillRestore.disabled=true;
