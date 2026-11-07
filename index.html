@@ -263,6 +263,19 @@
     .mention-picker{padding:8px 14px;background:var(--theme-panel);display:flex;flex-wrap:wrap;gap:6px}
     .mention-picker[hidden]{display:none}
     .mention-picker button{font:inherit;padding:7px 10px;border-radius:8px}
+    .emoji-shortcode-suggestions{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:5px;max-height:195px;overflow:auto;padding:9px 12px;border:1px solid var(--theme-border);background:var(--theme-panel);position:relative;z-index:18}
+    .emoji-shortcode-suggestions[hidden]{display:none!important}
+    .emoji-shortcode-suggestions button{display:flex;align-items:center;gap:9px;text-align:left;padding:8px 10px;border-radius:9px;background:var(--theme-surface)!important;color:var(--theme-text)!important;border:1px solid var(--theme-border);min-height:42px}
+    .emoji-shortcode-suggestions button:hover,.emoji-shortcode-suggestions button:focus-visible{outline:2px solid #71b3ff}
+    .emoji-shortcode-suggestions .shortcode-emoji{font-size:22px}
+    .msg-reactions{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 2px;align-items:center}
+    .msg-reactions[hidden],.msg-reaction-chooser[hidden],.msg-actions .reaction-action[hidden]{display:none!important}
+    .msg-reactions button{display:inline-flex;align-items:center;justify-content:center;gap:5px;border:1px solid var(--theme-border);border-radius:18px;background:var(--theme-panel)!important;color:var(--theme-text)!important;padding:4px 9px;font-size:13px;min-width:44px;min-height:32px}
+    .msg-reactions button.mine{background:#dcefff!important;border-color:#608cca;color:#17346a!important;font-weight:700}
+    .msg-reactions button:disabled{opacity:.85;cursor:default}
+    .msg-reaction-chooser{display:flex;flex-wrap:wrap;gap:6px;padding:8px;max-width:280px;background:var(--theme-panel);border:1px solid var(--theme-border);border-radius:12px;margin-top:5px}
+    .msg-reaction-chooser button{font-size:23px;min-width:40px;min-height:40px;padding:5px;border-radius:8px;background:var(--theme-surface)!important;color:var(--theme-text)!important}
+    @media(max-width:600px){.emoji-shortcode-suggestions{grid-template-columns:repeat(2,minmax(0,1fr))}}
     .notification-settings{border-top:1px solid var(--theme-border,#dce1ec);margin-top:13px;padding-top:12px}
     .notification-settings label{display:flex;align-items:center;gap:8px;margin:9px 0;font-size:13px}
     .notification-settings small{display:block;color:var(--theme-secondary,#64748b);font-size:12px}
@@ -4436,7 +4449,7 @@ try{
           const cancel=document.createElement("button");cancel.type="button";cancel.textContent="Cancel";
           cancel.addEventListener("click",()=>form.remove());
           form.addEventListener("submit",async e=>{
-            e.preventDefault();const text=input.value.trim();
+            e.preventDefault();const text=expandEmojiShortcodes(input.value.trim());
             if(!text)return;
             save.disabled=true;
             try{await update(ref(db,path+"/"+key),{text,editedAt:Date.now()});void writeActivityLog("message_edited",JSON.stringify({path,key,authorUid:data.uid,authorName:data.name,preview:String(data.text||"").slice(0,500),newText:text,byModerator:!own}));form.remove();}
@@ -4448,6 +4461,78 @@ try{
       make("🔗","Copy message link",()=>copyMessageLink(path,key));
       wrap.append(actions);
     }
+    // :shortcode: autocomplete. The emoji itself is Unicode, not a separate upload.
+    const EMOJI_SHORTCODES=[
+      ["sob","😭","cry loudly sad"],["joy","😂","laugh happy tears"],["rofl","🤣","laugh rolling"],["smile","😄","happy"],["smiley","😃","happy"],["grinning","😀","grin"],["grin","😁","happy"],["laughing","😆","smile"],["sweat_smile","😅","awkward"],["blush","😊","smile"],["slight_smile","🙂","smile"],["wink","😉","flirt"],["heart_eyes","😍","love"],["smiling_hearts","🥰","love"],["kissing_heart","😘","kiss"],["sunglasses","😎","cool"],["thinking","🤔","hmm"],["neutral_face","😐","neutral"],["expressionless","😑","blank"],["rolling_eyes","🙄","eyes"],["scream","😱","shock"],["open_mouth","😮","surprise"],["cry","😢","sad tear"],["disappointed","😞","sad"],["pensive","😔","sad"],["rage","😡","angry mad"],["angry","😠","mad"],["sleeping","😴","sleep"],["yawning_face","🥱","tired"],["mind_blown","🤯","shock"],["partying_face","🥳","party"],["skull","💀","dead"],["ghost","👻","spooky"],["robot","🤖","bot"],["eyes","👀","look"],["facepalm","🤦","oops"],["shrug","🤷","idk"],["thumbsup","👍","like yes"],["thumbsdown","👎","dislike no"],["clap","👏","applause"],["raised_hands","🙌","celebrate"],["pray","🙏","thanks please"],["wave","👋","hello bye"],["ok_hand","👌","okay"],["muscle","💪","strong"],["handshake","🤝","agree"],["point_up","☝️","up"],["heart","❤️","love red"],["blue_heart","💙","heart"],["green_heart","💚","heart"],["purple_heart","💜","heart"],["yellow_heart","💛","heart"],["broken_heart","💔","heart"],["heartpulse","💗","love"],["fire","🔥","lit hot"],["sparkles","✨","shiny"],["star","⭐","rating"],["star_struck","🤩","wow"],["tada","🎉","party confetti"],["confetti_ball","🎊","celebrate"],["100","💯","perfect"],["check","✅","yes done"],["x","❌","no wrong"],["warning","⚠️","alert"],["question","❓","help"],["exclamation","❗","important"],["poop","💩","funny"],["cat","🐱","kitty"],["dog","🐶","puppy"],["frog","🐸","animal"],["pizza","🍕","food"],["burger","🍔","food"],["cake","🍰","food"],["coffee","☕","drink"],["sun","☀️","day"],["moon","🌙","night"],["rainbow","🌈","colours"],["cloud","☁️","weather"],["rocket","🚀","space"],["video_game","🎮","gaming"],["computer","💻","tech"],["iphone","📱","phone"],["camera","📷","photo"],["music","🎵","song"],["speech_balloon","💬","chat"]
+    ];
+    const emojiByShortcode=new Map(EMOJI_SHORTCODES.map(([id,symbol])=>[id,symbol]));
+    const expandEmojiShortcodes=text=>String(text).replace(/:([a-z0-9_+-]{1,32}):/gi,(raw,id)=>emojiByShortcode.get(id.toLowerCase())||raw);
+    const shortcodePicker=document.createElement("div");
+    shortcodePicker.className="emoji-shortcode-suggestions";shortcodePicker.hidden=true;
+    shortcodePicker.setAttribute("role","listbox");shortcodePicker.setAttribute("aria-label","Emoji shortcut suggestions");
+    sendForm.before(shortcodePicker);
+    let shortcodeRange=null;
+    function insertShortcodeEmoji(id,range=shortcodeRange){
+      if(!range||!emojiByShortcode.has(id))return;
+      const [start,end]=range,symbol=emojiByShortcode.get(id);
+      const next=messageInput.value.slice(0,start)+symbol+messageInput.value.slice(end);
+      if(next.length>messageInput.maxLength)return;
+      messageInput.value=next;messageInput.focus();
+      messageInput.setSelectionRange(start+symbol.length,start+symbol.length);
+      shortcodePicker.hidden=true;shortcodeRange=null;
+      messageInput.dispatchEvent(new Event("input",{bubbles:true}));
+    }
+    function drawShortcodePicker(){
+      shortcodePicker.replaceChildren();shortcodePicker.hidden=true;shortcodeRange=null;
+      if(!joined||messageInput.disabled)return;
+      const caret=messageInput.selectionStart??messageInput.value.length;
+      const match=messageInput.value.slice(0,caret).match(/(^|[\s([{]):([a-z0-9_+-]{1,32})$/i);
+      if(!match)return;
+      const typed=match[2].toLowerCase(),start=caret-match[0].length+match[1].length;
+      const candidates=EMOJI_SHORTCODES.filter(([id,,keywords])=>id.startsWith(typed)||keywords.split(" ").some(x=>x.startsWith(typed))).slice(0,10);
+      if(!candidates.length)return;
+      shortcodeRange=[start,caret];
+      for(const [id,symbol] of candidates){
+        const b=document.createElement("button");b.type="button";b.setAttribute("role","option");b.title="Insert :"+id+":";
+        const icon=document.createElement("span");icon.className="shortcode-emoji";icon.textContent=symbol;
+        const label=document.createElement("span");label.textContent=":"+id+":";
+        b.append(icon,label);
+        b.addEventListener("mousedown",e=>e.preventDefault());
+        b.addEventListener("click",()=>insertShortcodeEmoji(id,[start,caret]));
+        shortcodePicker.append(b);
+      }
+      shortcodePicker.hidden=false;
+    }
+    messageInput.addEventListener("input",()=>{
+      const caret=messageInput.selectionStart??messageInput.value.length;
+      const matched=messageInput.value.slice(0,caret).match(/:([a-z0-9_+-]{1,32}):$/i);
+      const symbol=matched&&emojiByShortcode.get(matched[1].toLowerCase());
+      if(symbol){
+        const start=caret-matched[0].length,next=messageInput.value.slice(0,start)+symbol+messageInput.value.slice(caret);
+        if(next.length<=messageInput.maxLength){
+          messageInput.value=next;messageInput.setSelectionRange(start+symbol.length,start+symbol.length);
+        }
+      }
+      drawShortcodePicker();
+    });
+    messageInput.addEventListener("click",drawShortcodePicker);
+    messageInput.addEventListener("keydown",event=>{
+      if(shortcodePicker.hidden)return;
+      if(event.key==="Escape"){event.preventDefault();shortcodePicker.hidden=true;return;}
+      if(event.key==="ArrowDown"){event.preventDefault();shortcodePicker.querySelector("button")?.focus();return;}
+      if((event.key==="Enter"||event.key==="Tab")&&shortcodePicker.childElementCount===1){
+        event.preventDefault();shortcodePicker.firstElementChild.click();
+      }
+    });
+    shortcodePicker.addEventListener("keydown",event=>{
+      const buttons=[...shortcodePicker.querySelectorAll("button")],index=buttons.indexOf(document.activeElement);
+      if(event.key==="ArrowDown"||event.key==="ArrowUp"){
+        event.preventDefault();buttons[(index+(event.key==="ArrowDown"?1:-1)+buttons.length)%buttons.length]?.focus();
+      }
+      if(event.key==="Escape"){event.preventDefault();shortcodePicker.hidden=true;messageInput.focus();}
+      if(event.key==="Enter"||event.key===" "){event.preventDefault();document.activeElement?.click();}
+    });
+    document.addEventListener("click",e=>{if(e.target!==messageInput&&!shortcodePicker.contains(e.target))shortcodePicker.hidden=true;});
     // Mentions use names visible in the current room and online list.
     let mentionNames=new Set(),onlineMentionUids=new Set(),mentionListeningSince=Date.now();
     const mentionPicker=document.createElement("div");
@@ -5651,7 +5736,7 @@ try{
     sendForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       clearError();
-      const text = messageInput.value.trim();
+      const text = expandEmojiShortcodes(messageInput.value.trim());
       if (!joined || !user || !db || !text || blockedFromChat() || !roomCanPost() || !roomCanView() || (lockdown && !isAdmin)) return;
       if(text.toLowerCase()==="/shop"){
         messageInput.value="";
