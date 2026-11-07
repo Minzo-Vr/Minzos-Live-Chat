@@ -1971,6 +1971,12 @@ try{
         chatPlusBillButton.disabled=!ready;chatPlusBillRestore.disabled=!ready;chatPlusBillManage.disabled=true;
         if(!ready){billingMessage("Apple purchases are not configured in this app build yet.");return;}
         try{
+          // Never launch an Apple purchase before the backend can verify and
+          // unlock this account. StoreKit must not charge with no entitlement sync.
+          if(!CHAT_PLUS_BILLING_WORKER_URL)throw Error("Billing service isn't connected.");
+          const healthResponse=await fetch(billingEndpoint("/health"),{cache:"no-store"});
+          const health=await healthResponse.json().catch(()=>({}));
+          if(!healthResponse.ok||health.iosEnabled!==true)throw Error("Apple purchase verification and Firebase billing rules aren't ready.");
           const offer=await window.CommunityAppleBilling.getOffer(user.uid);
           chatPlusBillButton.textContent="Subscribe with Apple · "+offer.price;
           billingMessage("Your exact price and renewal terms appear in Apple's purchase sheet.");
