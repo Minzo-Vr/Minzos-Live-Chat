@@ -1,5 +1,6 @@
 import {Client, GatewayIntentBits, Events} from "discord.js";
 import {setupRoleSync} from "./role-sync.js";
+import {ONE_WORD_STORIES_CHANNEL_NAME,isStoryMessageValid} from "../one-word-rules.js";
 
 const required=["DISCORD_BOT_TOKEN","HELP_CHANNEL_ID","OPENAI_API_KEY"];
 for(const key of required)if(!process.env[key])throw Error("Missing required environment variable: "+key);
@@ -64,6 +65,78 @@ client.on(Events.MessageCreate,async message=>{
   await message.reply({content:"Sorry, support AI is unavailable right now. Please try again later or ask a server administrator.",allowedMentions:{parse:[],repliedUser:false}}).catch(console.error);
  }
 });
+
+/**
+ * 1 Word Stories moderates normal Discord messages in near-real time.
+ * Gate by configured server and channel name (or explicit channel ID).
+ * A per-channel queue prevents same-author messages racing each other.
+ */
+const storyQueues=new Map(),storyNoticeCooldown=new Map();
+function isStoryChannel(message){
+ const guild=process.env.DISCORD_GUILD_ID;
+ if(!guild||message.guildId!==guild)return false;
+ const id=process.env.ONE_WORD_STORIES_CHANNEL_ID;
+ return id?message.channelId===id:message.channel?.name===ONE_WORD_STORIES_CHANNEL_NAME;
+}
+function enqueueStory(channelId,task){
+ const previous=storyQueues.get(channelId)||Promise.resolve();
+ const next=previous.catch(()=>{}).then(task);
+ storyQueues.set(channelId,next);
+ void next.catch(error=>console.error("1 Word Stories moderation failed:",error)).finally(()=>{
+  if(storyQueues.get(channelId)===next)storyQueues.delete(channelId);
+ });
+}
+async function precedingValidStoryAuthor(message){
+ let before=message.id;
+ for(let page=0;page<6;page++){
+  const batch=await message.channel.messages.fetch({limit:100,before,cache:false});
+  if(!batch.size)return null;
+  for(const item of batch.values()){
+   if(isStoryMessageValid({content:item.content,author:item.author,attachments:item.attachments,embeds:item.embeds,stickers:item.stickers,webhook_id:item.webhookId,poll:item.poll}))
+    return item.author.id;
+  }
+  if(batch.size<100)return null;
+  before=batch.last()?.id;
+  if(!before)return null;
+ }
+ return null;
+}
+async function storyNotice(message,reason){
+ const now=Date.now(),key=message.author.id;
+ if((storyNoticeCooldown.get(key)||0)>now)return;
+ storyNoticeCooldown.set(key,now+60000);
+ if(storyNoticeCooldown.size>1000)
+  for(const [id,until] of storyNoticeCooldown)if(until<=now)storyNoticeCooldown.delete(id);
+ try{await message.author.send("📖 **1 Word Stories:** "+reason+" Your message in <#"+message.channelId+"> was removed.");}
+ catch{} // Never spam the story channel when DMs are disabled.
+}
+client.on(Events.MessageCreate,message=>{
+ if(!isStoryChannel(message)||message.author?.bot||message.webhookId)return;
+ enqueueStory(message.channelId,async()=>{
+  if(!isStoryMessageValid({content:message.content,author:message.author,attachments:message.attachments,embeds:message.embeds,stickers:message.stickers,poll:message.poll})){
+   await message.delete();
+   await storyNotice(message,"Send only **one word**. Hyphens, underscores, spaces, emojis and attachments are not allowed.");
+   return;
+  }
+  const previous=await precedingValidStoryAuthor(message);
+  if(previous===message.author.id){
+   await message.delete();
+   await storyNotice(message,"You can't write two turns in a row. Let someone else add the next word.");
+  }
+ });
+});
+client.on(Events.MessageUpdate,(before,after)=>{
+ if(!isStoryChannel(after)||after.author?.bot||after.webhookId)return;
+ enqueueStory(after.channelId,async()=>{
+  const message=after.partial?await after.fetch().catch(()=>null):after;
+  if(!message||message.author?.bot)return;
+  if(!isStoryMessageValid({content:message.content,author:message.author,attachments:message.attachments,embeds:message.embeds,stickers:message.stickers,poll:message.poll})){
+   await message.delete();
+   await storyNotice(message,"Edits must still contain exactly one valid word.");
+  }
+ });
+});
+
 client.on(Events.Error,error=>console.error("Discord client error:",error));
 setupRoleSync(client);
 await client.login(process.env.DISCORD_BOT_TOKEN);
