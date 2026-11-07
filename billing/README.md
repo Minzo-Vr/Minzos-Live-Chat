@@ -10,7 +10,7 @@ This repository now contains a **secure subscription implementation**, but no pa
 
 ## Payment backend
 
-File: [worker.js](./worker.js). This is a **separate** Cloudflare Worker from the Discord bot.
+File: [worker.js](./worker.js). This is a **separate** Cloudflare Worker from the Discord bot. It has been deployed to **`community-chat-billing`**, with a workers.dev address of **`https://community-chat-billing.kobefalzon8.workers.dev`**. The GitHub Pages `chat-plus-config.js` file points to that address. All payments still remain disabled until configuration is complete.
 
 Routes:
 - `GET /health` — public configuration readiness without secrets.
@@ -33,6 +33,7 @@ Routes:
 - `REVENUECAT_IOS_PRODUCT_ID` — exact App Store Connect monthly subscription product identifier.
 - `REVENUECAT_ENTITLEMENT_ID` — `chat_plus` (must match RevenueCat dashboard).
 - `PUBLIC_SITE_URL` — `https://minzo-vr.github.io/Minzos-Live-Chat/`.
+- `BILLING_FIREBASE_RULES_READY` — **`true` only after** the merged Firebase security rules are published and verified (owner-read and no client-write). Both web and Apple payment buttons intentionally stay disabled without this interlock.
 - `REVENUECAT_ALLOW_SANDBOX` — omit or `false` in production; set `true` in an isolated test environment only.
 
 Configure the Worker route(s) above, then register the Stripe webhook endpoint `https://YOUR-WORKER/stripe-webhook` for `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed` (the Worker refetches the current subscription and ignores unsupported events). The webhook must be configured for the appropriate Stripe test/live environment.
@@ -84,6 +85,8 @@ The existing mobile bundle is Capacitor **7**; [mobile/package.json](../mobile/p
 7. Test purchase, restore, cancellation, renewal, and expiry with sandbox/TestFlight. Test with the same Firebase account on web and iPad to verify access follows the account. Do not enable live charging until this succeeds.
 
 **Why not Apple Pay?** Apple's in-app purchase requirements apply to Chat+ digital features inside the native app. Apple Pay for physical goods is not a substitute for StoreKit.
+
+**Payment activation is not automatic:** Worker deployment only publishes code. It does not create a Stripe product, enable the RevenueCat webhook, set Apple subscription pricing, sign the IPA, or publish Firebase rules. Do not configure the readiness interlock until both the backend credentials and Firebase security rules are verified. RevenueCat signed webhooks require a supported plan with HMAC signing.
 
 ### Important safety notes
 
