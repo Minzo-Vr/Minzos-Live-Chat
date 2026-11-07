@@ -8,11 +8,13 @@
  if(!window.Capacitor?.isNativePlatform?.()||window.Capacitor.getPlatform?.()!=="ios")return;
  const config=window.COMMUNITY_CHAT_BILLING||{};
  const state={ready:false,uid:null};
+ const productId=String(config.appleProductId||"");
+ const entitlementId=String(config.entitlementId||"chat_plus");
  const getSDK=()=>window.Capacitor?.Plugins?.Purchases;
  function errorMessage(error){return String(error?.message||error||"Purchase unavailable").slice(0,220)}
  async function configure(uid){
    const sdk=getSDK(),key=config.revenueCatAppleApiKey;
-   if(!sdk||!key)throw Error("Apple in-app purchases are not configured in this build.");
+   if(!sdk||!key||!productId||!key.startsWith("appl_"))throw Error("Apple in-app purchases are not configured in this build.");
    if(!state.ready){
      await sdk.configure({apiKey:key,appUserID:uid});
      state.ready=true;state.uid=uid;
@@ -23,20 +25,26 @@
  }
  window.CommunityAppleBilling={
    isNativeApple:true,
-   isConfigured:()=>!!(config.revenueCatAppleApiKey&&getSDK()),
+   isConfigured:()=>!!(config.revenueCatAppleApiKey?.startsWith("appl_")&&productId&&getSDK()),
+   async getOffer(uid){
+     const sdk=await configure(uid);
+     const offerings=await sdk.getOfferings();
+     const pack=offerings?.current?.availablePackages?.find(p=>p?.product?.identifier===productId);
+     if(!pack)throw Error("Chat+ monthly subscription isn't available in App Store Connect or the RevenueCat offering.");
+     return {price:pack.product.priceString||"App Store price",productId};
+   },
    async purchase(uid){
      const sdk=await configure(uid);
      const offerings=await sdk.getOfferings();
-     const offering=offerings?.current;
-     const pack=offering?.availablePackages?.[0];
-     if(!pack)throw Error("No Chat+ subscription is available from the App Store.");
+     const pack=offerings?.current?.availablePackages?.find(p=>p?.product?.identifier===productId);
+     if(!pack)throw Error("Chat+ subscription product unavailable from Apple's App Store.");
      const result=await sdk.purchasePackage({aPackage:pack});
-     return {purchased:!!result?.customerInfo,customerInfo:result?.customerInfo};
+     return {purchased:!!result?.customerInfo,active:!!result?.customerInfo?.entitlements?.active?.[entitlementId]};
    },
    async restore(uid){
      const sdk=await configure(uid);
      const result=await sdk.restorePurchases();
-     return {restored:!!result?.customerInfo,customerInfo:result?.customerInfo};
+     return {restored:!!result?.customerInfo,active:!!result?.customerInfo?.entitlements?.active?.[entitlementId]};
    },
    async status(uid){
      const sdk=await configure(uid);
