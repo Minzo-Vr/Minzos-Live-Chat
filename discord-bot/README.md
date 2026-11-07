@@ -11,3 +11,12 @@ This is a Cloudflare Worker Discord interactions endpoint. It does **not** repla
 The existing GitHub Actions webhook announcements remain enabled during setup. Once commands work, bot-token-based automatic announcements can be migrated separately to avoid duplicates.
 
 Security: Discord verifies signed interactions. `/announce` requires Discord Administrator permissions and a matching guild ID. Do not publish credentials, and rotate any previously exposed webhook or bot token.
+
+
+## Private ticket support
+
+The bot now automatically posts ticket buttons to the **App Reports**, **Direct Support**, and **Bug Support** text channels. A button creates a **private Discord thread**, invites its creator, and shows a **Close Ticket** button. Only invited members and admins/moderators with **Manage Threads** can read it; ordinary members cannot see ticket messages.
+
+For the three requested channel IDs, Discord permissions, optional staff invitations, and `/setup_tickets` recovery, read [TICKETS.md](./TICKETS.md). The bot must have **Create Private Threads**, **View Channel**, **Send Messages**, **Send Messages in Threads**, and **Manage Threads**. Members need **View Channel** and **Send Messages in Threads**.
+
+The implementation uses the existing `SAD_MESSAGES` KV namespace with separate ticket key prefixes. It does not require an extra database or expose ticket messages to the website.
