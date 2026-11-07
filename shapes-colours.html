@@ -963,13 +963,25 @@ function populatePhysicalBubbles(){
 }
 let yeepsBubblePage=0;
 function setPhysicalBubbles(open){
- if(!yeepsMode||!walking){open=false;}if(open&&(!yeepsZipArchive||!yeepsEntries.length)){fpBubblePanel.hidden=false;fpBubbleToggle.setAttribute('aria-expanded','true');bubbleOpen=false;physicalBubbles.visible=false;return;}bubbleOpen=Boolean(open&&walking&&yeepsMode);
- physicalBubbles.visible=bubbleOpen;
+ if(!walking&&!flying)open=false;
+ if(open&&yeepsMode&&(!yeepsZipArchive||!yeepsEntries.length)){
+  bubbleOpen=false;physicalBubbles.visible=false;
+  status.textContent='Load your Yeeps ZIP or choose Load blocks from release first';
+  if(walking){fpBubblePanel.hidden=false;fpBubbleToggle.setAttribute('aria-expanded','true');bubbleRender();}
+  refreshBubbleUI();return;
+ }
+ bubbleOpen=Boolean(open);physicalBubbles.visible=bubbleOpen;
  if(!open)fpBubblePanel.hidden=true;
  fpBubbleToggle.setAttribute('aria-expanded',String(bubbleOpen));
  fpBubbleToggle.textContent=bubbleOpen?'✖':'🫧';
- if(bubbleOpen){populatePhysicalBubbles();if(document.pointerLockElement===renderer.domElement)document.exitPointerLock();}
- else{bubbleGrab=null;}
+ if(bubbleOpen){
+  if(yeepsMode)populatePhysicalBubbles();
+  else populateStandardBubbles();
+  if(document.pointerLockElement===renderer.domElement)document.exitPointerLock();
+ }else bubbleGrab=null;
+ // The touch-look overlay should not intercept taps on floating 3D bubbles.
+ lookPad.style.pointerEvents=walking&&!bubbleOpen?'auto':'none';
+ refreshBubbleUI();
 }
 function bubbleHit(clientX,clientY){
  const rect=renderer.domElement.getBoundingClientRect();
@@ -981,13 +993,14 @@ function bubbleHit(clientX,clientY){
  return bubbleMeshes.includes(obj)?obj:null;
 }
 renderer.domElement.addEventListener('pointerdown',e=>{
- if(!walking||!bubbleOpen)return;
+ if(!bubbleOpen)return;
  const hit=bubbleHit(e.clientX,e.clientY);if(!hit)return;
- e.preventDefault();e.stopPropagation();bubbleGrab=hit;bubbleGrabStart={x:e.clientX,y:e.clientY,time:performance.now()};
+ e.preventDefault();e.stopImmediatePropagation();bubbleGrab=hit;bubbleGrabStart={x:e.clientX,y:e.clientY,time:performance.now()};
  try{renderer.domElement.setPointerCapture?.(e.pointerId);}catch{}
 },true);
 renderer.domElement.addEventListener('pointermove',e=>{
  if(!bubbleGrab||!bubbleGrabStart)return;
+ e.preventDefault();e.stopImmediatePropagation();
  const dx=(e.clientX-bubbleGrabStart.x)/Math.max(1,renderer.domElement.clientWidth);
  const dy=(e.clientY-bubbleGrabStart.y)/Math.max(1,renderer.domElement.clientHeight);
  bubbleGrab.position.x=bubbleGrab.userData.initialX+dx*2.2;
@@ -995,7 +1008,7 @@ renderer.domElement.addEventListener('pointermove',e=>{
 },true);
 renderer.domElement.addEventListener('pointerup',e=>{
  if(!bubbleGrab)return;
- e.preventDefault();e.stopPropagation();
+ e.preventDefault();e.stopImmediatePropagation();
  const hit=bubbleGrab;const moved=Math.hypot(e.clientX-bubbleGrabStart.x,e.clientY-bubbleGrabStart.y);
  bubbleGrab=null;bubbleGrabStart=null;
  if(moved<24)hit.userData.action();
@@ -1064,7 +1077,7 @@ async function firstPersonBuild(){
 fpBuildButton.onclick=firstPersonBuild;
 let walking=false,yaw=0,pitch=0,lastWalk=performance.now();const keys=new Set(),fpButton=document.getElementById('firstPerson');
 function exitWalk(){walking=false;lookPad.style.pointerEvents='none';fpBuildButton.hidden=true;fpBubbleUI.hidden=true;hud.hidden=true;setPhysicalBubbles(false);playerView.visible=false;keys.clear();fpButton.textContent='🎮 First person';if(document.pointerLockElement===renderer.domElement)document.exitPointerLock();resumeFly();}
-fpButton.onclick=()=>{if(walking){exitWalk();return;}if(flying)exitFly();walking=true;lookPad.style.pointerEvents='auto';fpBuildButton.hidden=false;fpBubbleUI.hidden=!yeepsMode;hud.hidden=false;fpBubbleToggle.style.display='none';fpBubblePlace.style.display='none';playerView.visible=true;playerView.position.copy(camera.position);select(null);orbit.enabled=false;transform.visible=false;fpButton.textContent='Exit first person';const direction=new THREE.Vector3();camera.getWorldDirection(direction);yaw=Math.atan2(-direction.x,-direction.z);pitch=Math.asin(Math.max(-1,Math.min(1,direction.y)));camera.position.y=1.7;if(!matchMedia('(pointer:coarse)').matches)renderer.domElement.requestPointerLock?.().catch(()=>{status.textContent='Click the 3D view to capture your mouse.';});status.textContent='WASD move · Shift run · Mouse look · Esc exit';};
+fpButton.onclick=()=>{if(walking){exitWalk();return;}if(flying)exitFly();walking=true;lookPad.style.pointerEvents=bubbleOpen?'none':'auto';fpBuildButton.hidden=false;fpBubbleUI.hidden=!yeepsMode;hud.hidden=false;fpBubbleToggle.style.display='none';fpBubblePlace.style.display='none';playerView.visible=true;playerView.position.copy(camera.position);select(null);orbit.enabled=false;transform.visible=false;fpButton.textContent='Exit first person';const direction=new THREE.Vector3();camera.getWorldDirection(direction);yaw=Math.atan2(-direction.x,-direction.z);pitch=Math.asin(Math.max(-1,Math.min(1,direction.y)));camera.position.y=1.7;if(!matchMedia('(pointer:coarse)').matches)renderer.domElement.requestPointerLock?.().catch(()=>{status.textContent='Click the 3D view to capture your mouse.';});status.textContent='WASD move · Shift run · Mouse look · Esc exit';};
 document.addEventListener('keydown',e=>{if(walking&&['KeyW','KeyA','KeyS','KeyD','ShiftLeft','ShiftRight'].includes(e.code)){keys.add(e.code);e.preventDefault();}if(walking&&e.code==='KeyB'&&!e.repeat&&!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName)){firstPersonBuild();e.preventDefault();}if(walking&&e.code==='Escape')exitWalk();});
 document.addEventListener('keyup',e=>keys.delete(e.code));
 document.addEventListener('mousemove',e=>{if(!walking||document.pointerLockElement!==renderer.domElement)return;yaw-=e.movementX*.002;pitch=Math.max(-1.45,Math.min(1.45,pitch-e.movementY*.002));});
