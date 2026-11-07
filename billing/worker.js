@@ -18,7 +18,7 @@ function same(a,b){if(typeof a!=="string"||typeof b!=="string")return false;cons
 function appUrl(env){return String(env.PUBLIC_SITE_URL||"https://minzo-vr.github.io/Minzos-Live-Chat/")}
 function originHeaders(origin){return origin===WEB_ORIGIN?{"access-control-allow-origin":WEB_ORIGIN,"vary":"Origin","access-control-allow-headers":"authorization, content-type","access-control-allow-methods":"GET, POST, OPTIONS"}:{}}
 function isStripeConfigured(env){
- return !!(env.STRIPE_SECRET_KEY&&env.STRIPE_WEBHOOK_SECRET&&/^price_/.test(env.STRIPE_PRICE_ID||"")&&env.FIREBASE_SERVICE_ACCOUNT);
+ return !!(env.BILLING_FIREBASE_RULES_READY==="true"&&env.STRIPE_SECRET_KEY&&env.STRIPE_WEBHOOK_SECRET&&/^price_/.test(env.STRIPE_PRICE_ID||"")&&env.FIREBASE_SERVICE_ACCOUNT);
 }
 const testMode=env=>env.STRIPE_MODE!=="live";
 async function stripe(env,method,path,params){
@@ -162,7 +162,7 @@ async function revenuecatSubscriber(env,uid){
  return response.json();
 }
 async function revenuecatWebhook(req,env){
- if(!env.REVENUECAT_WEBHOOK_SECRET||!env.REVENUECAT_SECRET_API_KEY)fail(503,"RevenueCat server verification not configured.");
+ if(env.BILLING_FIREBASE_RULES_READY!=="true"||!env.FIREBASE_SERVICE_ACCOUNT||!env.REVENUECAT_WEBHOOK_SECRET||!env.REVENUECAT_SECRET_API_KEY||!env.REVENUECAT_IOS_PRODUCT_ID)fail(503,"RevenueCat billing rules and server verification not configured.");
  const raw=await req.text(),verified=await verifyHmac(env.REVENUECAT_WEBHOOK_SECRET,raw,req.headers.get("X-RevenueCat-Webhook-Signature"));
  if(!verified)fail(401,"RevenueCat webhook signature invalid.");
  let payload;try{payload=JSON.parse(raw)}catch{fail(400,"Malformed RevenueCat event.")}
@@ -187,7 +187,7 @@ export default {
   const url=new URL(req.url),headers=originHeaders(req.headers.get("origin"));
   if(req.method==="OPTIONS")return new Response(null,{status:204,headers});
   try{
-   if(url.pathname==="/health"&&req.method==="GET")return json({ok:true,checkoutEnabled:isStripeConfigured(env),iosEnabled:!!(env.REVENUECAT_SECRET_API_KEY&&env.REVENUECAT_WEBHOOK_SECRET),stripeMode:testMode(env)?"test":"live"},200,headers);
+   if(url.pathname==="/health"&&req.method==="GET")return json({ok:true,checkoutEnabled:isStripeConfigured(env),iosEnabled:!!(env.BILLING_FIREBASE_RULES_READY==="true"&&env.FIREBASE_SERVICE_ACCOUNT&&env.REVENUECAT_IOS_PRODUCT_ID&&env.REVENUECAT_SECRET_API_KEY&&env.REVENUECAT_WEBHOOK_SECRET),stripeMode:testMode(env)?"test":"live"},200,headers);
    if(url.pathname==="/stripe-webhook"&&req.method==="POST")return json(await stripeWebhook(req,env));
    if(url.pathname==="/revenuecat-webhook"&&req.method==="POST")return json(await revenuecatWebhook(req,env));
    if(url.pathname!=="/checkout"&&url.pathname!=="/portal"&&url.pathname!=="/status")return json({error:"Not found"},404,headers);
