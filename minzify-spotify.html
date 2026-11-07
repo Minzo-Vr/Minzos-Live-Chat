@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0c12">
+<meta name="description" content="Minzify Spotify search — discover Spotify songs with your own authorized Spotify account.">
+<title>Spotify Discovery — Minzify</title>
+<link rel="icon" href="./app-icon.svg" type="image/svg+xml">
+<style>
+:root{color-scheme:dark;--bg:#090b11;--panel:#161a26;--stroke:#303747;--muted:#abb1c0;--text:#f4f5fc;--mint:#acfb85}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100dvh;background:radial-gradient(ellipse 50% 35% at 80% 0%,#1f4c37 0%,transparent 100%),var(--bg);color:var(--text);font:500 14px/1.55 Inter,system-ui,-apple-system,sans-serif}
+a{color:inherit;text-decoration:none}button,input{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.45}button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--mint);outline-offset:3px}[hidden]{display:none!important}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px clamp(20px,4vw,40px);border-bottom:1px solid #ffffff18;background:#0d1019d9}.brand{font-size:25px;font-weight:900;letter-spacing:-1.2px}.brand span{color:var(--mint)}.back{padding:9px 13px;border-radius:99px;border:1px solid #495166;color:#dce3ec;font-size:12px;font-weight:800}
+main{max-width:1020px;margin:0 auto;padding:clamp(24px,5vw,45px)}.eyebrow{font-size:11px;letter-spacing:2px;font-weight:900;color:var(--mint)}h1{font-size:clamp(34px,6vw,62px);line-height:1.1;letter-spacing:-2px;margin:12px 0 15px}h1 em{font-style:normal;color:var(--mint)}.lead{font-size:16px;color:#c3cbd7;max-width:740px;margin-bottom:28px}.grid{display:grid;grid-template-columns:1.2fr 1fr;gap:18px;align-items:start}.panel{border:1px solid var(--stroke);border-radius:22px;padding:23px;background:linear-gradient(150deg,#181d2b,#111520)}.panel h2{margin:0 0 11px;font-size:21px;letter-spacing:-.4px}.muted{color:var(--muted);font-size:13px}.label{display:block;font-size:12px;font-weight:800;color:#d9e5e0;margin:17px 0 7px}.input{display:block;width:100%;padding:12px;border-radius:12px;background:#0b101b;color:#fff;border:1px solid #526076;min-width:0}.input:focus{border-color:var(--mint)}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.button{border-radius:12px;padding:12px 16px;font-weight:800;border:1px solid #53657a;background:#262e3e;color:#f5f9ff;min-height:44px}.button.primary{background:var(--mint);border-color:var(--mint);color:#0e1a10}.button.small{font-size:12px;padding:8px 11px;min-height:36px}.status{margin-top:17px;border:1px solid #496853;background:#172820;color:#d6f8dc;border-radius:12px;padding:11px 12px;overflow-wrap:anywhere;font-size:13px}.status.error{border-color:#8e4f56;background:#2b1b22;color:#ffccd4}.status.info{background:#131d2c;border-color:#3b4e6f;color:#d7e9ff}.oauth-note{border-left:3px solid var(--mint);padding-left:11px}.redirect{padding:9px;border-radius:10px;overflow-wrap:anywhere;background:#0b111a;border:1px solid #3b4556;color:#d2f1d4;font:11px/1.6 ui-monospace,monospace}
+.search{display:flex;gap:8px;flex-wrap:wrap}.search .input{flex:1;min-width:200px}.tracks{display:grid;gap:11px;margin:19px 0 35px}.track{display:flex;gap:13px;align-items:center;padding:12px;background:#141a28;border:1px solid #2b3545;border-radius:15px}.art{height:64px;width:64px;flex:0 0 64px;background:#283346;border-radius:9px;display:grid;place-items:center;font-size:25px;overflow:hidden}.art img{width:100%;height:100%;object-fit:cover}.meta{min-width:0;flex:1}.meta strong{font-size:14px;display:block;overflow-wrap:anywhere}.meta small{display:block;color:#c1c9d8;overflow-wrap:anywhere}.open{padding:9px 12px;background:#264b32;color:#d1ffda;border:1px solid #54856a;border-radius:10px;white-space:nowrap;font-size:12px;font-weight:800}.open:hover{background:#31643e}.number{color:#a7b0bf;font-size:11px;font-weight:800}.help a,footer a{color:var(--mint);text-decoration:underline}.help p{margin:8px 0}.help li{margin:7px 0}footer{font-size:12px;color:#aab2c3;margin-top:35px}
+@media(max-width:750px){.grid{grid-template-columns:1fr}h1{letter-spacing:-1px}.track{flex-wrap:wrap}.open{margin-left:77px}}
+</style>
+<script src="./minzify-spotify-config.js"></script>
+<script src="./minzify-spotify.js" defer></script>
+</head>
+<body>
+<nav class="top"><a class="brand" href="./minzify.html" aria-label="Go to Minzify home">♫ minzify<span>.</span></a><a href="./minzify.html" class="back">← Back to Minzify</a></nav>
+<main>
+<div class="eyebrow">MINZIFY / SPOTIFY DISCOVERY</div>
+<h1>Find music on <em>Spotify.</em></h1>
+<p class="lead">Use Spotify's official catalog to search for songs, albums and artists, then open tracks on Spotify. Minzify's independent-artist player remains separate and free.</p>
+<div class="grid">
+<section class="panel" aria-labelledby="connectTitle">
+<h2 id="connectTitle">Connect your Spotify account</h2>
+<p class="muted">Spotify Web API uses a public <strong>Client ID</strong> and secure Spotify account sign-in (PKCE). Never paste a Client Secret here or into GitHub.</p>
+<label class="label" for="clientId">Spotify Client ID (not Client Secret)</label>
+<input class="input" id="clientId" name="clientId" autocomplete="off" spellcheck="false" inputmode="text" placeholder="32-character Client ID" maxlength="64">
+<div class="actions"><button class="button small" id="saveClient" type="button">Save Client ID on this device</button><a class="button small" target="_blank" rel="noopener noreferrer" href="https://developer.spotify.com/dashboard">Spotify Developer Dashboard ↗</a></div>
+<label class="label" for="redirectUri">Spotify Redirect URI (add this exact URL in your Spotify app settings)</label>
+<div id="redirectUri" class="redirect"></div>
+<div class="actions"><button class="button small" id="copyRedirect" type="button">Copy Redirect URI</button></div>
+<div class="actions"><button class="button primary" type="button" id="connect">Connect Spotify</button><button class="button" type="button" id="disconnect" hidden>Disconnect on this device</button></div>
+<div id="connectStatus" role="status" aria-live="polite" class="status info">Not connected to Spotify.</div>
+</section>
+<aside class="panel help" aria-label="Spotify limitations and setup">
+<h2>Important to know</h2>
+<p class="muted">Spotify Developer Mode currently requires the app owner to have Spotify Premium and allows up to five authorised users. This is suitable for private testing, not an unlimited public music service.</p>
+<p class="muted oauth-note">Your Spotify password is entered on Spotify's own website, not into Minzify. This integration does not request a Client Secret.</p>
+<p class="muted"><strong>Full songs:</strong> Spotify's API does not provide raw free-to-stream song files. Results open in Spotify; they do not play through the Minzify Audius player.</p>
+<p class="muted"><strong>Setup:</strong> Create or open your Spotify Developer app, select Web API, add the Redirect URI shown on this page, save your Client ID, then connect.</p>
+<p class="muted"><a target="_blank" rel="noopener noreferrer" href="https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow">Official Spotify PKCE guide ↗</a></p>
+</aside>
+</div>
+<section aria-labelledby="searchTitle">
+<h2 id="searchTitle" style="font-size:24px;margin:36px 0 5px">Search Spotify tracks</h2>
+<p class="muted" style="margin:0 0 12px">Search Spotify's catalog. The free Audius songs in Minzify continue working separately.</p>
+<form id="spotifySearch" class="search" role="search"><input id="query" class="input" type="search" required minlength="2" maxlength="90" placeholder="Search an artist, song or album…" aria-label="Search Spotify tracks"><button class="button primary" id="searchButton" type="submit" disabled>Search Spotify</button></form>
+<div id="searchStatus" class="status info" role="status" aria-live="polite">Connect Spotify to search its music catalog.</div>
+<div id="trackResults" class="tracks" aria-label="Spotify search results"></div>
+</section>
+<footer>Spotify search is optional and does not replace Audius playback. Spotify catalog data and artwork belong to their respective rightsholders. Minzify is an independent app and is not affiliated with or endorsed by Spotify.</footer>
+</main>
+</body>
+</html>
