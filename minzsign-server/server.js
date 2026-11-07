@@ -12,7 +12,7 @@ const {rateLimit} = require("express-rate-limit");
 const {initializeApp} = require("firebase-admin/app");
 const {getAuth} = require("firebase-admin/auth");
 const {randomBytes} = require("crypto");
-const {mkdtemp, readFile, rm, unlink, stat, writeFile} = require("fs/promises");
+const {mkdtemp, readFile, open, rm, unlink, stat} = require("fs/promises");
 const {createReadStream} = require("fs");
 const os = require("os");
 const path = require("path");
@@ -154,8 +154,10 @@ app.post("/api/sign", verifyBearer, async(req,res)=>{
     if(typeof req.body.password!=="string"||!req.body.password.length||req.body.password.length>1000)throw Error("A valid .p12 password is required.");
     const ipa=req.files.ipa[0].path,cert=req.files.certificate[0].path,prov=req.files.profile[0].path;
     if((await stat(cert)).size>256*1024 || (await stat(prov)).size>3*1024*1024)throw Error("Certificate or provisioning profile is too large.");
-    const header=await readFile(ipa,{encoding:null,flag:"r"});
-    if(header[0]!==0x50||header[1]!==0x4b)throw Error("The IPA is not a ZIP archive.");
+    const fh=await open(ipa,"r");
+    const header=Buffer.alloc(4);
+    try{await fh.read(header,0,4,0)}finally{await fh.close()}
+    if(header[0]!==0x50||header[1]!==0x4b||header[2]!==0x03||header[3]!==0x04)throw Error("The IPA is not a ZIP archive.");
     const profile=await readProvision(prov,dir);
     const info=await zipInfo(ipa);
     if(!profileMatchesApp(profile,info.bundleId))throw Error("The provisioning profile does not match this app's bundle identifier.");
