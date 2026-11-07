@@ -108,7 +108,7 @@ export async function moderateOneWordStories(env){
  let lastAuthor=state.lastAuthorId||null,deleted=0,accepted=0,lastScanned=state.cursor;
  for(const message of chronological){
   // Bot posts don't take a turn.
-  if(message.author?.bot||message.webhook_id){
+  if(message.author?.bot||(message.type!==undefined&&message.type!==0&&message.type!==19)){
    lastScanned=message.id;continue;
   }
   // Discord strips content when Message Content Intent is disabled. Avoid
@@ -124,12 +124,30 @@ export async function moderateOneWordStories(env){
   }
   lastScanned=message.id;
  }
- if(chronological.length){
+ // Revisit recent messages so an offline Gateway listener cannot be bypassed
+ // by editing a previously accepted word into a sentence or hyphenated phrase.
+ const recent=await api(env,"GET","/channels/"+config.id+"/messages?limit=100");
+ let editedRemoved=0,latestAcceptedAuthor=null;
+ if(Array.isArray(recent)){
+  for(const message of recent){
+   if(message.author?.bot||(message.type!==undefined&&message.type!==0&&message.type!==19))continue;
+   if(message.content===""&&!(message.attachments?.length||message.embeds?.length||message.sticker_items?.length))
+    throw Error("Cannot check story edits: enable Message Content Intent in Discord Developer Portal.");
+   if(!isStoryMessageValid(message)){
+    try{await api(env,"DELETE","/channels/"+config.id+"/messages/"+message.id);}
+    catch(error){if(!/Discord HTTP 404/.test(String(error)))throw error;}
+    editedRemoved++;
+   }else if(!latestAcceptedAuthor)latestAcceptedAuthor=message.author?.id||null;
+  }
+ }
+ if(latestAcceptedAuthor)lastAuthor=latestAcceptedAuthor;
+ else if(editedRemoved)lastAuthor=null;
+ if(chronological.length||editedRemoved){
   await env.SAD_MESSAGES.put(STATE_KEY,JSON.stringify({
    channelId:config.id,cursor:lastScanned,lastAuthorId:lastAuthor,checkedAt:Date.now()
   }));
  }
- return {active:true,channelId:config.id,scanned:chronological.length,accepted,deleted};
+ return {active:true,channelId:config.id,scanned:chronological.length,accepted,deleted:deleted+editedRemoved,editedRemoved};
 }
 async function reportToOriginal(data,env,message){
  const response=await fetch(BASE+"/webhooks/"+encodeURIComponent(env.DISCORD_APPLICATION_ID)+"/"+
