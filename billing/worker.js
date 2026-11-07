@@ -134,7 +134,9 @@ async function syncStripeSubscription(env,subscriptionId){
  if(!uidValid(uid))fail(400,"Subscription is not attached to a verified Firebase user.");
  // Re-fetch current subscription so reordered webhooks cannot replace newer status.
  const valid=sub.status==="active"||sub.status==="trialing";
- const expiresAt=Number(sub.current_period_end||0)*1000;
+ // Stripe Basil (2025+) moved subscription periods to individual items.
+ const latestPeriod=Math.max(0,...(sub.items?.data||[]).map(item=>Number(item.current_period_end)||0));
+ const expiresAt=(latestPeriod||Number(sub.current_period_end)||0)*1000;
  await setEntitlement(env,uid,"stripe",{active:valid,expiresAt,id:subscriptionId,status:sub.status});
 }
 async function stripeWebhook(req,env){
@@ -168,13 +170,15 @@ async function revenuecatWebhook(req,env){
  // Never grant entitlements from webhook claims alone; verify with RC's REST API.
  const subscriber=await revenuecatSubscriber(env,uid);
  const record=subscriber.subscriber?.entitlements?.[env.REVENUECAT_ENTITLEMENT_ID||"chat_plus"];
+ const productId=String(env.REVENUECAT_IOS_PRODUCT_ID||"");
+ const subscription=subscriber.subscriber?.subscriptions?.[productId];
  const expires=record?.expires_date?Date.parse(record.expires_date):0;
- const active=Number.isFinite(expires)&&expires>Date.now();
- const envType=String(ev.environment||"").toUpperCase();
- if(envType==="SANDBOX"&&env.REVENUECAT_ALLOW_SANDBOX!=="true"){
-  return {received:true,sandboxIgnored:true};
- }
- await setEntitlement(env,uid,"apple",{active,expiresAt:expires,id:record?.product_identifier||"",status:active?"active":"expired"});
+ const sandbox=String(ev.environment||"").toUpperCase()==="SANDBOX"||subscription?.is_sandbox===true;
+ if(sandbox&&env.REVENUECAT_ALLOW_SANDBOX!=="true")return {received:true,sandboxIgnored:true};
+ const active=!!productId&&record?.product_identifier===productId&&
+   Number.isFinite(expires)&&expires>Date.now()&&subscription?.store==="app_store"&&
+   !subscription?.refunded_at;
+ await setEntitlement(env,uid,"apple",{active,expiresAt:Number.isFinite(expires)?expires:0,id:productId,status:active?"active":"expired"});
  return {received:true};
 }
 export default {
