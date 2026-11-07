@@ -133,7 +133,8 @@ async function syncStripeSubscription(env,subscriptionId){
  const uid=sub.metadata?.firebase_uid;
  if(!uidValid(uid))fail(400,"Subscription is not attached to a verified Firebase user.");
  // Re-fetch current subscription so reordered webhooks cannot replace newer status.
- const valid=sub.status==="active"||sub.status==="trialing";
+ const hasCorrectPrice=(sub.items?.data||[]).some(item=>item.price?.id===env.STRIPE_PRICE_ID);
+ const valid=(sub.status==="active"||sub.status==="trialing")&&hasCorrectPrice;
  // Stripe Basil (2025+) moved subscription periods to individual items.
  const latestPeriod=Math.max(0,...(sub.items?.data||[]).map(item=>Number(item.current_period_end)||0));
  const expiresAt=(latestPeriod||Number(sub.current_period_end)||0)*1000;
