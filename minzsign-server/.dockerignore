@@ -1,0 +1,6 @@
+node_modules
+*.p12
+*.pfx
+*.mobileprovision
+*.ipa
+.env
