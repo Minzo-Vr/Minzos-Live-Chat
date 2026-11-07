@@ -27,8 +27,19 @@ html=html.replace(/<link rel="manifest" href="\.\/manifest\.webmanifest">/, '<li
 writeFileSync(index,html);
 console.log("Prepared Community Chat web assets in mobile/www");
 
-// Inject mobile-only download UI without editing the website's original index.html.
+// Inject only into bundled native app pages, keeping GitHub Pages unchanged.
+// The native file bridge manages iOS/Android document picking and import storage.
 copyFileSync(resolve(import.meta.dirname,"../sideload-tool.js"),join(dest,"sideload-tool.js"));
-let bundled=readFileSync(index,"utf8");
-bundled=bundled.replace("</body>",'<script src="./sideload-tool.js"></script>\\n</body>');
-writeFileSync(index,bundled);
+copyFileSync(resolve(import.meta.dirname,"../native-files.js"),join(dest,"native-files.js"));
+for(const name of publicFiles){
+  if(!/\.html?$/i.test(name))continue;
+  const destFile=join(dest,name);
+  let bundled=readFileSync(destFile,"utf8");
+  const inject=(name==="index.html"?
+    '<script src="./sideload-tool.js"></script>\n':'')+
+    '<script src="./native-files.js"></script>\n';
+  if(!/<\/body\s*>/i.test(bundled))throw Error("Cannot inject native file handling into "+name+": missing </body>");
+  bundled=bundled.replace(/<\/body\s*>/i,inject+"</body>");
+  writeFileSync(destFile,bundled);
+}
+console.log("Injected native files support into all bundled HTML pages.");
