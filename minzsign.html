@@ -48,7 +48,7 @@ code{background:#111d31;border-radius:4px;padding:2px 4px}
 <div class="eyebrow">COMMUNITY HUB / APP TOOLS</div>
 <h1>Your IPA.<br><em>Your certificate.</em></h1>
 <p>Inspect an iOS app archive on your device, or re-sign it with a legitimate Apple certificate and provisioning profile. No fake install button, fake certificate, or promise to bypass Apple security.</p>
-<div class="flags"><span class="flag">✓ Local IPA check</span><span class="flag">✓ Real signing backend</span><span class="flag">✓ No certificate storage</span></div>
+<div class="flags"><span class="flag">✓ Local IPA check</span><span class="flag">✓ Real signing backend</span><span class="flag">✓ Short-lived key processing</span></div>
 </header>
 <div class="grid">
 <section class="panel">
@@ -76,7 +76,7 @@ code{background:#111d31;border-radius:4px;padding:2px 4px}
 <aside class="panel">
 <h2>How it works</h2>
 <div class="info"><span>🔍</span><div><strong>1. Inspect</strong><small>The IPA's ZIP structure is checked in your browser; no upload needed.</small></div></div>
-<div class="info"><span>🔐</span><div><strong>2. Sign</strong><small>A separately hosted signing service runs zsign using your certificate and profile. Private keys and password are deleted from the server after signing.</small></div></div>
+<div class="info"><span>🔐</span><div><strong>2. Sign</strong><small>A separately hosted signing service runs zsign using your certificate and profile. Certificate files are removed after signing; the password is processed temporarily in memory.</small></div></div>
 <div class="info"><span>📲</span><div><strong>3. Install legitimately</strong><small>Download the signed app. Safari wireless installation is offered only for eligible in-house profiles; development and Ad Hoc apps may require Apple Configurator or Xcode.</small></div></div>
 <h2 style="margin-top:25px">Before you start</h2>
 <p class="note">GitHub Pages can host this interface, but it <strong>cannot cryptographically sign apps</strong> by itself. Your hub administrator must connect a server. The service URL will be displayed before any credentials are uploaded.</p>
