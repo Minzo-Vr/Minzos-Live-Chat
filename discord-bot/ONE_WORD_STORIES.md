@@ -19,7 +19,7 @@
 
 Unicode letters (including accented words and non-English scripts) are supported. A word may have a single terminal `.`, `,`, `!`, `?`, `;`, or `:`. Length limit: 40 Unicode characters.
 
-The bot cannot stop a user from pressing Send, but deletes messages that break the rules. It also checks message edits.
+The bot cannot stop a user from pressing Send. **Accepted messages receive a ✅ reaction**, while **rejected messages receive a ❌ reaction before being deleted**. The real-time listener typically removes rejected messages after about five seconds; the Cloudflare scheduled fallback leaves the ❌ visible until its following moderation run (normally within roughly a minute). The bot also checks message edits and removes its previous ✅ reaction if an accepted word is edited into an invalid one.
 
 ## Discord channel setup
 
@@ -30,7 +30,7 @@ The bot cannot stop a user from pressing Send, but deletes messages that break t
 
 ### Required Discord permissions
 
-Bot: **Manage Channels** (to create the new channel), **View Channel**, **Read Message History**, **Send Messages**, and **Manage Messages** (to delete invalid messages). Channel permissions can override server roles.
+Bot: **Manage Channels** (to create the new channel), **View Channel**, **Read Message History**, **Send Messages**, **Add Reactions** (to mark ✅ / ❌), and **Manage Messages** (to delete invalid messages). Channel permissions can override server roles. If Add Reactions is denied, the rule enforcement still works, but reactions may not appear.
 
 Enable **Message Content Intent** in the [Discord Developer Portal](https://discord.com/developers/applications) → your bot → Bot → Privileged Gateway Intents. Without message content access, Discord may hide message contents and the bot cannot reliably decide whether a message is one word. The Cloudflare moderator refuses to mass-delete when content appears unavailable.
 
@@ -46,7 +46,7 @@ For that service on Render (or other Node host), set:
 - `HELP_CHANNEL_ID` and `OPENAI_API_KEY` — **optional** for AI help; not needed for the word game.
 - `ROLE_SYNC_MAP` — optional; the Gateway listener requests Guild Members Intent only if enabled.
 
-The bot replies to a rule violation with a private DM no more than once per minute per user (when DMs are open). It does **not** clutter the story channel with explanations. Run **only one instance** of the Gateway listener for consistent moderation.
+The bot adds ✅ to each accepted word and ❌ to a rejected word, then removes rejected messages after a short delay so the reaction can be seen. It also replies to a rule violation with a private DM no more than once per minute per user (when DMs are open). It does **not** clutter the story channel with explanation messages. Run **only one instance** of the Gateway listener for consistent moderation.
 
 If the separate Gateway listener isn't running, the Cloudflare cron moderator is a fallback, but invalid posts may remain visible for up to about a minute. The Cloudflare bot and Discord Gateway use the same strict validator (`discord-bot/one-word-rules.mjs`).
 
