@@ -17,7 +17,7 @@ body.yeeps-font-mode,body.yeeps-font-mode *,body.yeeps-font-mode *::before,body.
 }
 /* Touch-friendly Blocks sidebar and first-person block chooser. */
 #mobileBlocksBack{display:none}
-#firstPersonBlocksTab[hidden]{display:none!important}
+#firstPersonBlocksTab[hidden],#firstPersonBlocksTab [hidden]{display:none!important}
 #firstPersonBlocksTab{position:absolute;inset:0;z-index:40;background:linear-gradient(160deg,#142640f8,#0b1428fa);color:#f1f6ff;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:14px max(14px,env(safe-area-inset-right)) calc(22px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));touch-action:pan-y}
 #firstPersonBlocksTab .quick-tab-heading{display:flex;align-items:center;gap:12px;position:sticky;top:-14px;z-index:2;padding:10px 3px;background:#15263df5;border-bottom:1px solid #6f91ae}
 #firstPersonBlocksTab .quick-tab-heading strong{font-size:19px;flex:1}
@@ -498,7 +498,7 @@ function setYeepsMode(enabled){
  yeepsButton.setAttribute('aria-pressed',String(enabled));
  yeepsButton.textContent='🧱 Yeeps Mode: '+(enabled?'On':'Off');
  if(bubbleOpen)setPhysicalBubbles(false);
-  if(typeof walking!=='undefined'&&walking){fpBubbleUI.hidden=!enabled;hud.hidden=false;}
+  if(typeof walking!=='undefined'&&walking){fpBubbleUI.hidden=!enabled;hud.hidden=false;if(!firstPersonBlocksTab.hidden)renderFirstPersonBlocksTab();}
  if(enabled){objects.forEach(mesh=>{snapYeeps(mesh);if(mesh.userData.mbLocalOwner)mbNotify(mesh);});refreshProperties();}
  status.textContent=enabled?'Yeeps Mode · grid snapping ON':'Standard editor · free movement';
 }
@@ -1280,7 +1280,7 @@ async function refreshBubblePreview(){
 function animateBubblePreview(now){if(!walking)return;refreshBubblePreview();if(previewMesh){previewMesh.rotation.y=now*.00055;previewMesh.rotation.x=.15+Math.sin(now*.0004)*.1;}previewRenderer.render(previewScene,previewCamera);}
 const fpBuildButton=document.getElementById('fpBuild');
 async function firstPersonBuild(){
- if(!walking)return;
+ if(!walking||!firstPersonBlocksTab.hidden)return;
  const direction=new THREE.Vector3();camera.getWorldDirection(direction);
  const raycaster=new THREE.Raycaster(camera.position,direction,.1,7);
  const hits=raycaster.intersectObjects(objects,true);
@@ -1301,9 +1301,9 @@ async function firstPersonBuild(){
 }
 fpBuildButton.onclick=firstPersonBuild;
 let walking=false,yaw=0,pitch=0,lastWalk=performance.now();const keys=new Set(),fpButton=document.getElementById('firstPerson');
-function exitWalk(){walking=false;lookPad.style.pointerEvents='none';fpBuildButton.hidden=true;fpBubbleUI.hidden=true;hud.hidden=true;setPhysicalBubbles(false);playerView.visible=false;keys.clear();fpButton.textContent='🎮 First person';if(document.pointerLockElement===renderer.domElement)document.exitPointerLock();resumeFly();}
-fpButton.onclick=()=>{if(walking){exitWalk();return;}if(flying)exitFly();walking=true;lookPad.style.pointerEvents=bubbleOpen?'none':'auto';fpBuildButton.hidden=false;fpBubbleUI.hidden=!yeepsMode;hud.hidden=false;fpBubbleToggle.style.display='none';fpBubblePlace.style.display='none';playerView.visible=true;playerView.position.copy(camera.position);select(null);orbit.enabled=false;transform.visible=false;fpButton.textContent='Exit first person';const direction=new THREE.Vector3();camera.getWorldDirection(direction);yaw=Math.atan2(-direction.x,-direction.z);pitch=Math.asin(Math.max(-1,Math.min(1,direction.y)));camera.position.y=1.7;if(!bubbleOpen&&!matchMedia('(pointer:coarse)').matches)renderer.domElement.requestPointerLock?.().catch(()=>{status.textContent='Click the 3D view to capture your mouse.';});status.textContent='WASD move · Shift run · Mouse look · Esc exit';};
-document.addEventListener('keydown',e=>{if(walking&&['KeyW','KeyA','KeyS','KeyD','ShiftLeft','ShiftRight'].includes(e.code)){keys.add(e.code);e.preventDefault();}if(walking&&e.code==='KeyB'&&!e.repeat&&!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName)){firstPersonBuild();e.preventDefault();}if(walking&&e.code==='Escape')exitWalk();});
+function exitWalk(){closeFirstPersonBlocksTab();walking=false;lookPad.style.pointerEvents='none';fpBuildButton.hidden=true;fpBubbleUI.hidden=true;hud.hidden=true;setPhysicalBubbles(false);playerView.visible=false;keys.clear();fpButton.textContent='🎮 First person';if(document.pointerLockElement===renderer.domElement)document.exitPointerLock();resumeFly();}
+fpButton.onclick=()=>{if(walking){exitWalk();return;}closeMobilePanels();if(flying)exitFly();walking=true;lookPad.style.pointerEvents=bubbleOpen?'none':'auto';fpBuildButton.hidden=false;fpBubbleUI.hidden=!yeepsMode;hud.hidden=false;fpBubbleToggle.style.display='none';fpBubblePlace.style.display='none';playerView.visible=true;playerView.position.copy(camera.position);select(null);orbit.enabled=false;transform.visible=false;fpButton.textContent='Exit first person';const direction=new THREE.Vector3();camera.getWorldDirection(direction);yaw=Math.atan2(-direction.x,-direction.z);pitch=Math.asin(Math.max(-1,Math.min(1,direction.y)));camera.position.y=1.7;if(!bubbleOpen&&!matchMedia('(pointer:coarse)').matches)renderer.domElement.requestPointerLock?.().catch(()=>{status.textContent='Click the 3D view to capture your mouse.';});status.textContent='WASD move · Shift run · Mouse look · Esc exit';};
+document.addEventListener('keydown',e=>{if(walking&&!firstPersonBlocksTab.hidden){if(e.code==='Escape'){closeFirstPersonBlocksTab();e.preventDefault();}return;}if(walking&&['KeyW','KeyA','KeyS','KeyD','ShiftLeft','ShiftRight'].includes(e.code)){keys.add(e.code);e.preventDefault();}if(walking&&e.code==='KeyB'&&!e.repeat&&!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName)){firstPersonBuild();e.preventDefault();}if(walking&&e.code==='Escape')exitWalk();});
 document.addEventListener('keyup',e=>keys.delete(e.code));
 document.addEventListener('mousemove',e=>{if(!walking||document.pointerLockElement!==renderer.domElement)return;yaw-=e.movementX*.002;pitch=Math.max(-1.45,Math.min(1.45,pitch-e.movementY*.002));});
 document.addEventListener('pointerlockchange',()=>{if(walking&&document.pointerLockElement!==renderer.domElement&&!bubbleOpen&&!matchMedia('(pointer:coarse)').matches)status.textContent='Mouse released · click the view to look around';});
