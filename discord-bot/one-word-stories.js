@@ -5,6 +5,66 @@ import {ONE_WORD_STORIES_CHANNEL_NAME,isStoryMessageValid,storyInstructions} fro
 // that separate listener is offline. It only touches the dedicated channel.
 const BASE="https://discord.com/api/v10",SNOWFLAKE=/^\d{15,22}$/;
 const CHANNEL_KEY="oneword:channel:v1",STATE_KEY="oneword:state:v1";
+
+const REJECT_PREFIX="oneword:rejected:v1:";
+const REJECT_DISPLAY_MS=5000;
+async function reactToStory(env,channelId,messageId,emoji){
+ try{
+  await api(env,"PUT","/channels/"+channelId+"/messages/"+messageId+
+   "/reactions/"+encodeURIComponent(emoji)+"/@me");
+ }catch(error){
+  // A missing Add Reactions permission should not interrupt turn enforcement.
+  console.warn("Could not add story reaction",emoji,String(error));
+ }
+}
+async function removeStoryReaction(env,channelId,messageId,emoji){
+ try{
+  await api(env,"DELETE","/channels/"+channelId+"/messages/"+messageId+
+   "/reactions/"+encodeURIComponent(emoji)+"/@me");
+ }catch(error){
+  if(!/Discord HTTP 404/.test(String(error)))
+   console.warn("Could not remove prior story reaction",emoji,String(error));
+ }
+}
+async function markRejectedStory(env,channelId,messageId){
+ const key=REJECT_PREFIX+messageId;
+ if(await env.SAD_MESSAGES.get(key))return;
+ // Persist rejection before adding the ❌ so future cron invocations can
+ // remove it even if the Worker stops before finishing this run.
+ await env.SAD_MESSAGES.put(key,JSON.stringify({
+  channelId,deleteAfter:Date.now()+REJECT_DISPLAY_MS
+ }),{expirationTtl:86400});
+ await removeStoryReaction(env,channelId,messageId,"✅");
+ await reactToStory(env,channelId,messageId,"❌");
+}
+/** Keep ❌ visible until at least the next scheduled moderation check. */
+async function cleanupRejectedStories(env,channelId){
+ const pending=new Set();
+ let cursor;
+ do{
+  const page=await env.SAD_MESSAGES.list({prefix:REJECT_PREFIX,limit:1000,...(cursor?{cursor}:{})});
+  for(const item of page.keys||[]){
+   const messageId=item.name.slice(REJECT_PREFIX.length);
+   const record=await env.SAD_MESSAGES.get(item.name,"json");
+   if(!record){continue;}
+   if(record.channelId!==channelId||!SNOWFLAKE.test(messageId))continue;
+   if(Number(record.deleteAfter)>Date.now()){
+    pending.add(messageId);
+    continue;
+   }
+   try{
+    await api(env,"DELETE","/channels/"+channelId+"/messages/"+messageId);
+    await env.SAD_MESSAGES.delete(item.name);
+   }catch(error){
+    if(/Discord HTTP 404/.test(String(error)))await env.SAD_MESSAGES.delete(item.name);
+    else{pending.add(messageId);console.error("Could not delete rejected story",String(error));}
+   }
+  }
+  cursor=page.list_complete?null:page.cursor;
+ }while(cursor);
+ return pending;
+}
+
 async function api(env,method,path,body){
  if(!env.DISCORD_BOT_TOKEN)throw Error("Discord bot token is missing.");
  const response=await fetch(BASE+path,{
@@ -74,11 +134,12 @@ export async function ensureOneWordStories(env){
  }
  return {channelId:channel.id,created,welcomeId:record.welcomeId};
 }
-/** Checks all new messages in order; delete rule-breaking messages. */
+/** Checks all new messages in order; reacts ✅ to successes, ❌ before deletion on failures. */
 export async function moderateOneWordStories(env){
  requireConfig(env);
  const config=await env.SAD_MESSAGES.get(CHANNEL_KEY,"json");
  if(!config||!SNOWFLAKE.test(String(config.id)))return {active:false};
+ const pendingIds=await cleanupRejectedStories(env,config.id);
  const state=(await env.SAD_MESSAGES.get(STATE_KEY,"json"))||{
   channelId:config.id,cursor:config.welcomeId,lastAuthorId:null
  };
@@ -117,10 +178,12 @@ export async function moderateOneWordStories(env){
    throw Error("Cannot inspect story messages: enable Message Content Intent in Discord Developer Portal.");
   const valid=isStoryMessageValid(message)&&message.author?.id!==lastAuthor;
   if(!valid){
-   await api(env,"DELETE","/channels/"+config.id+"/messages/"+message.id);
+   await markRejectedStory(env,config.id,message.id);
+   pendingIds.add(message.id);
    deleted++;
   }else{
    lastAuthor=message.author.id;accepted++;
+   await reactToStory(env,config.id,message.id,"✅");
   }
   lastScanned=message.id;
  }
@@ -131,11 +194,12 @@ export async function moderateOneWordStories(env){
  if(Array.isArray(recent)){
   for(const message of recent){
    if(message.author?.bot||(message.type!==undefined&&message.type!==0&&message.type!==19))continue;
+   if(pendingIds.has(message.id))continue; // ❌ is already showing before deletion.
    if(message.content===""&&!(message.attachments?.length||message.embeds?.length||message.sticker_items?.length))
     throw Error("Cannot check story edits: enable Message Content Intent in Discord Developer Portal.");
    if(!isStoryMessageValid(message)){
-    try{await api(env,"DELETE","/channels/"+config.id+"/messages/"+message.id);}
-    catch(error){if(!/Discord HTTP 404/.test(String(error)))throw error;}
+    await markRejectedStory(env,config.id,message.id);
+    pendingIds.add(message.id);
     editedRemoved++;
    }else if(!latestAcceptedAuthor)latestAcceptedAuthor=message.author?.id||null;
   }
