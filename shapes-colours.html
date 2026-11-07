@@ -824,6 +824,32 @@ physicalBubbles.visible=false;
 const bubbleRay=new THREE.Raycaster(),bubblePointer=new THREE.Vector2();
 const bubbleMeshes=[];let bubbleOpen=false,bubbleOpeningAt=0,bubbleGrab=null,bubbleGrabStart=null;
 const bubbleGlass=new THREE.MeshPhysicalMaterial({color:0x7acbff,transparent:true,opacity:.43,roughness:.12,metalness:0,clearcoat:1,clearcoatRoughness:.06,depthTest:false,depthWrite:false,side:THREE.FrontSide});
+const bubbleToggleButton=document.getElementById('physicalBubbleToggle');
+let bubbleTab='shapes',bubblePage=0,bubblePaintColor='#7c9cff';
+const bubbleTabs=document.createElement('div');
+bubbleTabs.id='physicalBubbleTabs';
+bubbleTabs.style.cssText='position:absolute;z-index:28;left:50%;top:54px;transform:translateX(-50%);display:none;align-items:center;gap:6px;padding:6px 8px;border:1px solid #8acbff;border-radius:14px;background:#11243de8;color:#fff;box-shadow:0 6px 22px #0009;max-width:96%;font:12px system-ui';
+bubbleTabs.innerHTML='<button type="button" data-bubble-tab="shapes">🧱 Shapes</button><button type="button" data-bubble-tab="colours">🎨 Colours</button><span id="bubblePageLabel" aria-live="polite" style="white-space:nowrap"></span><button type="button" data-bubble-close="true" aria-label="Close 3D bubbles">✕</button>';
+viewport.append(bubbleTabs);
+const bubbleTabButtons=[...bubbleTabs.querySelectorAll('[data-bubble-tab]')];
+bubbleTabs.querySelector('[data-bubble-close]').addEventListener('click',()=>setPhysicalBubbles(false));
+for(const button of bubbleTabButtons)button.addEventListener('click',()=>{
+ bubbleTab=button.dataset.bubbleTab;bubblePage=0;
+ if(bubbleOpen&&!yeepsMode)populateStandardBubbles();
+});
+function refreshBubbleUI(){
+ bubbleToggleButton.textContent=bubbleOpen?'🫧 Bubbles: On':'🫧 Bubbles: Off';
+ bubbleToggleButton.setAttribute('aria-pressed',String(bubbleOpen));
+ bubbleToggleButton.setAttribute('aria-expanded',String(bubbleOpen));
+ bubbleTabs.style.display=bubbleOpen&&!yeepsMode?'flex':'none';
+ for(const button of bubbleTabButtons){
+  const active=button.dataset.bubbleTab===bubbleTab;
+  button.style.cssText='padding:7px 9px;border-radius:9px;border:1px solid '+(active?'#baf5ff':'#557ba5')+';background:'+(active?'#297dc2':'#23425e')+';color:#fff;font-weight:700;cursor:pointer';
+ }
+ bubbleTabs.querySelector('[data-bubble-close]').style.cssText='background:#344d6a;color:white;padding:5px 9px;border-radius:8px;border:0';
+}
+bubbleToggleButton.addEventListener('click',()=>setPhysicalBubbles(!bubbleOpen));
+
 function bubbleLabel(value){
  const canvas=document.createElement('canvas');canvas.width=256;canvas.height=128;
  const ctx=canvas.getContext('2d');ctx.clearRect(0,0,256,128);ctx.fillStyle='#ffffff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 25px system-ui';
@@ -835,13 +861,78 @@ function clearPhysicalBubbles(){
  for(const obj of bubbleMeshes){physicalBubbles.remove(obj);obj.traverse(child=>{if(child.geometry)child.geometry.dispose();if(child.material&&child.material!==bubbleGlass){if(child.material.map)child.material.map.dispose();child.material.dispose();}});}
  bubbleMeshes.length=0;bubbleGrab=null;
 }
-function makePhysicalBubble(label,x,y,z,r,action){
+function makePhysicalBubble(label,x,y,z,r,action,options={}){
  const root=new THREE.Group();root.position.set(x,y,z);root.userData={action,baseY:y,phase:Math.random()*6.28,initialX:x,initialY:y};
  const shell=new THREE.Mesh(new THREE.SphereGeometry(r,28,20),bubbleGlass);shell.renderOrder=1000;root.add(shell);
- const rim=new THREE.Mesh(new THREE.TorusGeometry(r*.91,.009,6,42),new THREE.MeshBasicMaterial({color:0xd9f6ff,transparent:true,opacity:.75,depthTest:false,depthWrite:false}));rim.renderOrder=1001;root.add(rim);
+ const rim=new THREE.Mesh(new THREE.TorusGeometry(r*.91,.009,6,42),new THREE.MeshBasicMaterial({color:options.color||0xd9f6ff,transparent:true,opacity:.75,depthTest:false,depthWrite:false}));rim.renderOrder=1001;root.add(rim);
  const shine=new THREE.Mesh(new THREE.SphereGeometry(r*.20,12,10),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.55,depthTest:false,depthWrite:false}));shine.position.set(-r*.38,r*.4,r*.76);shine.renderOrder=1001;root.add(shine);
+ if(options.kind||options.color){
+  const geo=options.kind?geometry(options.kind):new THREE.SphereGeometry(1,18,12);
+  if(geo){
+   geo.computeBoundingBox();
+   const box=geo.boundingBox,size=box.getSize(new THREE.Vector3()),centre=box.getCenter(new THREE.Vector3());
+   geo.translate(-centre.x,-centre.y,-centre.z);
+   const preview=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:options.color||bubblePaintColor,depthTest:false,depthWrite:false,side:THREE.DoubleSide}));
+   preview.scale.setScalar(r*.95/Math.max(size.x,size.y,size.z,.01));
+   if(options.kind==='plane')preview.rotation.x=-Math.PI/3;
+   preview.position.z=-r*.15;preview.renderOrder=1001;root.add(preview);
+  }
+ }
  const text=bubbleLabel(label);text.position.z=r+.035;root.add(text);
  root.scale.setScalar(.001);physicalBubbles.add(root);bubbleMeshes.push(root);return root;
+}
+
+function bubbleItemsForTab(){
+ if(bubbleTab==='colours')return yeepsColours.map((hex,i)=>({label:'Colour '+(i+1),color:hex}));
+ return Object.values(bubbleCatalog).flat().map(choice=>({label:choice[1],kind:choice[2],choice}));
+}
+function applyBubbleColour(hex){
+ bubblePaintColor=hex;
+ let target=selected;
+ if(!target&&walking){
+  const direction=new THREE.Vector3();camera.getWorldDirection(direction);
+  const hits=new THREE.Raycaster(camera.position,direction,.1,9).intersectObjects(objects,true);
+  target=hits.find(hit=>hit.object?.isMesh)?.object||null;
+ }
+ if(target&&target.material?.color){
+  target.material.color.set(hex);target.material.vertexColors=false;target.material.map=null;
+  target.material.needsUpdate=true;
+  if(target===selected)refreshProperties();
+  mbNotify(target);
+  status.textContent='Painted '+target.name+' '+hex;
+ }else status.textContent='Colour '+hex+' selected · the next shape will use it';
+}
+function placeStandardBubbleShape(choice){
+ bubbleChoice=choice;
+ hudName.textContent=choice[1];
+ if(walking){status.textContent=choice[1]+' selected · tap Build or press B';return;}
+ const forward=new THREE.Vector3();camera.getWorldDirection(forward);
+ const point=camera.position.clone().addScaledVector(forward,3);point.y=Math.max(.15,point.y);
+ const mesh=add(choice[2],{color:bubblePaintColor,position:point.toArray(),scale:choice[3]||[1,1,1]});
+ if(mesh)status.textContent='Placed '+mesh.name+' · use the arrows to move it';
+}
+function populateStandardBubbles(){
+ if(yeepsMode)return;
+ clearPhysicalBubbles();
+ const items=bubbleItemsForTab();
+ const portrait=renderer.domElement.clientWidth<renderer.domElement.clientHeight*1.12;
+ const columns=portrait?2:4,perPage=columns*3;
+ const pages=Math.max(1,Math.ceil(items.length/perPage));
+ bubblePage=Math.max(0,Math.min(bubblePage,pages-1));
+ for(const [i,item] of items.slice(bubblePage*perPage,(bubblePage+1)*perPage).entries()){
+  const col=i%columns,row=Math.floor(i/columns);
+  makePhysicalBubble(item.label,(col-(columns-1)/2)*(portrait?.67:.58),.61-row*.55,-2.35,portrait?.235:.24,()=>{
+   if(item.color)applyBubbleColour(item.color);
+   else if(item.choice)placeStandardBubbleShape(item.choice);
+   setPhysicalBubbles(false);
+  },{color:item.color,kind:item.kind});
+ }
+ if(pages>1){
+  makePhysicalBubble('◀ Prev',-.42,-.99,-2.35,.19,()=>{bubblePage=(bubblePage+pages-1)%pages;populateStandardBubbles();});
+  makePhysicalBubble('Next ▶',.42,-.99,-2.35,.19,()=>{bubblePage=(bubblePage+1)%pages;populateStandardBubbles();});
+ }
+ bubbleTabs.querySelector('#bubblePageLabel').textContent=(bubblePage+1)+'/'+pages;
+ bubbleOpeningAt=performance.now();refreshBubbleUI();
 }
 let yeepsBubbleChoice=null;
 function missingYeepsAssets(){status.textContent='Missing Assets (Error 13)';window.alert('Missing Assets (Error 13)\\nLoad your Yeeps blocks ZIP file or use Load blocks from release.');}
