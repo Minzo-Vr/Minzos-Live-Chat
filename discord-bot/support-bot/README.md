@@ -46,3 +46,12 @@ Sync is disabled until both `DISCORD_GUILD_ID` and `ROLE_SYNC_MAP` are configure
 The bot checks Community Chat roles about every minute and applies changes to the Discord server. Discord role changes while the bot is connected are reflected back to Firebase immediately. The bot preserves unrelated roles in both systems. At startup, Community Chat is authoritative for resolving any differences while the bot was offline. There is no historical conflict resolution, and only changes to the mapped roles are synced.
 
 **Security note:** anyone who can manage a mapped Discord role may indirectly grant or revoke the corresponding Community Chat role. Restrict Discord Manage Roles carefully, particularly if mapping Moderator. A mapped Discord role can carry Discord permissions independent of Community Chat. Review Firebase rules and the Discord role permissions before enabling this in production. Use a dedicated service account with the minimum feasible access, and never expose its private key.
+
+
+## 1 Word Stories real-time moderation
+
+This Gateway bot also handles normal messages in **#1-word-stories**, deleting any message with more than one word, a hyphen trick such as `he-liked-her`, or the same sender as the previous valid word. It also checks edited messages. This feature works without the AI help credentials.
+
+Required for this feature: `DISCORD_BOT_TOKEN` and `DISCORD_GUILD_ID` (the existing server ID `1564239312613015585`); optional `ONE_WORD_STORIES_CHANNEL_ID` to pin the listener to the specific channel. If that optional ID is absent, it listens by the exact channel name `1-word-stories` in the configured server. Enable **Message Content Intent** in the Developer Portal and grant the bot **View Channel**, **Read Message History**, and **Manage Messages** in the story channel. The existing Cloudflare Worker provides slower, minute-by-minute moderation if this Gateway listener is offline.
+
+The AI help service's `HELP_CHANNEL_ID` and `OPENAI_API_KEY` are now optional for running just the story moderator. `GuildMembers` intent is requested only when optional `ROLE_SYNC_MAP` is configured. Full instructions: [ONE_WORD_STORIES.md](../ONE_WORD_STORIES.md).
