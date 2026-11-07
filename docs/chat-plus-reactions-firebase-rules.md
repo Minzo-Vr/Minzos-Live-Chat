@@ -19,7 +19,7 @@ The Community Chat front end uses the dedicated path `chatMessageReactions/{gene
       "$messageId": {
         "$emojiId": {
           "$uid": {
-            ".write": "auth != null && auth.uid === $uid && $messageId.matches(/^[-A-Za-z0-9_]{12,100}$/) && $emojiId.matches(/^(thumbsup|heart|joy|sob|open_mouth|cry|rage|fire|tada|skull|eyes|pray|100|sunglasses|partying_face|sparkles)$/) && (!newData.exists() || ((root.child('chatRoles').child(auth.uid).child('plus').val() === true || root.child('chatRoles').child(auth.uid).child('admin').val() === true || auth.token.admin === true) && ($room === 'general' || ($room.matches(/^room[1-5]$/) && root.child('rooms').child($room).child('members').child(auth.uid).exists())) && (($room === 'general' && root.child('chatMessages').child($messageId).exists()) || ($room.matches(/^room[1-5]$/) && root.child('roomMessages').child($room).child($messageId).exists()))))",
+            ".write": "auth != null && auth.uid === $uid && $messageId.matches(/^[-A-Za-z0-9_]{12,100}$/) && $emojiId.matches(/^(thumbsup|heart|joy|sob|open_mouth|cry|rage|fire|tada|skull|eyes|pray|100|sunglasses|partying_face|sparkles)$/) && (!newData.exists() || ((root.child('chatRoles').child(auth.uid).child('plus').val() === true || root.child('chatRoles').child(auth.uid).child('admin').val() === true || root.child('chatRoles').child(auth.uid).val() === 'plus' || root.child('chatRoles').child(auth.uid).val() === 'admin' || auth.token.admin === true) && ($room === 'general' || ($room.matches(/^room[1-5]$/) && root.child('rooms').child($room).child('members').child(auth.uid).exists())) && (($room === 'general' && root.child('chatMessages').child($messageId).exists()) || ($room.matches(/^room[1-5]$/) && root.child('roomMessages').child($room).child($messageId).exists()))))",
             ".validate": "newData.val() === true"
           }
         }
@@ -38,7 +38,7 @@ The Community Chat front end uses the dedicated path `chatMessageReactions/{gene
 - Private-room reads require membership at `rooms/{roomN}/members/{uid}`. This is intentionally stricter than some room discovery workflows.
 - If any **ancestor** has a broad `.write` grant (for example, `".write": "auth != null"` at the root), Firebase rules cannot restrict access by adding a deeper `.write` rule. Review existing ancestors before claiming Chat+ exclusivity. Place the rule under a restrictive parent or revise the broad ancestor first.
 - Deleting a message does not automatically delete its reaction records. These are hidden when the message disappears; for storage hygiene, a trusted backend cleanup task can remove orphaned records later.
-- If `chatRoles` in your deployed database uses a different schema (such as string roles rather than boolean `plus`/`admin` children), adapt the role test against **your actual deployed schema** before publishing. The site currently accepts both formats, but this rules example checks boolean role entries and the admin claim.
+- If `chatRoles` in your deployed database uses a different schema (such as string roles rather than boolean `plus`/`admin` children), adapt the role test against **your actual deployed schema** before publishing. The site accepts both formats, and this rules example checks boolean role entries, legacy string `plus`/`admin` roles, and the verified admin claim.
 
 ## How the user interface works
 
