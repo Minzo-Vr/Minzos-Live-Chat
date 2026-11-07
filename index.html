@@ -1946,21 +1946,46 @@ try{
       const isApple=nativeAppleBilling();
       chatPlusBillRestore.hidden=!isApple;
       chatPlusBillManage.hidden=isApple||!CHAT_PLUS_BILLING_WORKER_URL;
-      chatPlusBillButton.textContent=isApple?"Subscribe with Apple": "Subscribe for A$1.00/month (Stripe Test)";
+      chatPlusBillButton.textContent=isApple?"Subscribe with Apple":"Subscribe for A$1.00/month";
       $("chatPlusBillingDescription").textContent=isApple
         ?"Apple App Store subscription. Your Apple purchase price and terms appear on the App Store purchase sheet. Purchases can be restored."
-        :"Stripe test checkout — A$1.00/month, no real charges. Chat+ is unlocked only after server verification.";
+        :"Stripe Checkout — A$1.00/month. Chat+ is unlocked after secure server verification.";
       if(!user){
         chatPlusBillButton.disabled=true;chatPlusBillRestore.disabled=true;chatPlusBillManage.disabled=true;
         billingMessage("Sign in to purchase Chat+.");return;
       }
+      const manuallyPlus=!!(isAdmin||roleMap[user.uid]?.plus===true||roleMap[user.uid]==="plus");
+      if(manuallyPlus||paidChatPlus()){
+        chatPlusBillButton.textContent="✓ Chat+ active";
+        chatPlusBillButton.disabled=true;
+        const hasSubscription=isApple?paidBillingActive("apple"):paidBillingActive("stripe");
+        chatPlusBillManage.hidden=!hasSubscription;
+        chatPlusBillManage.disabled=!hasSubscription;
+        chatPlusBillManage.textContent=isApple?"Manage Apple subscription":"Manage Stripe subscription";
+        chatPlusBillRestore.disabled=!window.CommunityAppleBilling?.isConfigured?.();
+        billingMessage("Chat+ is active on this account. Subscription access is tied to your sign-in.");
+        return;
+      }
       if(isApple){
         const ready=window.CommunityAppleBilling?.isConfigured?.()===true;
         chatPlusBillButton.disabled=!ready;chatPlusBillRestore.disabled=!ready;chatPlusBillManage.disabled=true;
-        billingMessage(ready?"Apple purchase sheet is available.":"Apple purchases are not configured in this app build yet.");
+        if(!ready){billingMessage("Apple purchases are not configured in this app build yet.");return;}
+        try{
+          const offer=await window.CommunityAppleBilling.getOffer(user.uid);
+          chatPlusBillButton.textContent="Subscribe with Apple · "+offer.price;
+          billingMessage("Your exact price and renewal terms appear in Apple's purchase sheet.");
+        }catch(error){
+          chatPlusBillButton.disabled=true;
+          billingMessage("Apple Chat+ unavailable: "+String(error.message||error).slice(0,140));
+        }
         return;
       }
-      chatPlusBillRestore.disabled=true;
+      if(window.Capacitor?.isNativePlatform?.()===true){
+        chatPlusBillButton.disabled=true;chatPlusBillRestore.hidden=true;chatPlusBillManage.hidden=true;
+        billingMessage("Google Play billing isn't configured for the Android app.");
+        return;
+      }
+      chatPlusBillRestore.disabled=true;chatPlusBillManage.hidden=true;
       if(!CHAT_PLUS_BILLING_WORKER_URL){
         chatPlusBillButton.disabled=true;chatPlusBillManage.disabled=true;
         billingMessage("Stripe checkout is not yet connected. No payments will be taken.");return;
