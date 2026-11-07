@@ -112,18 +112,43 @@ async function storyNotice(message,reason){
  try{await message.author.send("📖 **1 Word Stories:** "+reason+" Your message in <#"+message.channelId+"> was removed.");}
  catch{} // Never spam the story channel when DMs are disabled.
 }
+// ✅ stays on accepted story words; ❌ is shown for 5 seconds before removal.
+// The timer runs outside the per-channel queue so subsequent valid turns aren't held up.
+const storyRejecting=new Set();
+async function reactStory(message,emoji){
+ try{await message.react(emoji);}
+ catch(error){console.warn("Could not react to 1 Word Stories message",emoji,String(error));}
+}
+async function rejectStory(message,reason){
+ if(storyRejecting.has(message.id))return;
+ storyRejecting.add(message.id);
+ try{
+  // If a previously accepted word is edited into something invalid, remove our ✅.
+  const prior=message.reactions?.cache?.find(reaction=>reaction.emoji?.name==="✅");
+  if(prior&&client.user?.id)await prior.users.remove(client.user.id).catch(()=>{});
+  await reactStory(message,"❌");
+  await storyNotice(message,reason);
+ }finally{
+  const deleteLater=setTimeout(async()=>{
+   try{await message.delete();}
+   catch(error){if(error?.code!==10008)console.warn("Could not remove rejected story word",String(error));}
+   finally{storyRejecting.delete(message.id);}
+  },5000);
+  deleteLater.unref?.();
+ }
+}
 client.on(Events.MessageCreate,message=>{
  if(!isStoryChannel(message)||message.author?.bot||message.webhookId)return;
  enqueueStory(message.channelId,async()=>{
   if(!isStoryMessageValid({content:message.content,author:message.author,attachments:message.attachments,embeds:message.embeds,stickers:message.stickers,poll:message.poll})){
-   await message.delete();
-   await storyNotice(message,"Send only **one word**. Hyphens, underscores, spaces, emojis and attachments are not allowed.");
+   await rejectStory(message,"Send only **one word**. Hyphens, underscores, spaces, emojis and attachments are not allowed.");
    return;
   }
   const previous=await precedingValidStoryAuthor(message);
   if(previous===message.author.id){
-   await message.delete();
-   await storyNotice(message,"You can't write two turns in a row. Let someone else add the next word.");
+   await rejectStory(message,"You can't write two turns in a row. Let someone else add the next word.");
+  }else{
+   await reactStory(message,"✅");
   }
  });
 });
@@ -131,10 +156,9 @@ client.on(Events.MessageUpdate,(before,after)=>{
  if(!isStoryChannel(after)||after.author?.bot||after.webhookId)return;
  enqueueStory(after.channelId,async()=>{
   const message=after.partial?await after.fetch().catch(()=>null):after;
-  if(!message||message.author?.bot)return;
+  if(!message||message.author?.bot||storyRejecting.has(message.id))return;
   if(!isStoryMessageValid({content:message.content,author:message.author,attachments:message.attachments,embeds:message.embeds,stickers:message.stickers,poll:message.poll})){
-   await message.delete();
-   await storyNotice(message,"Edits must still contain exactly one valid word.");
+   await rejectStory(message,"Edits must still contain exactly one valid word.");
   }
  });
 });
