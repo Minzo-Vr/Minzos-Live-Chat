@@ -53,6 +53,9 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Generate iOS Xcode project
         working-directory: mobile
+        env:
+          # RevenueCat Apple public SDK key, not a private credential.
+          REVENUECAT_APPLE_PUBLIC_KEY: ${{ vars.REVENUECAT_APPLE_PUBLIC_KEY }}
         run: npm run native:ios
       - name: Build iOS simulator app (unsigned)
         working-directory: mobile/ios/App
