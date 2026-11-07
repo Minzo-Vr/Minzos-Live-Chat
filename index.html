@@ -2037,6 +2037,7 @@ try{
       updateRoleAppearanceOptions();
       updateLockdownUI();
       updateExperimentalAccess();
+      refreshReactionPermissions();
       if(!hasExperimentalAccess()&&activeRoom!==0)switchRoom(0).catch(console.warn);
       startAnnouncementListeners();
     }
@@ -4426,6 +4427,131 @@ try{
       const node=displayedMessages.get(key);
       if(node){node.scrollIntoView({behavior:"smooth",block:"center"});node.focus({preventScroll:true});}
     }
+    // Chat+ live reactions are stored separately from chat message records.
+    // Server Firebase rules MUST enforce Plus/Admin writes, not just this UI.
+    const REACTION_CHOICES=[
+      ["thumbsup","👍"],["heart","❤️"],["joy","😂"],["sob","😭"],
+      ["open_mouth","😮"],["cry","😢"],["rage","😡"],["fire","🔥"],
+      ["tada","🎉"],["skull","💀"],["eyes","👀"],["pray","🙏"],
+      ["100","💯"],["sunglasses","😎"],["partying_face","🥳"],["sparkles","✨"]
+    ];
+    const reactionById=new Map(REACTION_CHOICES);
+    const reactionStreams=new Map();
+    const canUseChatReactions=()=>!!(joined&&user&&db&&(isAdmin||hasRole(user.uid,"plus")||hasRole(user.uid,"admin")));
+    function reactionStorageKey(path,key){
+      const room=path==="chatMessages"?"general":path.split("/")[1];
+      if(room!=="general"&&!/^room[1-5]$/.test(room))return null;
+      if(!/^[-A-Za-z0-9_]{12,100}$/.test(String(key)))return null;
+      return room+"/"+key;
+    }
+    function stopReactionStream(storageKey){
+      const current=reactionStreams.get(storageKey);
+      if(current){try{current()}catch{}reactionStreams.delete(storageKey);}
+    }
+    function stopAllReactionStreams(){
+      for(const unsub of reactionStreams.values())try{unsub()}catch{}
+      reactionStreams.clear();
+    }
+    function refreshReactionPermissions(){
+      const allowed=canUseChatReactions();
+      for(const button of document.querySelectorAll(".reaction-action")){
+        button.hidden=!allowed;
+        if(!allowed){
+          button.setAttribute("aria-expanded","false");
+          const chooser=button.closest(".msg")?.querySelector(".msg-reaction-chooser");
+          if(chooser)chooser.hidden=true;
+        }
+      }
+      for(const button of document.querySelectorAll(".msg-reactions button"))button.disabled=!allowed;
+    }
+    let reactionRulesNoticeShown=false;
+    function addMessageReactions(wrap,key,path){
+      const storageKey=reactionStorageKey(path,key);
+      if(!storageKey||!db||!user)return;
+      stopReactionStream(storageKey); // Edits replace the message without leaking listeners.
+      wrap.dataset.reactionStorageKey=storageKey;
+      const main=wrap.querySelector(".message-main"),actions=wrap.querySelector(".msg-actions");
+      if(!main||!actions)return;
+      const bar=document.createElement("div");bar.className="msg-reactions";bar.hidden=true;bar.setAttribute("aria-label","Message reactions");
+      const chooser=document.createElement("div");chooser.className="msg-reaction-chooser";chooser.hidden=true;
+      chooser.setAttribute("role","group");chooser.setAttribute("aria-label","Choose a Chat+ reaction");
+      const trigger=document.createElement("button");trigger.type="button";trigger.className="reaction-action";
+      trigger.textContent="😊+";trigger.title="React with emoji — Chat+ only";
+      trigger.setAttribute("aria-label","Add emoji reaction (Chat+ only)");
+      trigger.setAttribute("aria-expanded","false");trigger.hidden=!canUseChatReactions();
+      let currentReactions={},pending=false;
+      const myUid=user.uid,roomListenerKey=storageKey;
+      async function toggleReaction(id){
+        if(!reactionById.has(id)||pending)return;
+        if(!canUseChatReactions()||user?.uid!==myUid){
+          chooser.hidden=true;showError("🔒 Emoji reactions require a Chat+ (Plus) or Admin role.");return;
+        }
+        pending=true;
+        const selfPath="chatMessageReactions/"+roomListenerKey+"/"+id+"/"+myUid;
+        const mine=currentReactions[id]?.[myUid]===true;
+        try{
+          if(mine)await remove(ref(db,selfPath));
+          else await set(ref(db,selfPath),true);
+          chooser.hidden=true;trigger.setAttribute("aria-expanded","false");
+        }catch(err){
+          const reason=String(err.code||err.message||"");
+          showError("Couldn't update reaction: "+reason+". Ask an admin to check Chat+ reaction Firebase rules.");
+        }finally{pending=false;}
+      }
+      function showReactionCounts(){
+        bar.replaceChildren();
+        for(const [id,symbol] of REACTION_CHOICES){
+          const users=currentReactions[id];
+          if(!users||typeof users!=="object")continue;
+          const count=Object.values(users).filter(v=>v===true).length;
+          if(!count)continue;
+          const button=document.createElement("button");button.type="button";
+          button.textContent=symbol+" "+count;
+          button.title="React with :"+id+": — "+count+" reaction(s)";
+          const mine=users[myUid]===true;
+          button.classList.toggle("mine",mine);
+          button.setAttribute("aria-pressed",String(mine));
+          button.setAttribute("aria-label",":"+id+": — "+count+" reaction(s)"+(mine?", including yours":""));
+          button.disabled=!canUseChatReactions();button.addEventListener("click",()=>toggleReaction(id));
+          bar.append(button);
+        }
+        bar.hidden=!bar.childElementCount;
+      }
+      for(const [id,symbol] of REACTION_CHOICES){
+        const b=document.createElement("button");b.type="button";b.textContent=symbol;b.title="React with :"+id+":";
+        b.setAttribute("aria-label","React with :"+id+":");
+        b.addEventListener("click",()=>toggleReaction(id));chooser.append(b);
+      }
+      trigger.addEventListener("click",()=>{
+        if(!canUseChatReactions()){showError("🔒 Chat+ membership required for reactions.");return;}
+        chooser.hidden=!chooser.hidden;trigger.setAttribute("aria-expanded",String(!chooser.hidden));
+      });
+      const closeChooser=event=>{
+        if(!wrap.isConnected){document.removeEventListener("pointerdown",closeChooser);return;}
+        if(!chooser.hidden&&!chooser.contains(event.target)&&event.target!==trigger){
+          chooser.hidden=true;trigger.setAttribute("aria-expanded","false");
+        }
+      };
+      document.addEventListener("pointerdown",closeChooser);
+      const refPath=ref(db,"chatMessageReactions/"+storageKey);
+      const off=onValue(refPath,snap=>{
+        if(user?.uid!==myUid)return;
+        currentReactions=snap.val()||{};
+        showReactionCounts();
+      },err=>{
+        // Until the RTDB rule is added, reactions will not load or save.
+        if(!reactionRulesNoticeShown&&canUseChatReactions()){
+          reactionRulesNoticeShown=true;
+          console.warn("Chat+ reaction reads unavailable. Deploy the reaction Firebase rules.",err);
+        }
+      });
+      reactionStreams.set(storageKey,()=>{
+        off();
+        document.removeEventListener("pointerdown",closeChooser);
+      });
+      main.append(bar,chooser);actions.prepend(trigger);
+    }
+
     function addMessageActions(wrap,data,key,path){
       const actions=document.createElement("div");actions.className="msg-actions";
       const own=!!user&&data.uid===user.uid;
@@ -4460,6 +4586,7 @@ try{
       }
       make("🔗","Copy message link",()=>copyMessageLink(path,key));
       wrap.append(actions);
+      addMessageReactions(wrap,key,path);
     }
     // :shortcode: autocomplete. The emoji itself is Unicode, not a separate upload.
     const EMOJI_SHORTCODES=[
@@ -4707,6 +4834,7 @@ try{
       while (messages.children.length > 100) {
         const oldest = messages.firstElementChild;
         for (const [id, node] of displayedMessages) if (node === oldest) displayedMessages.delete(id);
+        if(oldest.dataset.reactionStorageKey)stopReactionStream(oldest.dataset.reactionStorageKey);
         oldest.remove();
       }
       messages.scrollTop = messages.scrollHeight;
@@ -4779,6 +4907,7 @@ try{
     function listenMessages() {
       if (stopMessages) stopMessages();
       if (stopRemovedMessages) stopRemovedMessages();
+      stopAllReactionStreams();
       displayedMessages.clear();
       messages.innerHTML = "";
       $("chatSearchInput").value="";
@@ -4793,6 +4922,7 @@ try{
       const offChanged=onChildChanged(recentMessages,snapshot=>{
         const old=displayedMessages.get(snapshot.key);
         if(!old)return;
+        if(old.dataset.reactionStorageKey)stopReactionStream(old.dataset.reactionStorageKey);
         const wasLinked=old.id===("chat-msg-"+new URLSearchParams(location.search).get("chatMessage"));
         old.remove();displayedMessages.delete(snapshot.key);
         addMessage(snapshot.val(),snapshot.key);
@@ -4801,6 +4931,7 @@ try{
       stopChangedMessages=offChanged;
       stopRemovedMessages = onChildRemoved(recentMessages, snapshot => {
         const node = displayedMessages.get(snapshot.key);
+        if(node?.dataset.reactionStorageKey)stopReactionStream(node.dataset.reactionStorageKey);
         if (node) node.remove();
         displayedMessages.delete(snapshot.key);
       });
@@ -4889,6 +5020,7 @@ try{
       activeRoom=0;roomMeta={};roomMembers={};
       if(stopRemovedMessages){stopRemovedMessages();stopRemovedMessages=null;}
       if(stopChangedMessages){stopChangedMessages();stopChangedMessages=null;}
+      stopAllReactionStreams();
       for(const off of stopSettings)off();stopSettings=[];
       if(stopVotes){stopVotes();stopVotes=null;}
       if(stopPresenceList){stopPresenceList();stopPresenceList=null;}
