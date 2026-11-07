@@ -16,7 +16,7 @@ for(const key of ["UIFileSharingEnabled","LSSupportsOpeningDocumentsInPlace"]){
   }else{
     const i=xml.lastIndexOf("</dict>");
     if(i<0)throw Error("Cannot find root Info.plist dictionary");
-    xml=xml.slice(0,i)+"\\t<key>"+key+"</key>\\n\\t<true/>\\n"+xml.slice(i);
+    xml=xml.slice(0,i)+"  <key>"+key+"</key>"+String.fromCharCode(10)+"  <true/>"+String.fromCharCode(10)+xml.slice(i);
   }
 }
 writeFileSync(plist,xml);
