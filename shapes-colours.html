@@ -1042,6 +1042,21 @@ const previewScene=new THREE.Scene(),previewCamera=new THREE.PerspectiveCamera(3
 previewScene.add(new THREE.AmbientLight(0xffffff,1.6));const previewLight=new THREE.DirectionalLight(0xffffff,2);previewLight.position.set(3,5,4);previewScene.add(previewLight);
 let previewMesh=null,previewChoice=null;
 async function refreshBubblePreview(){
+ if(!yeepsMode){
+  hudName.textContent=bubbleChoice[1];
+  if(previewChoice===bubbleChoice&&previewMesh?.userData.standardPreview){
+   previewMesh.material.color.set(bubblePaintColor);return;
+  }
+  previewChoice=bubbleChoice;
+  if(previewMesh){previewScene.remove(previewMesh);previewMesh=null;}
+  const geo=geometry(bubbleChoice[2]);if(!geo)return;
+  const mesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:bubblePaintColor,side:THREE.DoubleSide}));
+  if(bubbleChoice[3])mesh.scale.fromArray(bubbleChoice[3]);
+  const bounds=new THREE.Box3().setFromObject(mesh),size=bounds.getSize(new THREE.Vector3()),centre=bounds.getCenter(new THREE.Vector3());
+  const scale=1.6/Math.max(size.x,size.y,size.z,.001);
+  mesh.scale.multiplyScalar(scale);mesh.position.sub(centre.multiplyScalar(scale));
+  mesh.userData.standardPreview=true;previewMesh=mesh;previewScene.add(mesh);return;
+ }
  if(!yeepsBubbleChoice||!yeepsZipArchive){hudName.textContent='No assets';return;}
  if(previewChoice===yeepsBubbleChoice)return;const requested=yeepsBubbleChoice;previewChoice=requested;
  if(previewMesh){previewScene.remove(previewMesh);previewMesh=null;}
@@ -1070,7 +1085,11 @@ async function firstPersonBuild(){
  if(yeepsMode){
   if(yeepsZipArchive&&yeepsBubbleChoice){const mesh=await placeYeepsBlock(yeepsBubbleChoice);if(mesh){mesh.position.copy(target);snapYeeps(mesh);mbNotify(mesh);}}
   else{status.textContent='Load the Yeeps asset library to place Yeeps blocks.';return;}
- }else{status.textContent='Enable Yeeps Mode to build with Yeeps assets.';return;}
+ }else{
+  const shape=bubbleChoice||bubbleCatalog.Basic[0];
+  const placed=add(shape[2],{color:bubblePaintColor,position:[target.x,Math.max(.15,target.y),target.z],scale:shape[3]||[1,1,1]});
+  if(!placed){status.textContent='Could not place shape';return;}
+ }
  // Stay in first-person instead of opening the editor transform handles.
  select(null);transform.visible=false;status.textContent='Block placed · Press B or Build to place another';
 }
