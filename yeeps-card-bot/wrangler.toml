@@ -1,0 +1,10 @@
+name = "yeeps-card-pack-opener"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+keep_vars = true
+
+# This is a separate namespace from Community Chat's SAD_MESSAGES storage.
+[[kv_namespaces]]
+binding = "PACKS"
+id = "96b47f6895ea48d0a218c05b2fedaf23"
