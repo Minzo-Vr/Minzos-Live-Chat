@@ -23,6 +23,8 @@ jobs:
         run: |
           node --check yeeps-card-bot/worker.js
           node --check yeeps-card-bot/packs.js
+          node --check yeeps-card-bot/admin.js
+          node --check yeeps-card-bot/register-global-commands.mjs
           node --check yeeps-card-bot/register-commands.mjs
       - name: Test virtual packs and reveal button
-        run: node --test yeeps-card-bot/packs.test.mjs
+        run: node --test yeeps-card-bot/packs.test.mjs yeeps-card-bot/admin.test.mjs
