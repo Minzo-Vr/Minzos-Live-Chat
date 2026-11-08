@@ -1,0 +1,28 @@
+name: Test Standalone Yeeps Card Bot
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "yeeps-card-bot/**"
+      - ".github/workflows/test-yeeps-card-bot.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check standalone bot syntax
+        run: |
+          node --check yeeps-card-bot/worker.js
+          node --check yeeps-card-bot/packs.js
+          node --check yeeps-card-bot/register-commands.mjs
+      - name: Test virtual packs and reveal button
+        run: node --test yeeps-card-bot/packs.test.mjs
