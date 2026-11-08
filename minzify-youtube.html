@@ -14,9 +14,6 @@ a{color:inherit}button,input{font:inherit}button{cursor:pointer}button:disabled{
 [hidden]{display:none!important}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px clamp(19px,4vw,40px);border-bottom:1px solid #ffffff18;background:#0d1019d9}.brand{font-size:24px;font-weight:900;letter-spacing:-1px;text-decoration:none}.brand b{color:var(--mint)}.back{padding:9px 13px;border-radius:50px;border:1px solid #4b556c;color:#dce3ee;font-size:12px;font-weight:800;text-decoration:none}
 main{max-width:1080px;margin:auto;padding:clamp(20px,5vw,42px)}.eyebrow{font-size:11px;letter-spacing:2px;color:var(--mint);font-weight:850}.hero h1{font-size:clamp(34px,6vw,58px);letter-spacing:-2px;line-height:1.1;margin:12px 0}.hero h1 em{font-style:normal;color:var(--mint)}.lead{font-size:16px;max-width:680px;color:#c5ccd8}.form{display:flex;align-items:stretch;gap:10px;margin-top:26px;flex-wrap:wrap}.form input{flex:1;min-width:210px;border:1px solid #535e73;border-radius:12px;background:#121b2b;color:#fff;padding:13px}.button{display:inline-flex;justify-content:center;align-items:center;text-decoration:none;border:1px solid #596578;background:#293144;color:#f5f7ff;padding:12px 16px;border-radius:12px;font-weight:800;white-space:nowrap}.button.primary{border-color:var(--mint);background:var(--mint);color:#132318}.button:hover{filter:brightness(1.1)}.status{margin:16px 0;padding:12px 14px;border:1px solid #44526a;background:#192235;border-radius:12px;color:#d8e6f6;font-size:13px;overflow-wrap:anywhere}.status.error{border-color:#965b5b;background:#30202a;color:#ffd3d5}.meta{color:var(--muted);font-size:12px}.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.8fr);gap:18px;align-items:start;margin-top:24px}.results{display:grid;gap:11px}.result{display:flex;align-items:start;gap:12px;border:1px solid var(--stroke);background:linear-gradient(145deg,#1b2232,#111725);border-radius:15px;padding:12px}.thumb{flex:0 0 116px;width:116px;aspect-ratio:16/9;border-radius:9px;object-fit:cover;background:#263043}.details{flex:1;min-width:0}.details strong{display:block;font-size:14px;overflow-wrap:anywhere}.details small{display:block;color:#b3bfd1;margin:4px 0 10px}.actions{display:flex;gap:8px;flex-wrap:wrap}.actions .button{padding:7px 11px;min-height:34px;font-size:12px}.side{position:sticky;top:14px;border:1px solid var(--stroke);background:#171c29;border-radius:17px;padding:19px}.side h2{font-size:19px;margin:0 0 12px}.side p{color:#c1cad7;font-size:13px}.player{width:100%;aspect-ratio:16/9;min-height:230px;border-radius:12px;border:0;background:#040507}.player-placeholder{display:grid;place-items:center;min-height:230px;background:#0b1119;border:1px solid #344051;border-radius:12px;color:#aab9cc;text-align:center;padding:22px}.links{display:flex;flex-wrap:wrap;gap:9px;margin-top:13px}.links a{font-size:12px;font-weight:850;color:var(--mint)}.setup{border-top:1px solid #343d4d;padding-top:13px;margin-top:17px}.setup summary{cursor:pointer;color:#e5edff;font-weight:800}.setup p{font-size:12px}.setup a{color:var(--mint)}.setup code{overflow-wrap:anywhere}.muted{color:var(--muted)}footer{margin-top:34px;font-size:12px;color:#aab4c2;line-height:1.65}
 @media(max-width:800px){.layout{grid-template-columns:1fr}.side{position:static;order:-1}.hero h1{letter-spacing:-1px}.result .thumb{flex-basis:90px;width:90px}.actions .button{font-size:11px}}
-.api-setup{border:1px solid #515e72;background:linear-gradient(125deg,#182237,#192b31);padding:18px;border-radius:16px;margin:18px 0}
-.api-setup[hidden]{display:none!important}.api-heading{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}.api-heading strong{font-size:16px}.api-badge{font-size:11px;border:1px solid #72683e;border-radius:999px;padding:4px 9px;color:#f5d99d;background:#392d17}.api-badge.connected{color:#d3ffe5;background:#18402b;border-color:#48795b}
-.api-setup p{font-size:13px;color:#c4cedf;margin:11px 0}.api-setup label{display:block;font-size:13px;font-weight:800;color:#e0e9f7;margin-bottom:8px}.api-key-controls{display:flex;flex-wrap:wrap;gap:8px}.api-key-controls input{flex:1;min-width:220px;border:1px solid #536174;border-radius:11px;background:#0c1625;color:#fff;padding:12px}.api-links{display:flex;gap:15px;flex-wrap:wrap;margin-top:13px}.api-links a{color:var(--mint);font-size:12px;font-weight:750}.api-key-controls button{min-height:44px}
 </style>
 <script src="./minzify-youtube-config.js"></script>
 <script src="./minzify-youtube.js" defer></script>
@@ -27,25 +24,13 @@ main{max-width:1080px;margin:auto;padding:clamp(20px,5vw,42px)}.eyebrow{font-siz
 <header class="hero">
 <div class="eyebrow">MINZIFY / VIDEO DISCOVERY</div>
 <h1>Find music on <em>YouTube.</em></h1>
-<p class="lead">Search music-category videos using YouTube's official Data API, then watch with the official YouTube player. Or continue the search on YouTube Music.</p>
+<p class="lead">Search music-category videos directly inside Minzify, then watch with the official YouTube player. No API key needed from visitors.</p>
 </header>
 <form id="youtubeSearch" class="form" role="search" autocomplete="off">
 <input id="query" type="search" placeholder="Artist, song, music video…" aria-label="Search YouTube music videos" maxlength="100" required>
 <button class="button primary" type="submit" id="searchButton">Search music</button>
 <a id="musicSearchLink" class="button" href="https://music.youtube.com/" target="_blank" rel="noopener noreferrer">Search on YouTube Music ↗</a>
 </form>
-<div id="apiKeySetup" class="api-setup" aria-label="YouTube search setup">
-  <div class="api-heading"><strong>Enable search inside Minzify</strong><span id="apiBadge" class="api-badge">Setup needed</span></div>
-  <p id="apiHelp">To show search results here, paste a YouTube Data API v3 key from Google Cloud. Connect &amp; test checks that Google accepts it. Restrict the key to this website and the YouTube Data API.</p>
-  <label for="apiKeyInput">YouTube Data API v3 key</label>
-  <div class="api-key-controls">
-    <input id="apiKeyInput" type="password" autocomplete="off" spellcheck="false" placeholder="Paste a restricted Google Cloud API key" aria-label="Your restricted YouTube API key" maxlength="256">
-    <button id="saveApiKey" class="button primary" type="button">Connect &amp; test</button>
-    <button id="clearApiKey" class="button" type="button" hidden>Remove key</button>
-  </div>
-  <div id="apiKeyMessage" role="status" aria-live="polite" class="meta">The key will be tested against Google before being saved in this browser. Use a YouTube Data API v3 key, not a Spotify or Jamendo key.</div>
-  <div class="api-links"><a target="_blank" rel="noopener noreferrer" href="https://console.cloud.google.com/apis/library/youtube.googleapis.com">Enable YouTube Data API v3 ↗</a><a target="_blank" rel="noopener noreferrer" href="https://console.cloud.google.com/apis/credentials">Create &amp; restrict API key ↗</a></div>
-</div>
 <div class="status" id="status" role="status" aria-live="polite">Search for a song or artist to get started.</div>
 <section class="layout">
 <div class="results" id="results" aria-label="YouTube music video search results"></div>
@@ -57,8 +42,8 @@ main{max-width:1080px;margin:auto;padding:clamp(20px,5vw,42px)}.eyebrow{font-siz
 <div class="links"><a id="watchYouTube" target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/" hidden>Watch on YouTube ↗</a><a id="watchMusic" target="_blank" rel="noopener noreferrer" href="https://music.youtube.com/" hidden>Open in YouTube Music ↗</a></div>
 <details class="setup"><summary>About search and API setup</summary>
 <p>YouTube Music has no equivalent public song-catalog search API. This page uses the official <strong>YouTube Data API v3</strong> to find music-category videos (not necessarily every item in the YouTube Music catalogue). YouTube may block embedding for some videos.</p>
-<p>To search directly inside Minzify, add a Google Cloud YouTube Data API v3 key in the form above. For all visitors, the site owner can instead configure a site-wide restricted key in <code>minzify-youtube-config.js</code>. For browser website restrictions, allow <code>https://minzo-vr.github.io</code> and <code>https://minzo-vr.github.io/*</code>, and restrict the key to YouTube Data API v3. The app verifies the key with Google instead of guessing its format.</p>
-<p>The Data API has daily limits. Searches happen only when you press Search, not on each keystroke. Without a key, you can still follow the explicit YouTube Music link; the search form will explain how to enable in-site results.</p>
+<p><strong>Visitors never need an API key.</strong> Minzify uses one YouTube Data API v3 key configured by the site owner in <code>minzify-youtube-config.js</code>. Until the owner connects that key, visitors can open their search on YouTube Music instead. The shared key must be restricted in Google Cloud to YouTube Data API v3 and the Minzify website.</p>
+<p>Every visitor shares the owner’s Google Cloud quota, so search may temporarily become unavailable if the daily limit is reached. Searches happen when you press Search, not on each keystroke. The YouTube Music link remains available separately.</p>
 </details>
 </aside>
 </section>
