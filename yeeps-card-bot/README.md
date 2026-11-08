@@ -25,3 +25,17 @@ This Discord bot is separate from Community Chat:
 The Worker only needs the new application's public key and application ID at runtime; the bot token is used locally for registering commands. Don't reuse Community Chat's Discord application ID, token, or public key.
 
 **Note:** A new application must be created in the Discord Developer Portal by its owner. Adding code does not automatically create a second Discord identity or finish installation.
+
+
+## Easiest command registration (GitHub Actions)
+
+The repository includes a **Register Yeeps Card Bot Commands** workflow. It registers `/openpack`, `/collection`, and `/packhelp` as **global commands** for the separate Discord application only, avoiding duplicate guild commands.
+
+1. In this repository, open **Settings → Secrets and variables → Actions → New repository secret**.
+2. Add the secret name `YEEPS_DISCORD_BOT_TOKEN` and paste the bot token from the **new Yeeps Card Pack Opener application**, not Community Chat. **Never commit the token or paste it in chat.**
+3. Open **Actions → Register Yeeps Card Bot Commands → Run workflow** (branch `main`).
+4. Once the workflow succeeds, install the new bot into your server with the `bot` and `applications.commands` scopes and wait for global commands to appear.
+
+This workflow uses the Yeeps application's public ID provided during setup. It needs no Discord server ID and does not overwrite commands belonging to the Community Chat application. Do not also run the guild command registrar for the same app unless you deliberately want guild-scoped copies (which can show duplicates).
+
+**Interactions Endpoint URL:** `https://yeeps-card-pack-opener.kobefalzon8.workers.dev`
