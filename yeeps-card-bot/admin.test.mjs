@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {handleAdminCommand,handleAdminInteraction} from "./admin.js";
 import {drawYeepsPack,getCustomCards,getYeepsCollectionText,handleYeepsOpenPack,handleYeepsReveal} from "./packs.js";
 
-const GUILD="1564239312613015585",USER="123456789012345678",OTHER="987654321098765432";
+const GUILD="1535801847527514162",USER="123456789012345678",OTHER="987654321098765432";
 function kv(){
  const store=new Map(),metadata=new Map();
  return {store,
