@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - "discord-bot/register-commands.mjs"
+      - "discord-bot/command-definitions.mjs"
       - "discord-bot/register-global-commands.mjs"
       - ".github/workflows/register-discord-commands.yml"
 
