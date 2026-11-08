@@ -10,7 +10,7 @@ crons = ["* * * * *"]
 
 # Limit card-admin controls to the owner's configured Discord guild.
 [vars]
-YEEPS_ADMIN_GUILD_ID = "1564239312613015585"
+YEEPS_ADMIN_GUILD_ID = "1535801847527514162"
 
 # This is a separate namespace from Community Chat's SAD_MESSAGES storage.
 [[kv_namespaces]]
