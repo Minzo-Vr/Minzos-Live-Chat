@@ -8,7 +8,7 @@ const base="https://discord.com/api/v10/applications/"+app;
 async function api(url,init={}){
   for(let attempt=0;attempt<8;attempt++){
     const response=await fetch(url,{headers,...init});
-    if(response.ok)return response.json();
+    if(response.ok)return response.status===204?null:response.json();
     const body=(await response.text()).slice(0,500);
     if(response.status===429&&attempt<7){
       let seconds=3;
@@ -23,7 +23,12 @@ async function api(url,init={}){
   throw Error("Discord command registration retries exhausted");
 }
 const existing=await api(base+"/guilds/"+guild+"/commands");
-const names=["ping","sad","help","ask","latest","updates","status","openpack","collection"];
+const retired=await api(base+"/commands");
+for(const command of retired.filter(x=>["openpack","collection"].includes(x.name)&&x.type===1)){
+  await api(base+"/commands/"+command.id,{method:"DELETE"});
+  console.log("Removed old Community Chat global /"+command.name);
+}
+const names=["ping","sad","help","ask","latest","updates","status"];
 for(const name of names){
   const source=existing.find(command=>command.name===name&&command.type===1);
   if(!source)throw Error("Missing guild command /"+name+". Register existing guild commands first.");
