@@ -221,7 +221,7 @@
       const info=button("","track-data",()=>playCollection(tracks,i),"Play "+track.title+" by "+track.artist);
       info.style.cssText="border:0;background:none;text-align:left;color:inherit;min-width:0;padding:0";
       const title=document.createElement("strong");title.textContent=track.title;
-      const artist=document.createElement("span");artist.textContent=track.artist;
+      const artist=document.createElement("span");artist.textContent=track.artist+(track.source==="jamendo"?" · Jamendo":"");
       info.append(title,artist);row.append(info);
       const duration=document.createElement("span");duration.className="track-duration";duration.textContent=time(track.duration);
       row.append(duration);
