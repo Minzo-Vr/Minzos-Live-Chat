@@ -27,20 +27,41 @@ function syncKeyUI(){
  keyClear.hidden=configured||!validApiKey(storedKey());
  $("apiKeySetup").hidden=configured;
 }
-keySave.addEventListener("click",()=>{
+
+function googleError(data,http){
+ const msg=String(data?.error?.message||"");
+ const reason=String(data?.error?.errors?.[0]?.reason||"");
+ const detail=(reason+" "+msg).toLowerCase();
+ if(detail.includes("referer")||detail.includes("referrer"))return "Your Google API key is blocked by website restrictions. Add https://minzo-vr.github.io/Minzos-Live-Chat/* to allowed referrers.";
+ if(detail.includes("not enabled")||detail.includes("accessnotconfigured")||detail.includes("service_disabled"))return "Enable YouTube Data API v3 for this key's Google Cloud project.";
+ if(detail.includes("quota")||detail.includes("rate limit"))return "YouTube API quota reached; check usage in Google Cloud.";
+ if(detail.includes("invalid")||detail.includes("expired"))return "Invalid API key. Use a YouTube Data API key, not your Spotify or Jamendo credential.";
+ return "Google rejected the key (HTTP "+http+", reason "+reason.slice(0,55)+"). Check API and website restrictions.";
+}
+keySave.addEventListener("click",async()=>{
  const key=keyInput.value.trim();
  if(!validApiKey(key)){
-  keyMessage.textContent="This does not look like a Google API key. Check that you copied the API key, not an OAuth secret or project ID.";
-  return;
+  const msg="This does not look like a Google API key. Google API keys typically start with AIza. Spotify and Jamendo keys will not work.";
+  keyMessage.textContent=msg;showStatus(msg,true);return;
  }
- try{localStorage.setItem(STORAGE_KEY,key)}catch{
-  keyMessage.textContent="Your browser blocked local storage. The key cannot be saved.";
-  return;
- }
- apiKey=key;keyInput.value="";
- keyMessage.textContent="Key saved in this browser. Try searching a song above; if Google rejects it, check the API restrictions.";
- syncKeyUI();showStatus("API key connected. Search a song to see YouTube results inside Minzify.");
- if(input.value.trim())void search(input.value.trim().slice(0,100));
+ keySave.disabled=true;keySave.textContent="Checking…";
+ keyMessage.textContent="Checking the key against YouTube's official API…";
+ try{
+  const params=new URLSearchParams({key,part:"snippet",regionCode:"AU"});
+  const r=await fetch("https://www.googleapis.com/youtube/v3/videoCategories?"+params,{cache:"no-store"});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok)throw Error(googleError(data,r.status));
+  if(!Array.isArray(data.items))throw Error("Unexpected API response. Check YouTube Data API configuration.");
+  apiKey=key;
+  let saved=true;
+  try{localStorage.setItem(STORAGE_KEY,key)}catch{saved=false}
+  keyInput.value="";syncKeyUI();
+  keyMessage.textContent=saved?"✓ Key verified with Google and saved in this browser.":"✓ Key verified, but browser storage is blocked. It will reset when the page closes.";
+  showStatus("✓ Key verified. Search YouTube music videos above.");
+ }catch(e){
+  const msg=e instanceof TypeError?"Couldn't reach Google. Check your network and any browser content blocker.":String(e.message||e);
+  keyMessage.textContent=msg;showStatus("Key not connected: "+msg,true);
+ }finally{keySave.disabled=false;keySave.textContent="Connect & test"}
 });
 keyClear.addEventListener("click",()=>{
  try{localStorage.removeItem(STORAGE_KEY)}catch{}
