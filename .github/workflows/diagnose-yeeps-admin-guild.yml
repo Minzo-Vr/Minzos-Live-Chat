@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "yeeps-card-bot/check-admin-guild.mjs"
+      - ".github/workflows/diagnose-yeeps-admin-guild.yml"
   workflow_dispatch:
 
 permissions:
