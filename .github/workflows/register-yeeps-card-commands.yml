@@ -1,0 +1,29 @@
+name: Register Yeeps Card Bot Commands
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check separate bot token
+        env:
+          YEEPS_DISCORD_BOT_TOKEN: ${{ secrets.YEEPS_DISCORD_BOT_TOKEN }}
+        run: |
+          if [ -z "$YEEPS_DISCORD_BOT_TOKEN" ]; then
+            echo "::error::Set repository Actions secret YEEPS_DISCORD_BOT_TOKEN to your NEW Yeeps bot token."
+            exit 1
+          fi
+      - name: Register commands for the Yeeps bot only
+        env:
+          YEEPS_DISCORD_BOT_TOKEN: ${{ secrets.YEEPS_DISCORD_BOT_TOKEN }}
+          YEEPS_DISCORD_APPLICATION_ID: "1568889350995972238"
+        run: node yeeps-card-bot/register-global-commands.mjs
