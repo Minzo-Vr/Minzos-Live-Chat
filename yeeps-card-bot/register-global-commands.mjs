@@ -6,7 +6,8 @@ if(!token||!/^[0-9]{15,22}$/.test(app||""))
 const commands=[
  {type:1,name:"openpack",description:"Open five virtual Yeeps-inspired cards with a Reveal Cards button",integration_types:[0],contexts:[0]},
  {type:1,name:"collection",description:"See your personal virtual Yeeps-inspired card collection",integration_types:[0],contexts:[0]},
- {type:1,name:"packhelp",description:"How to use the Yeeps-inspired card pack opener",integration_types:[0],contexts:[0]}
+ {type:1,name:"packhelp",description:"How to use the Yeeps-inspired card pack opener",integration_types:[0],contexts:[0]},
+ {type:1,name:"cardadmin",description:"Open the admin-only Yeeps card management panel",integration_types:[0],contexts:[0],default_member_permissions:"8"}
 ];
 const endpoint="https://discord.com/api/v10/applications/"+encodeURIComponent(app)+"/commands";
 for(let attempt=0;attempt<8;attempt++){
