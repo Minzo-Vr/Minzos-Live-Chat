@@ -91,7 +91,14 @@ input.addEventListener("input",syncLink);
 form.addEventListener("submit",event=>{
  event.preventDefault();const q=input.value.trim().slice(0,100);
  if(!q)return;
- syncLink();void search(q);
+ syncLink();
+ if(!hasKey){
+   // Direct YouTube Music search needs no API key. This is an official external page.
+   window.open(link.href,"_blank","noopener,noreferrer");
+   showStatus("Opened your search on YouTube Music. If the new tab did not appear, tap “Search on YouTube Music”.");
+   return;
+ }
+ void search(q);
 });
 const url=new URL(window.location.href),initial=url.searchParams.get("q");
 if(initial)input.value=initial.slice(0,100);
