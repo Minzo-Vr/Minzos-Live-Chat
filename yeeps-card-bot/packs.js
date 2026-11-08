@@ -28,6 +28,52 @@ const CARDS = Object.freeze([
   {id:"monster-bear",name:"Monster Bear",rarity:"Legendary"}
 ]);
 const RARITY_RANK = Object.fromEntries(RARITIES.map((r,i)=>[r.name,i]));
+RARITY_RANK.Custom=5;
+const CUSTOM_PREFIX=PREFIX+"customcard:";
+const GLOBAL_RESET=PREFIX+"wipe:global";
+const USER_RESET=PREFIX+"wipe:user:";
+export function getBaseCards(){return CARDS.map(c=>({...c}));}
+export async function getCustomCards(env){
+ const page=await env.PACKS.list({prefix:CUSTOM_PREFIX,limit:1000});
+ if(!page.list_complete)throw Error("Too many custom cards configured");
+ return page.keys.map(k=>k.metadata).filter(x=>x&&x.id&&x.name&&Number.isFinite(x.chance));
+}
+export async function getCollectionGeneration(owner,env){
+ const [global,user]=await Promise.all([env.PACKS.get(GLOBAL_RESET),env.PACKS.get(USER_RESET+owner)]);
+ return {global:global||"legacy",user:user||"legacy"};
+}
+export function getCollectionPrefix(owner,generation){
+ if(generation.global==="legacy"&&generation.user==="legacy")return PREFIX+"collection:"+owner+":";
+ return PREFIX+"collection2:"+generation.global+":"+generation.user+":"+owner+":";
+}
+export async function awardCard(owner,card,env){
+ const generation=await getCollectionGeneration(owner,env);
+ await env.PACKS.put(getCollectionPrefix(owner,generation)+crypto.randomUUID(),JSON.stringify({cards:[card],openedAt:Date.now(),source:"admin"}));
+}
+export async function clearCollection(owner,env){
+ const generation=await getCollectionGeneration(owner,env);
+ const oldPrefix=getCollectionPrefix(owner,generation);
+ await env.PACKS.put(USER_RESET+owner,crypto.randomUUID());
+ await env.PACKS.put(PREFIX+"cleanup:"+crypto.randomUUID(),JSON.stringify({prefix:oldPrefix}));
+}
+export async function clearEveryone(env){
+ const old=await env.PACKS.get(GLOBAL_RESET)||"legacy";
+ const oldPrefix=old==="legacy"?PREFIX+"collection:":PREFIX+"collection2:"+old+":";
+ await env.PACKS.put(GLOBAL_RESET,crypto.randomUUID());
+ await env.PACKS.put(PREFIX+"cleanup:"+crypto.randomUUID(),JSON.stringify({prefix:oldPrefix}));
+}
+export async function cleanupOldCollections(env){
+ const jobs=await env.PACKS.list({prefix:PREFIX+"cleanup:",limit:10});
+ for(const job of jobs.keys){
+  try{
+   const record=await env.PACKS.get(job.name,"json");
+   if(!record||typeof record.prefix!=="string"){await env.PACKS.delete(job.name);continue;}
+   const keys=await env.PACKS.list({prefix:record.prefix,limit:100});
+   await Promise.all(keys.keys.map(k=>env.PACKS.delete(k.name)));
+   if(keys.list_complete)await env.PACKS.delete(job.name);
+  }catch(error){console.error("Yeeps collection cleanup failed",error);}
+ }
+}
 
 function randomFraction(){
   return crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296;
