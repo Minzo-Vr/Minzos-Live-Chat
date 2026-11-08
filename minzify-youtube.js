@@ -5,71 +5,26 @@
 (()=>{
 "use strict";
 const $=id=>document.getElementById(id);
-const configuredKey=String(window.MINZIFY_YOUTUBE_API_KEY||"").trim();
-const STORAGE_KEY="minzify-youtube-api-key-v1";
-const validApiKey=value=>{const v=String(value||"").trim();return v.length>0&&v.length<=256&&!/\s/.test(v)};
-const storedKey=()=>{try{return localStorage.getItem(STORAGE_KEY)||""}catch{return ""}};
-let apiKey=validApiKey(configuredKey)?configuredKey:(validApiKey(storedKey())?storedKey():"");
-const hasKey=()=>validApiKey(apiKey);
+// The site owner configures one shared, browser-restricted Google Cloud API key.
+// Visitors never need to supply their own credentials.
+const apiKey=String(window.MINZIFY_YOUTUBE_API_KEY||"").trim();
+const hasKey=()=>apiKey.length>0&&apiKey.length<=256&&!/\s/.test(apiKey);
 const form=$("youtubeSearch"),input=$("query"),link=$("musicSearchLink"),status=$("status"),results=$("results");
-const keyInput=$("apiKeyInput"),keySave=$("saveApiKey"),keyClear=$("clearApiKey"),keyMessage=$("apiKeyMessage");
 let controller=null,run=0;
-const configured=validApiKey(configuredKey);
-function syncKeyUI(){
- const connected=hasKey();
- $("apiBadge").textContent=connected?(configured?"Site-wide API connected":"API connected in this browser"):"Setup needed";
- $("apiBadge").classList.toggle("connected",connected);
- $("apiHelp").textContent=connected?
-  (configured?"Your hub's restricted YouTube API key is configured. You can search within Minzify.":"Your browser's API key is ready. Searches will stay inside Minzify.") :
-  "To show search results here, connect a YouTube Data API v3 key. Restrict it to this website and the YouTube Data API.";
- keyInput.hidden=configured;
- keySave.hidden=configured;
- keyClear.hidden=configured||!validApiKey(storedKey());
- $("apiKeySetup").hidden=configured;
-}
-
 function googleError(data,http){
  const msg=String(data?.error?.message||"");
  const reason=String(data?.error?.errors?.[0]?.reason||"");
  const detail=(reason+" "+msg).toLowerCase();
- if(detail.includes("referer")||detail.includes("referrer"))return "Your Google API key is blocked by website restrictions. Allow both https://minzo-vr.github.io and https://minzo-vr.github.io/* under Google Cloud website restrictions (cross-site requests send the site origin).";
- if(detail.includes("not enabled")||detail.includes("accessnotconfigured")||detail.includes("service_disabled"))return "Enable YouTube Data API v3 for this key's Google Cloud project.";
- if(detail.includes("quota")||detail.includes("rate limit"))return "YouTube API quota reached; check usage in Google Cloud.";
- if(detail.includes("invalid")||detail.includes("expired"))return "Invalid API key. Use a YouTube Data API key, not your Spotify or Jamendo credential.";
- return "Google rejected the key (HTTP "+http+", reason "+reason.slice(0,55)+"). Check API and website restrictions.";
+ if(detail.includes("referer")||detail.includes("referrer"))
+   return "YouTube search is blocked by the site key's website restrictions. The owner needs to allow https://minzo-vr.github.io and https://minzo-vr.github.io/*.";
+ if(detail.includes("not enabled")||detail.includes("accessnotconfigured")||detail.includes("service_disabled"))
+   return "The owner needs to enable YouTube Data API v3 for the configured Google Cloud project.";
+ if(detail.includes("quota")||detail.includes("rate limit"))
+   return "Minzify has reached its shared YouTube search quota. Try again later or use the YouTube Music link.";
+ if(detail.includes("invalid")||detail.includes("expired")||detail.includes("not valid"))
+   return "Minzify's YouTube API key is invalid. The site owner must update the Google Cloud API key.";
+ return "YouTube search could not complete (HTTP "+http+"). The site owner should check the key and restrictions.";
 }
-keySave.addEventListener("click",async()=>{
- const key=keyInput.value.trim();
- if(!validApiKey(key)){
-  const msg="Enter a non-empty API key without spaces. Minzify will ask Google to verify it instead of guessing its format.";
-  keyMessage.textContent=msg;showStatus(msg,true);return;
- }
- keySave.disabled=true;keySave.textContent="Checking…";
- keyMessage.textContent="Checking the key against YouTube's official API…";
- try{
-  const params=new URLSearchParams({key,part:"snippet",regionCode:"AU"});
-  const r=await fetch("https://www.googleapis.com/youtube/v3/videoCategories?"+params,{cache:"no-store"});
-  const data=await r.json().catch(()=>({}));
-  if(!r.ok)throw Error(googleError(data,r.status));
-  if(!Array.isArray(data.items))throw Error("Unexpected API response. Check YouTube Data API configuration.");
-  apiKey=key;
-  let saved=true;
-  try{localStorage.setItem(STORAGE_KEY,key)}catch{saved=false}
-  keyInput.value="";syncKeyUI();
-  keyMessage.textContent=saved?"✓ Key verified with Google and saved in this browser.":"✓ Key verified, but browser storage is blocked. It will reset when the page closes.";
-  showStatus("✓ Key verified. Search YouTube music videos above.");
- }catch(e){
-  const msg=e instanceof TypeError?"Couldn't reach Google. Check your network and any browser content blocker.":String(e.message||e);
-  keyMessage.textContent=msg;showStatus("Key not connected: "+msg,true);
- }finally{keySave.disabled=false;keySave.textContent="Connect & test"}
-});
-keyClear.addEventListener("click",()=>{
- try{localStorage.removeItem(STORAGE_KEY)}catch{}
- apiKey=validApiKey(configuredKey)?configuredKey:"";
- keyInput.value="";results.replaceChildren();
- keyMessage.textContent="Browser key removed. Connect a key to search inside Minzify.";
- syncKeyUI();showStatus("In-site search is not configured. Add a restricted YouTube API key above.");
-});
 const videoId=id=>/^[A-Za-z0-9_-]{11}$/.test(String(id||""));
 const showStatus=(message,isError=false)=>{
  status.textContent=message;status.className="status"+(isError?" error":"");
@@ -118,7 +73,7 @@ async function search(q){
  if(controller)controller.abort();
  controller=new AbortController();
  results.replaceChildren();
- if(!hasKey()){showStatus("Add a restricted YouTube Data API key above to show results inside Minzify. YouTube Music is available as a separate link.",true);$("apiKeySetup").scrollIntoView({behavior:"smooth",block:"center"});return}
+ if(!hasKey()){showStatus("YouTube search is not configured by the site owner yet. You can use the separate YouTube Music link.",true);return}
  showStatus("Searching YouTube's music-video category…");
  $("searchButton").disabled=true;
  try{
@@ -130,14 +85,7 @@ async function search(q){
   signal:controller.signal,headers:{Accept:"application/json"},cache:"no-store",referrerPolicy:"strict-origin-when-cross-origin"
  });
  const payload=await response.json().catch(()=>({}));
- if(!response.ok){
-  const reason=String(payload.error?.errors?.[0]?.reason||"");
-  if(response.status===403&&(reason==="quotaExceeded"||reason==="dailyLimitExceeded"))
-    throw Error("YouTube's search quota has been reached for today. Use the YouTube Music link instead.");
-  if(response.status===400||response.status===403)
-    throw Error("YouTube search isn't configured correctly, or the API key's website restrictions blocked access. You can still search on YouTube Music.");
-  throw Error("YouTube search is unavailable (HTTP "+response.status+"). Use the YouTube Music link.");
- }
+ if(!response.ok)throw Error(googleError(payload,response.status));
  if(request!==run)return;
  const items=Array.isArray(payload.items)?payload.items:[];
  let count=0;
@@ -153,18 +101,11 @@ form.addEventListener("submit",event=>{
  event.preventDefault();const q=input.value.trim().slice(0,100);
  if(!q)return;
  syncLink();
- if(!hasKey()){
-   // Do not silently leave the website; user requested in-site search.
-   showStatus("Search inside Minzify needs a YouTube Data API key. Paste one above, or tap the separate YouTube Music link.",true);
-   $("apiKeySetup").scrollIntoView({behavior:"smooth",block:"center"});
-   return;
- }
  void search(q);
 });
 const url=new URL(window.location.href),initial=url.searchParams.get("q");
 if(initial)input.value=initial.slice(0,100);
 syncLink();
-syncKeyUI();
-if(!hasKey())showStatus("In-site search needs a restricted YouTube Data API key. Connect one above to see results here.");
-else showStatus("YouTube search is connected. Enter a song or artist and press Search to see results here.");
+if(!hasKey())showStatus("YouTube search is not configured by the site owner yet. Use the separate YouTube Music link until it is enabled.");
+else showStatus("Minzify YouTube search is ready. Search for a song or artist to see results on this page.");
 })();
