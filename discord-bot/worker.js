@@ -1,7 +1,6 @@
 // Community Hub Discord bot. Keep OAuth, Firebase, roles and existing commands unchanged.
 import {TICKET_TYPES,ticketAction,ensureTicketPanels,completeTicketInteraction,completeTicketSetupInteraction} from "./tickets.js";
 import {ensureOneWordStories,moderateOneWordStories,finishOneWordSetup} from "./one-word-stories.js";
-import {handleYeepsOpenPack,handleYeepsReveal,handleYeepsCollection} from "./yeeps-packs.js";
 // Support categories are deliberately selected server-side; a label alone does not grant permissions.
 const SUPPORT_CATEGORIES=Object.freeze({
  chats:{label:"Chats",focus:"Support chat messages, rooms, mentions, friends, DMs, notifications, music and moderation."},
@@ -340,7 +339,7 @@ async function retryRoleRequest(data,env){
  await env.SAD_MESSAGES.delete("role-request:"+key);
  return reply("✅ Your linked account was found! Your role request has been sent to administrators for approval.",true);
 }
-const GLOBAL_COMMANDS_VERSION="global-user-install-v4-yeeps-packs";
+const GLOBAL_COMMANDS_VERSION="global-user-install-v3-ask-categories";
 async function registerGlobalCommandsOnce(env){
  if(!env.SAD_MESSAGES||!env.DISCORD_BOT_TOKEN||!env.DISCORD_APPLICATION_ID||!env.DISCORD_GUILD_ID)return;
  const marker="config:"+GLOBAL_COMMANDS_VERSION;
@@ -350,7 +349,7 @@ async function registerGlobalCommandsOnce(env){
  const source=await fetch(base+"/guilds/"+env.DISCORD_GUILD_ID+"/commands",{headers});
  if(!source.ok)throw Error("Cannot read guild commands: HTTP "+source.status);
  const guildCommands=await source.json();
- for(const name of ["openpack","collection"]){
+ for(const name of ["ping","sad","help","latest","updates","status","ask"]){
   const command=guildCommands.find(x=>x.name===name&&x.type===1);
   if(!command&&name!=="ask")throw Error("Missing guild command /"+name);
   const payload={type:1,name:command?.name||"ask",description:command?.description||"Ask the Community Chat support AI",
@@ -434,7 +433,6 @@ export default {
  if(!await verify(request,raw,env.DISCORD_PUBLIC_KEY))return new Response("Invalid signature",{status:401});
  let data;try{data=JSON.parse(raw);}catch{return new Response("Bad request",{status:400});}
  if(data.type===1)return json({type:1});
- if(data.type===3&&String(data.data?.custom_id||"").startsWith("yeeps:reveal:"))return handleYeepsReveal(data,env);
  if(data.type===3&&String(data.data?.custom_id||"").startsWith("role-retry:")){try{return await retryRoleRequest(data,env);}catch(e){console.error("Role retry",e);return reply("Could not retry right now. Please try later.",true);}}
  if(data.type===3){
    const ticket=ticketAction(data.data?.custom_id);
@@ -445,8 +443,6 @@ export default {
  }
  if(data.type!==2)return reply("Unsupported interaction.",true);
  const name=data.data?.name;
- if(name==="openpack")return handleYeepsOpenPack(data,env);
- if(name==="collection")return handleYeepsCollection(data,env,ctx);
  if(name==="ask"){
   if(!data.guild_id||!env.ASK_CHANNEL_ID||data.channel_id!==env.ASK_CHANNEL_ID)
    return reply("This command can ONLY be used in "+(env.ASK_CHANNEL_ID?"<#"+env.ASK_CHANNEL_ID+">":"the designated support channel")+".",true);
@@ -521,7 +517,7 @@ export default {
    return json({type:5,data:{flags:64}});
  }
  if(name==="ping")return reply("🏓 Pong! Community Chat bot is online.");
- if(name==="help")return reply("**Community Hub commands**\n/openpack — reveal a fan-made Yeeps pack\n/collection — view your virtual card collection\n/ask — select an app category or Generic Question\n/ping — bot health\n/sad — timed self-deleting message\n/help — commands\n/latest — latest published update\n/updates — three recent updates\n/status — website link\n/announce — admin-only Discord announcement\n/applications — admin-only application open/closed announcements\n/setup_applications — create private application review channel\n/setup_tickets — install/repair private ticket panels\n/setup_one_word_stories — create or repair #1-word-stories\n/add-role-to-user — server-admin-only linked Community Chat role assignment");
+ if(name==="help")return reply("**Community Hub commands**\n/ask — select an app category or Generic Question\n/ping — bot health\n/sad — timed self-deleting message\n/help — commands\n/latest — latest published update\n/updates — three recent updates\n/status — website link\n/announce — admin-only Discord announcement\n/applications — admin-only application open/closed announcements\n/setup_applications — create private application review channel\n/setup_tickets — install/repair private ticket panels\n/setup_one_word_stories — create or repair #1-word-stories\n/add-role-to-user — server-admin-only linked Community Chat role assignment");
  if(name==="status")return reply("Community Chat: https://minzo-vr.github.io/Minzos-Live-Chat/ (open to check availability)");
 
  if(name==="setup_applications"){
