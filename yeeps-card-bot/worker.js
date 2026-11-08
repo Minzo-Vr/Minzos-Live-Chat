@@ -1,6 +1,7 @@
 // Standalone Discord interactions endpoint for the unofficial Yeeps-inspired card bot.
 // Separate Discord application, Worker and KV from Community Chat.
-import {handleYeepsOpenPack,handleYeepsReveal,handleYeepsCollection} from "./packs.js";
+import {handleYeepsOpenPack,handleYeepsReveal,handleYeepsCollection,cleanupOldCollections} from "./packs.js";
+import {handleAdminCommand,handleAdminInteraction} from "./admin.js";
 
 const enc=new TextEncoder();
 function json(value,status=200){
@@ -25,6 +26,9 @@ async function validSignature(request,raw,key){
   }catch{return false;}
 }
 export default {
+  async scheduled(_event,env,ctx){
+    if(env.PACKS)ctx.waitUntil(cleanupOldCollections(env));
+  },
   async fetch(request,env,ctx){
     if(request.method!=="POST")return new Response("Yeeps Card Pack Opener (unofficial Discord simulator)",{headers:{"content-type":"text/plain; charset=utf-8"}});
     const raw=await request.text();
@@ -38,10 +42,13 @@ export default {
         switch(interaction.data?.name){
           case "openpack":return await handleYeepsOpenPack(interaction,env);
           case "collection":return handleYeepsCollection(interaction,env,ctx);
+          case "cardadmin":return handleAdminCommand(interaction,env);
           case "packhelp":return reply("🎴 **Yeeps-inspired Pack Opener**\nUse /openpack to get a five-card mystery pack, then press **Reveal Cards**.\nUse /collection to see your saved virtual cards.\n\n*Unofficial simulator: no real Yeeps cards or game rewards.*");
           default:return reply("Unknown command. Try /packhelp.");
         }
       }
+      if((interaction.type===3||interaction.type===5)&&String(interaction.data?.custom_id||"").startsWith("cardadmin:"))
+        return await handleAdminInteraction(interaction,env,ctx);
       if(interaction.type===3&&String(interaction.data?.custom_id||"").startsWith("yeeps:reveal:"))
         return await handleYeepsReveal(interaction,env);
       return reply("Unsupported interaction.");
