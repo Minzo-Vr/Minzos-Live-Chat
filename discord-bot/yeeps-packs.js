@@ -42,11 +42,10 @@ export function drawYeepsPack(){
   const drawn=[];
   // Four ordinary slots plus one guaranteed Rare-or-higher slot.
   for(let slot=0;slot<5;slot++){
-    const eligible=slot===4?RARITIES.slice(2):RARITIES;
-    const rarity=selectWeighted(eligible).name;
-    const pool=CARDS.filter(c=>c.rarity===rarity&&!drawn.some(d=>d.id===c.id));
-    const fallback=CARDS.filter(c=>!drawn.some(d=>d.id===c.id));
-    const options=pool.length?pool:fallback;
+    const rarities=(slot===4?RARITIES.slice(2):RARITIES).filter(r=>
+      CARDS.some(c=>c.rarity===r.name&&!drawn.some(d=>d.id===c.id)));
+    const rarity=selectWeighted(rarities).name;
+    const options=CARDS.filter(c=>c.rarity===rarity&&!drawn.some(d=>d.id===c.id));
     drawn.push({...options[Math.floor(randomFraction()*options.length)]});
   }
   return drawn;
