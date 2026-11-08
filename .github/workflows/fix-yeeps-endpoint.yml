@@ -1,0 +1,31 @@
+name: Fix Yeeps Bot Interactions Endpoint
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "yeeps-card-bot/verify-endpoint.mjs"
+      - ".github/workflows/fix-yeeps-endpoint.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yeeps-endpoint-configuration
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify and connect Discord interactions
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify new app token and repair endpoint URL
+        env:
+          YEEPS_DISCORD_BOT_TOKEN: ${{ secrets.YEEPS_DISCORD_BOT_TOKEN }}
+        run: node yeeps-card-bot/verify-endpoint.mjs
