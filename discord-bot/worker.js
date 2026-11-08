@@ -350,7 +350,7 @@ async function registerGlobalCommandsOnce(env){
  const source=await fetch(base+"/guilds/"+env.DISCORD_GUILD_ID+"/commands",{headers});
  if(!source.ok)throw Error("Cannot read guild commands: HTTP "+source.status);
  const guildCommands=await source.json();
- for(const name of ["ping","sad","help","latest","updates","status","ask","openpack","collection"]){
+ for(const name of ["openpack","collection"]){
   const command=guildCommands.find(x=>x.name===name&&x.type===1);
   if(!command&&name!=="ask")throw Error("Missing guild command /"+name);
   const payload={type:1,name:command?.name||"ask",description:command?.description||"Ask the Community Chat support AI",
