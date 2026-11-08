@@ -59,9 +59,12 @@ export async function clearCollection(owner,env){
 }
 export async function clearEveryone(env){
  const old=await env.PACKS.get(GLOBAL_RESET)||"legacy";
- const oldPrefix=old==="legacy"?PREFIX+"collection:":PREFIX+"collection2:"+old+":";
+ const stalePrefixes=old==="legacy"
+   ?[PREFIX+"collection:",PREFIX+"collection2:legacy:"]
+   :[PREFIX+"collection2:"+old+":"];
  await env.PACKS.put(GLOBAL_RESET,crypto.randomUUID());
- await env.PACKS.put(PREFIX+"cleanup:"+crypto.randomUUID(),JSON.stringify({prefix:oldPrefix}));
+ for(const prefix of stalePrefixes)
+   await env.PACKS.put(PREFIX+"cleanup:"+crypto.randomUUID(),JSON.stringify({prefix}));
 }
 export async function cleanupOldCollections(env){
  const jobs=await env.PACKS.list({prefix:PREFIX+"cleanup:",limit:10});
