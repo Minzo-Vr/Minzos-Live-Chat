@@ -46,9 +46,10 @@ export function getCollectionPrefix(owner,generation){
  if(generation.global==="legacy"&&generation.user==="legacy")return PREFIX+"collection:"+owner+":";
  return PREFIX+"collection2:"+generation.global+":"+generation.user+":"+owner+":";
 }
-export async function awardCard(owner,card,env){
+export async function awardCard(owner,card,env,quantity=1){
  const generation=await getCollectionGeneration(owner,env);
- await env.PACKS.put(getCollectionPrefix(owner,generation)+crypto.randomUUID(),JSON.stringify({cards:[card],openedAt:Date.now(),source:"admin"}));
+ const cards=Array.from({length:quantity},()=>({...card}));
+ await env.PACKS.put(getCollectionPrefix(owner,generation)+crypto.randomUUID(),JSON.stringify({cards,openedAt:Date.now(),source:"admin"}));
 }
 export async function clearCollection(owner,env){
  const generation=await getCollectionGeneration(owner,env);
