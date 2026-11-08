@@ -39,3 +39,18 @@ The repository includes a **Register Yeeps Card Bot Commands** workflow. It regi
 This workflow uses the Yeeps application's public ID provided during setup. It needs no Discord server ID and does not overwrite commands belonging to the Community Chat application. Do not also run the guild command registrar for the same app unless you deliberately want guild-scoped copies (which can show duplicates).
 
 **Interactions Endpoint URL:** `https://yeeps-card-pack-opener.kobefalzon8.workers.dev`
+
+
+## Card admin panel
+
+The standalone bot offers the **/cardadmin** slash command. It opens a private panel with three Discord buttons and input forms:
+
+- **Add Card** — card name, independent drop chance **0–100% per pack**, and a difficulty label: **Easy / Medium / Hard / Extreme**. Difficulty is a label only; chance controls actual drops. Custom cards can replace up to four of the five slots, preserving the guaranteed Rare-or-higher fifth slot. If more than four custom cards trigger during a single pack, four are randomly selected.
+- **Give User Card** — specify the target's Discord User ID or full \`<@ID>\` mention, an exact built-in/custom card name or ID, and a quantity of 1–10.
+- **Delete Cards** — target an individual Discord User ID or type the exact string \`@everyone\` to clear the virtual card collections globally. Confirmation is \`DELETE USER\` for a single user and \`DELETE ALL\` for everyone. A reset also invalidates any older unopened packs so cleared cards cannot be recovered through old Reveal buttons.
+
+**Security:** Every admin command, button and modal checks Discord Administrator permission **inside the configured admin guild**. The Worker variable \`YEEPS_ADMIN_GUILD_ID\` currently targets the Community Chat server. If the Yeeps bot lives in a different server, change this Worker variable (and \`wrangler.toml\` to keep it on future deploys) to that server's ID. The panel cannot be used in DMs or other servers.
+
+**Storage:** The existing \`PACKS\` Cloudflare KV binding is used; no database migration or extra token is required. Clearing a collection changes its active collection generation immediately and queues old records for physical deletion. A one-minute cron works through the deletion queue in batches. KV is eventually consistent, so resets may take a short period to propagate across Cloudflare locations. \`@everyone\` in this panel is a collection reset instruction, **not** a Discord message mention or ping.
+
+**Command registration:** \`/cardadmin\` is registered as a **global guild-install-only** command with Discord's Administrator permission requirement. The existing \`Register Yeeps Card Bot Commands\` GitHub Action automatically updates the new Discord application's commands without opening a pull request. Do not also register the same commands at guild scope.
