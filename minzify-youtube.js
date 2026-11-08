@@ -7,7 +7,7 @@
 const $=id=>document.getElementById(id);
 const configuredKey=String(window.MINZIFY_YOUTUBE_API_KEY||"").trim();
 const STORAGE_KEY="minzify-youtube-api-key-v1";
-const validApiKey=value=>/^[A-Za-z0-9_-]{20,150}$/.test(String(value||"").trim());
+const validApiKey=value=>{const v=String(value||"").trim();return v.length>0&&v.length<=256&&!/\s/.test(v)};
 const storedKey=()=>{try{return localStorage.getItem(STORAGE_KEY)||""}catch{return ""}};
 let apiKey=validApiKey(configuredKey)?configuredKey:(validApiKey(storedKey())?storedKey():"");
 const hasKey=()=>validApiKey(apiKey);
@@ -41,7 +41,7 @@ function googleError(data,http){
 keySave.addEventListener("click",async()=>{
  const key=keyInput.value.trim();
  if(!validApiKey(key)){
-  const msg="This does not look like a Google API key. Google API keys typically start with AIza. Spotify and Jamendo keys will not work.";
+  const msg="Enter a non-empty API key without spaces. Minzify will ask Google to verify it instead of guessing its format.";
   keyMessage.textContent=msg;showStatus(msg,true);return;
  }
  keySave.disabled=true;keySave.textContent="Checking…";
