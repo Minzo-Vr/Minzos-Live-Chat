@@ -36,14 +36,14 @@ main{max-width:1080px;margin:auto;padding:clamp(20px,5vw,42px)}.eyebrow{font-siz
 </form>
 <div id="apiKeySetup" class="api-setup" aria-label="YouTube search setup">
   <div class="api-heading"><strong>Enable search inside Minzify</strong><span id="apiBadge" class="api-badge">Setup needed</span></div>
-  <p id="apiHelp">To show search results here, connect a YouTube Data API v3 key. It must be restricted to this website and the YouTube Data API.</p>
+  <p id="apiHelp">To show search results here, paste a YouTube Data API v3 key from Google Cloud. Connect &amp; test checks that Google accepts it. Restrict the key to this website and the YouTube Data API.</p>
   <label for="apiKeyInput">YouTube Data API v3 key</label>
   <div class="api-key-controls">
     <input id="apiKeyInput" type="password" autocomplete="off" spellcheck="false" placeholder="Paste a restricted Google Cloud API key" aria-label="Your restricted YouTube API key" maxlength="150">
-    <button id="saveApiKey" class="button primary" type="button">Connect key</button>
+    <button id="saveApiKey" class="button primary" type="button">Connect &amp; test</button>
     <button id="clearApiKey" class="button" type="button" hidden>Remove key</button>
   </div>
-  <div id="apiKeyMessage" role="status" aria-live="polite" class="meta">Saved only in this browser unless the hub owner configures a site-wide restricted key.</div>
+  <div id="apiKeyMessage" role="status" aria-live="polite" class="meta">The key will be tested against Google before being saved in this browser. Use a YouTube Data API v3 key, not a Spotify or Jamendo key.</div>
   <div class="api-links"><a target="_blank" rel="noopener noreferrer" href="https://console.cloud.google.com/apis/library/youtube.googleapis.com">Enable YouTube Data API v3 ↗</a><a target="_blank" rel="noopener noreferrer" href="https://console.cloud.google.com/apis/credentials">Create &amp; restrict API key ↗</a></div>
 </div>
 <div class="status" id="status" role="status" aria-live="polite">Search for a song or artist to get started.</div>
