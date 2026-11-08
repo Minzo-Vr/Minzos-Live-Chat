@@ -39,7 +39,7 @@ main{max-width:1080px;margin:auto;padding:clamp(20px,5vw,42px)}.eyebrow{font-siz
   <p id="apiHelp">To show search results here, paste a YouTube Data API v3 key from Google Cloud. Connect &amp; test checks that Google accepts it. Restrict the key to this website and the YouTube Data API.</p>
   <label for="apiKeyInput">YouTube Data API v3 key</label>
   <div class="api-key-controls">
-    <input id="apiKeyInput" type="password" autocomplete="off" spellcheck="false" placeholder="Paste a restricted Google Cloud API key" aria-label="Your restricted YouTube API key" maxlength="150">
+    <input id="apiKeyInput" type="password" autocomplete="off" spellcheck="false" placeholder="Paste a restricted Google Cloud API key" aria-label="Your restricted YouTube API key" maxlength="256">
     <button id="saveApiKey" class="button primary" type="button">Connect &amp; test</button>
     <button id="clearApiKey" class="button" type="button" hidden>Remove key</button>
   </div>
@@ -57,7 +57,7 @@ main{max-width:1080px;margin:auto;padding:clamp(20px,5vw,42px)}.eyebrow{font-siz
 <div class="links"><a id="watchYouTube" target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/" hidden>Watch on YouTube ↗</a><a id="watchMusic" target="_blank" rel="noopener noreferrer" href="https://music.youtube.com/" hidden>Open in YouTube Music ↗</a></div>
 <details class="setup"><summary>About search and API setup</summary>
 <p>YouTube Music has no equivalent public song-catalog search API. This page uses the official <strong>YouTube Data API v3</strong> to find music-category videos (not necessarily every item in the YouTube Music catalogue). YouTube may block embedding for some videos.</p>
-<p>To search directly inside Minzify, add a browser-restricted YouTube Data API v3 key in the form above. For all visitors, the site owner can instead configure a site-wide restricted key in <code>minzify-youtube-config.js</code>. Restrict the key to the exact website origin and YouTube Data API v3.</p>
+<p>To search directly inside Minzify, add a Google Cloud YouTube Data API v3 key in the form above. For all visitors, the site owner can instead configure a site-wide restricted key in <code>minzify-youtube-config.js</code>. For browser website restrictions, allow <code>https://minzo-vr.github.io</code> and <code>https://minzo-vr.github.io/*</code>, and restrict the key to YouTube Data API v3. The app verifies the key with Google instead of guessing its format.</p>
 <p>The Data API has daily limits. Searches happen only when you press Search, not on each keystroke. Without a key, you can still follow the explicit YouTube Music link; the search form will explain how to enable in-site results.</p>
 </details>
 </aside>
