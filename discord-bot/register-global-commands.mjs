@@ -6,9 +6,21 @@ if(!token||!app||!guild)throw Error("Set DISCORD_BOT_TOKEN, DISCORD_APPLICATION_
 const headers={Authorization:"Bot "+token,"Content-Type":"application/json"};
 const base="https://discord.com/api/v10/applications/"+app;
 async function api(url,init={}){
-  const response=await fetch(url,{headers,...init});
-  if(!response.ok)throw Error("Discord API HTTP "+response.status+" "+(await response.text()).slice(0,500));
-  return response.json();
+  for(let attempt=0;attempt<8;attempt++){
+    const response=await fetch(url,{headers,...init});
+    if(response.ok)return response.json();
+    const body=(await response.text()).slice(0,500);
+    if(response.status===429&&attempt<7){
+      let seconds=3;
+      try{seconds=Number(JSON.parse(body).retry_after)||seconds;}catch{}
+      const delay=Math.min(30000,Math.max(1500,Math.ceil(seconds*1000)+500));
+      console.warn("Discord rate limit, retry in "+delay+" ms");
+      await new Promise(resolve=>setTimeout(resolve,delay));
+      continue;
+    }
+    throw Error("Discord API HTTP "+response.status+" "+body);
+  }
+  throw Error("Discord command registration retries exhausted");
 }
 const existing=await api(base+"/guilds/"+guild+"/commands");
 const names=["ping","sad","help","ask","latest","updates","status","openpack","collection"];
