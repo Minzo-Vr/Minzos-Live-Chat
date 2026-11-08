@@ -1,8 +1,9 @@
+import {commands as existing,PUBLIC_COMMAND_NAMES as names} from "./command-definitions.mjs";
 // Register public commands for both Discord User Install and Guild Install.
 // Existing guild-only admin commands are left untouched.
 // Run: DISCORD_BOT_TOKEN=... DISCORD_APPLICATION_ID=... DISCORD_GUILD_ID=... node discord-bot/register-global-commands.mjs
-const {DISCORD_BOT_TOKEN:token,DISCORD_APPLICATION_ID:app,DISCORD_GUILD_ID:guild}=process.env;
-if(!token||!app||!guild)throw Error("Set DISCORD_BOT_TOKEN, DISCORD_APPLICATION_ID and DISCORD_GUILD_ID");
+const {DISCORD_BOT_TOKEN:token,DISCORD_APPLICATION_ID:app}=process.env;
+if(!token||!app)throw Error("Set DISCORD_BOT_TOKEN and DISCORD_APPLICATION_ID");
 const headers={Authorization:"Bot "+token,"Content-Type":"application/json"};
 const base="https://discord.com/api/v10/applications/"+app;
 async function api(url,init={}){
@@ -22,16 +23,16 @@ async function api(url,init={}){
   }
   throw Error("Discord command registration retries exhausted");
 }
-const existing=await api(base+"/guilds/"+guild+"/commands");
+// Use the same canonical definitions as the guild registrar, not the guild API.
 const retired=await api(base+"/commands");
 for(const command of retired.filter(x=>["openpack","collection"].includes(x.name)&&x.type===1)){
   await api(base+"/commands/"+command.id,{method:"DELETE"});
   console.log("Removed old Community Chat global /"+command.name);
 }
-const names=["ping","sad","help","ask","latest","updates","status"];
+
 for(const name of names){
-  const source=existing.find(command=>command.name===name&&command.type===1);
-  if(!source)throw Error("Missing guild command /"+name+". Register existing guild commands first.");
+  const source=existing.find(command=>command.name===name);
+  if(!source)throw Error("Missing command definition for /"+name+".");
   const command={
     type:1,name:source.name,description:source.description,
     ...(source.options?.length?{options:source.options}:{}),
