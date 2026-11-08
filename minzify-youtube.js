@@ -32,7 +32,7 @@ function googleError(data,http){
  const msg=String(data?.error?.message||"");
  const reason=String(data?.error?.errors?.[0]?.reason||"");
  const detail=(reason+" "+msg).toLowerCase();
- if(detail.includes("referer")||detail.includes("referrer"))return "Your Google API key is blocked by website restrictions. Add https://minzo-vr.github.io/Minzos-Live-Chat/* to allowed referrers.";
+ if(detail.includes("referer")||detail.includes("referrer"))return "Your Google API key is blocked by website restrictions. Allow both https://minzo-vr.github.io and https://minzo-vr.github.io/* under Google Cloud website restrictions (cross-site requests send the site origin).";
  if(detail.includes("not enabled")||detail.includes("accessnotconfigured")||detail.includes("service_disabled"))return "Enable YouTube Data API v3 for this key's Google Cloud project.";
  if(detail.includes("quota")||detail.includes("rate limit"))return "YouTube API quota reached; check usage in Google Cloud.";
  if(detail.includes("invalid")||detail.includes("expired"))return "Invalid API key. Use a YouTube Data API key, not your Spotify or Jamendo credential.";
