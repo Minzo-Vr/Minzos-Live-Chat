@@ -84,7 +84,7 @@ function selectWeighted(items){
   for(const item of items){roll-=item.weight;if(roll<0)return item;}
   return items[items.length-1];
 }
-export function drawYeepsPack(){
+export function drawYeepsPack(customCards=[]){
   const drawn=[];
   // Four ordinary slots plus one guaranteed Rare-or-higher slot.
   for(let slot=0;slot<5;slot++){
@@ -94,6 +94,10 @@ export function drawYeepsPack(){
     const options=CARDS.filter(c=>c.rarity===rarity&&!drawn.some(d=>d.id===c.id));
     drawn.push({...options[Math.floor(randomFraction()*options.length)]});
   }
+  const triggered=customCards.filter(c=>Number.isFinite(c.chance)&&c.chance>=0&&c.chance<=100&&randomFraction()*100<c.chance);
+  // At most four custom cards; the fifth slot remains Rare-or-higher.
+  for(let i=triggered.length-1;i>0;i--){const j=Math.floor(randomFraction()*(i+1));[triggered[i],triggered[j]]=[triggered[j],triggered[i]];}
+  for(let i=0;i<Math.min(4,triggered.length);i++)drawn[i]={...triggered[i]};
   return drawn;
 }
 function userId(data){
@@ -109,7 +113,7 @@ function privateReply(message){
 function enabledKV(env){
   return env.PACKS&&typeof env.PACKS.get==="function"&&typeof env.PACKS.put==="function";
 }
-function grade(name){return RARITIES.find(r=>r.name===name)||RARITIES[0];}
+function grade(name){return name==="Custom"?{emoji:"✨",color:0xf4a261}:RARITIES.find(r=>r.name===name)||RARITIES[0];}
 function revealData(pack){
   const top=pack.cards.reduce((best,c)=>RARITY_RANK[c.rarity]>RARITY_RANK[best.rarity]?c:best,pack.cards[0]);
   return {
@@ -117,7 +121,7 @@ function revealData(pack){
     embeds:[{
       title:"🎴 Pack Revealed! • 5 Cards",
       color:grade(top.rarity).color,
-      description:pack.cards.map((c,i)=>(i+1)+". "+grade(c.rarity).emoji+" **"+c.name+"** — "+c.rarity).join("\n"),
+      description:pack.cards.map((c,i)=>(i+1)+". "+grade(c.rarity).emoji+" **"+c.name+"** — "+(c.rarity==="Custom"?"Custom • "+c.difficulty:c.rarity)).join("\n"),
       footer:{text:"Unofficial Discord simulation • Not real Yeeps cards or in-game rewards"}
     }],
     components:[],
@@ -130,7 +134,8 @@ export async function handleYeepsOpenPack(data,env){
   if(!enabledKV(env))return privateReply("Pack opening is not configured. The bot owner must bind PACKS KV.");
   try{
     const id=crypto.randomUUID();
-    const pack={userId:owner,cards:drawYeepsPack(),opened:false,createdAt:Date.now()};
+    const [generation,customCards]=await Promise.all([getCollectionGeneration(owner,env),getCustomCards(env)]);
+    const pack={userId:owner,generation,cards:drawYeepsPack(customCards),opened:false,createdAt:Date.now()};
     await env.PACKS.put(PREFIX+"pending:"+id,JSON.stringify(pack),{expirationTtl:EXPIRES_SECONDS});
     return response({type:4,data:{
       content:"🎁 <@"+owner+"> found a sealed **Yeeps-inspired Card Pack**!\nPress **Reveal Cards** to see your five cards.",
@@ -155,10 +160,13 @@ export async function handleYeepsReveal(data,env){
     const pack=await env.PACKS.get(key,"json");
     if(!pack||!Array.isArray(pack.cards)||pack.cards.length!==5)return privateReply("This pack expired. Use /openpack to start again.");
     if(pack.userId!==owner)return privateReply("This is someone else's pack! Use /openpack to open your own.");
+    const generation=await getCollectionGeneration(owner,env);
+    const original=pack.generation||{global:"legacy",user:"legacy"};
+    if(original.global!==generation.global||original.user!==generation.user)return privateReply("This pack predates a collection reset. Use /openpack for a new pack.");
     if(!pack.opened){
       // A record for each opening avoids overwriting another opening's collection.
       // Repeated clicks write the same key and cannot duplicate the displayed cards.
-      await env.PACKS.put(PREFIX+"collection:"+owner+":"+id,JSON.stringify({cards:pack.cards,openedAt:Date.now()}));
+      await env.PACKS.put(getCollectionPrefix(owner,generation)+id,JSON.stringify({cards:pack.cards,openedAt:Date.now()}));
       await env.PACKS.put(key,JSON.stringify({...pack,opened:true}),{expirationTtl:EXPIRES_SECONDS});
     }
     return response({type:7,data:revealData(pack)});
@@ -168,7 +176,8 @@ export async function handleYeepsReveal(data,env){
   }
 }
 export async function getYeepsCollectionText(owner,env){
-  const prefix=PREFIX+"collection:"+owner+":";
+  const generation=await getCollectionGeneration(owner,env);
+  const prefix=getCollectionPrefix(owner,generation);
   const page=await env.PACKS.list({prefix,limit:50});
   if(!page.keys.length)return "📚 **Your Yeeps-inspired Collection**\nYou have no cards yet. Use /openpack to start collecting!";
   const records=(await Promise.all(page.keys.map(k=>env.PACKS.get(k.name,"json"))))
@@ -182,7 +191,7 @@ export async function getYeepsCollectionText(owner,env){
   const cards=[...totals.values()].sort((a,b)=>(RARITY_RANK[b.rarity]||0)-(RARITY_RANK[a.rarity]||0)||a.name.localeCompare(b.name));
   const count=[...totals.values()].reduce((sum,c)=>sum+c.count,0);
   const partial=!page.list_complete;
-  const display=cards.slice(0,18).map(c=>grade(c.rarity).emoji+" "+c.name+" ×"+c.count+" ("+c.rarity+")").join("\n");
+  const display=cards.slice(0,18).map(c=>grade(c.rarity).emoji+" "+c.name+" ×"+c.count+" ("+(c.rarity==="Custom"?"Custom • "+c.difficulty:c.rarity)+")").join("\n");
   return ("📚 **Your Yeeps-inspired Collection**\n"+
     "**"+count+" cards** • **"+cards.length+" unique** • **"+records.length+" packs**"+(partial?" (showing up to 50 openings)":"")+
     "\n\n"+display+(cards.length>18?"\n…and "+(cards.length-18)+" more card types.":"")+
