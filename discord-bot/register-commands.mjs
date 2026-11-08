@@ -3,8 +3,6 @@ const {DISCORD_BOT_TOKEN:token,DISCORD_APPLICATION_ID:app,DISCORD_GUILD_ID:guild
 if(!token||!app||!guild)throw Error("Set DISCORD_BOT_TOKEN, DISCORD_APPLICATION_ID and DISCORD_GUILD_ID");
 const commands=[
 {name:"ping",description:"Check Community Chat bot"},
-{name:"openpack",description:"Open a virtual Yeeps-inspired pack and reveal five cards"},
-{name:"collection",description:"View your virtual Yeeps-inspired card collection"},
 {name:"ask",description:"Ask Community Hub AI about any app or general topic",options:[
  {type:3,name:"question",description:"What would you like to ask?",required:true,max_length:1200},
  {type:3,name:"category",description:"Choose the app or topic",required:true,choices:[
