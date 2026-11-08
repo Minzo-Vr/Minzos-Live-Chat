@@ -162,7 +162,7 @@ async function doSearch(text){
   if(!response.ok){
    let reason="";
    try{const data=await response.json();reason=data.error?.message||data.reason||""}catch{}
-   if(response.status===403)throw Error("Spotify denied this request. The app owner needs Premium and your Spotify account may need to be added to the app allowlist.");
+   if(response.status===403)throw Error("Spotify denied this API search (403). The owner of this Spotify Developer app must have Premium, and development-mode users must be on its allowlist (Settings → Users Management). To search without developer access, use the Search on Spotify link.");
    if(response.status===429)throw Error("Spotify rate/quota limit reached. Try again later.");
    if(response.status===401){tokens=null;removeSession(TOKEN_KEY);refreshUI();throw Error("Spotify sign-in expired. Reconnect and try again.")}
    throw Error("Spotify search failed ("+response.status+"). "+String(reason).slice(0,120));
@@ -197,6 +197,13 @@ disconnect.addEventListener("click",()=>{
  $("trackResults").replaceChildren();showStatus("connectStatus","Disconnected on this device. Spotify's login on other websites is unchanged.");
  showStatus("searchStatus","Connect Spotify to search its catalog.");refreshUI();
 });
+const spotifyWebSearch=$("spotifyWebSearch");
+function updateSpotifyWebSearch(){
+ const text=query.value.trim();
+ spotifyWebSearch.href="https://open.spotify.com/search/"+encodeURIComponent(text);
+}
+query.addEventListener("input",updateSpotifyWebSearch);
+updateSpotifyWebSearch();
 form.addEventListener("submit",event=>{event.preventDefault();if(!inFlight)void doSearch(query.value)});
 refreshUI();
 if(tokens){showStatus("connectStatus","✓ Spotify session found. Ready to search.");showStatus("searchStatus","Search for a Spotify track.");}
