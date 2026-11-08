@@ -50,7 +50,8 @@ main{max-width:1020px;margin:0 auto;padding:clamp(24px,5vw,45px)}.eyebrow{font-s
 <section aria-labelledby="searchTitle">
 <h2 id="searchTitle" style="font-size:24px;margin:36px 0 5px">Search Spotify tracks</h2>
 <p class="muted" style="margin:0 0 12px">Search Spotify's catalog. The free Audius songs in Minzify continue working separately.</p>
-<form id="spotifySearch" class="search" role="search"><input id="query" class="input" type="search" required minlength="2" maxlength="90" placeholder="Search an artist, song or album…" aria-label="Search Spotify tracks"><button class="button primary" id="searchButton" type="submit" disabled>Search Spotify</button></form>
+<form id="spotifySearch" class="search" role="search"><input id="query" class="input" type="search" required minlength="2" maxlength="90" placeholder="Search an artist, song or album…" aria-label="Search Spotify tracks"><button class="button primary" id="searchButton" type="submit" disabled>Search inside Minzify</button><a id="spotifyWebSearch" class="button" href="https://open.spotify.com/search/" target="_blank" rel="noopener noreferrer">Search on Spotify ↗</a></form>
+<p class="muted">The <strong>Search on Spotify</strong> link works for everyone without connecting a developer account, but opens Spotify’s website. Searching <em>inside Minzify</em> requires a Premium app owner and an authorised Spotify test account.</p>
 <div id="searchStatus" class="status info" role="status" aria-live="polite">Connect Spotify to search its music catalog.</div>
 <div id="trackResults" class="tracks" aria-label="Spotify search results"></div>
 </section>
