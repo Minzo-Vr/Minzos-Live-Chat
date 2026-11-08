@@ -4,6 +4,14 @@ compatibility_date = "2026-10-01"
 workers_dev = true
 keep_vars = true
 
+# Clean up wiped virtual collections in small background batches.
+[triggers]
+crons = ["* * * * *"]
+
+# Limit card-admin controls to the owner's configured Discord guild.
+[vars]
+YEEPS_ADMIN_GUILD_ID = "1564239312613015585"
+
 # This is a separate namespace from Community Chat's SAD_MESSAGES storage.
 [[kv_namespaces]]
 binding = "PACKS"
