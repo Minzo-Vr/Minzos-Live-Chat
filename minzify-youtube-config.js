@@ -10,4 +10,4 @@
 // Enable that API in the same Google Cloud project.
 // Without a valid site-wide API key, Minzify shows a link to YouTube Music.
 // See docs/minzify-youtube-shared-key.md for step-by-step setup.
-window.MINZIFY_YOUTUBE_API_KEY = "";
+window.MINZIFY_YOUTUBE_API_KEY = "AIzaSyDxlWoJ-_MJvFV9vVNkSJ8jkWwAfBTM3x0";
