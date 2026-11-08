@@ -339,59 +339,12 @@ async function retryRoleRequest(data,env){
  await env.SAD_MESSAGES.delete("role-request:"+key);
  return reply("✅ Your linked account was found! Your role request has been sent to administrators for approval.",true);
 }
-const GLOBAL_COMMANDS_VERSION="global-user-install-v3-ask-categories";
-async function registerGlobalCommandsOnce(env){
- if(!env.SAD_MESSAGES||!env.DISCORD_BOT_TOKEN||!env.DISCORD_APPLICATION_ID||!env.DISCORD_GUILD_ID)return;
- const marker="config:"+GLOBAL_COMMANDS_VERSION;
- if(await env.SAD_MESSAGES.get(marker))return;
- const base="https://discord.com/api/v10/applications/"+env.DISCORD_APPLICATION_ID;
- const headers={authorization:"Bot "+env.DISCORD_BOT_TOKEN,"content-type":"application/json"};
- const source=await fetch(base+"/guilds/"+env.DISCORD_GUILD_ID+"/commands",{headers});
- if(!source.ok)throw Error("Cannot read guild commands: HTTP "+source.status);
- const guildCommands=await source.json();
- for(const name of ["ping","sad","help","latest","updates","status","ask"]){
-  const command=guildCommands.find(x=>x.name===name&&x.type===1);
-  if(!command&&name!=="ask")throw Error("Missing guild command /"+name);
-  const payload={type:1,name:command?.name||"ask",description:command?.description||"Ask the Community Chat support AI",
-   ...(command?.options?.length?{options:command.options}:{}),
-   integration_types:[0,1],contexts:[0,1,2]};
-  if(name==="ask"){
-   payload.description="Ask Community Hub AI about apps or general questions";
-   payload.options=[
-    {type:3,name:"question",description:"What would you like to ask?",required:true,max_length:1200},
-    {type:3,name:"category",description:"Choose the app or topic",required:true,choices:[
-     {name:"Chats",value:"chats"},
-     {name:"User",value:"user"},
-     {name:"Login",value:"login"},
-     {name:"Shapes and Colors",value:"shapes_and_colors"},
-     {name:"Update Centre",value:"update_centre"},
-     {name:"Ai (Admin Only)",value:"ai_admin"},
-     {name:"All",value:"all"},
-     {name:"Generic Question",value:"generic_question"}
-    ]},
-    {type:3,name:"visibility",description:"Who can see the question and answer?",required:false,choices:[
-     {name:"Everyone",value:"everyone"},
-     {name:"Only Me",value:"only_me"}
-    ]}
-   ];
-   payload.integration_types=[0];
-   payload.contexts=[0];
-  }
-  if(name==="sad"){
-   payload.description="Timed message (requires bot installed in server)";
-   const time=payload.options?.find(x=>x.name==="time");
-   if(time)time.description="Duration: 1s, 10s, 1m, 1h, 1d";
-  }
-  const result=await fetch(base+"/commands",{method:"POST",headers,body:JSON.stringify(payload)});
-  if(!result.ok)throw Error("Global /"+name+" failed: HTTP "+result.status+" "+(await result.text()).slice(0,200));
- }
- await env.SAD_MESSAGES.put(marker,new Date().toISOString());
- console.log("Global Discord commands registered for user and guild installs.");
-}
+// Slash commands are registered by .github/workflows/register-discord-commands.yml.
+// Do not recreate global commands in the minute-by-minute Worker cron: the
+// public commands are global and the admin commands are guild-scoped.
 
 export default {
  async scheduled(event,env,ctx){
-   try{await registerGlobalCommandsOnce(env);}catch(e){console.error('Global command registration:',e);}
    // Auto-post the three ticket panels once, using the existing scheduled cron.
    if(env.SAD_MESSAGES){
      try{
