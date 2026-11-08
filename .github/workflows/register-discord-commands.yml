@@ -9,6 +9,10 @@ on:
       - "discord-bot/register-global-commands.mjs"
       - ".github/workflows/register-discord-commands.yml"
 
+concurrency:
+  group: discord-command-register-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
