@@ -240,3 +240,13 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;background:#fff;borde
 }
 @media(max-width:385px){.mobile-brand{font-size:0}.mobile-brand span:first-child{font-size:17px}.genre-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hero-copy{max-width:100%}.hero-disc{opacity:.32}.track-item{gap:4px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:0.01ms!important;transition-duration:0.01ms!important;scroll-behavior:auto!important}}
+
+/* Expanded music discovery sections */
+.catalog-more{display:block;max-width:280px;width:100%;margin:17px auto 10px;padding:12px 16px;border:1px solid #67744d;background:#243426;color:#cfffb7;border-radius:13px;font-size:13px;font-weight:850;transition:background .15s}
+.catalog-more:hover{background:#37513b}
+.catalog-provider-link{font-size:12px;color:var(--mint);font-weight:850;border:1px solid #40593e;border-radius:30px;padding:8px 12px}
+.catalog-provider-link:hover{background:#293829}
+.genre-jazz{background:linear-gradient(138deg,#3b3157,#856177)}
+.genre-house{background:linear-gradient(138deg,#253e54,#427a8c)}
+.genre-ambient{background:linear-gradient(138deg,#343c5d,#55898b)}
+.genre-metal{background:linear-gradient(138deg,#47313b,#8b5066)}
