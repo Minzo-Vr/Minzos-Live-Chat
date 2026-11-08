@@ -8,6 +8,7 @@
   <title>Minzify — Your music, your mood</title>
   <link rel="icon" href="./app-icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./minzify.css">
+  <script src="./minzify-jamendo-config.js"></script>
   <script src="./minzify.js" defer></script>
 </head>
 <body>
@@ -28,7 +29,7 @@
       </div>
       <div class="side-bottom">
         <div class="free-chip"><span class="pulse-dot" aria-hidden="true"></span> FREE TO LISTEN</div>
-        <p>Music by artists on <a href="https://audius.co/" target="_blank" rel="noopener noreferrer">Audius</a>. Not Spotify's entire catalogue.</p>
+        <p>Artist-shared songs from <a href="https://audius.co/" target="_blank" rel="noopener noreferrer">Audius</a> plus optional Jamendo. Not Spotify's entire catalogue.</p>
         <a class="hub-return" href="./index.html?interface=selection">← Community Hub</a>
       </div>
     </aside>
@@ -71,12 +72,28 @@
             <button type="button" data-genre="Pop" class="genre-card genre-pop"><span>Pop</span><b>♥</b></button>
             <button type="button" data-genre="Rock" class="genre-card genre-rock"><span>Rock</span><b>★</b></button>
             <button type="button" data-genre="R&B/Soul" class="genre-card genre-rnb"><span>R&amp;B</span><b>♫</b></button>
+            <button type="button" data-genre="Jazz" class="genre-card genre-jazz"><span>Jazz</span><b>♬</b></button>
+            <button type="button" data-genre="House" class="genre-card genre-house"><span>House</span><b>⌁</b></button>
+            <button type="button" data-genre="Ambient" class="genre-card genre-ambient"><span>Ambient</span><b>☾</b></button>
+            <button type="button" data-genre="Metal" class="genre-card genre-metal"><span>Metal</span><b>⚙</b></button>
           </div>
           <div class="section-heading mt"><div><span class="eyebrow">RIGHT NOW</span><h2>On repeat <span class="heading-sparkle">↗</span></h2></div><button id="refreshTrending" class="text-button" type="button">↻ Refresh</button></div>
           <div id="trendingStatus" class="content-status" role="status" aria-live="polite">Finding your next favourite…</div>
           <div id="trendingGrid" class="album-grid"></div>
           <div class="section-heading mt"><div><span class="eyebrow">KEEP DISCOVERING</span><h2>More to explore</h2></div></div>
           <div id="freshGrid" class="track-list"></div>
+          <button type="button" class="catalog-more" id="freshLoadMore" hidden>Show more songs ↓</button>
+          <div class="section-heading mt"><div><span class="eyebrow">UNDERGROUND FINDS</span><h2>Hidden gems <span class="heading-sparkle">✧</span></h2></div></div>
+          <div id="undergroundStatus" class="content-status" role="status" aria-live="polite">Finding independent artists…</div>
+          <div id="undergroundGrid" class="track-list"></div>
+          <div class="section-heading mt"><div><span class="eyebrow">FRESHLY UPLOADED</span><h2>New releases <span class="heading-sparkle">✺</span></h2></div></div>
+          <div id="latestStatus" class="content-status" role="status" aria-live="polite">Finding new songs…</div>
+          <div id="latestGrid" class="track-list"></div>
+          <section id="jamendoSection" hidden aria-label="Jamendo discoveries">
+            <div class="section-heading mt"><div><span class="eyebrow">MORE FREE-TO-STREAM MUSIC</span><h2>Discover on Jamendo <span class="heading-sparkle">♪</span></h2></div><a class="catalog-provider-link" href="https://www.jamendo.com/" target="_blank" rel="noopener noreferrer">Jamendo ↗</a></div>
+            <div id="jamendoStatus" class="content-status" role="status" aria-live="polite">Loading Jamendo artists…</div>
+            <div id="jamendoGrid" class="track-list"></div>
+          </section>
         </section>
 
         <section id="resultsView" class="view" hidden>
@@ -95,7 +112,7 @@
           </div>
           <div id="libraryGrid" class="track-list"></div>
         </section>
-        <div class="bottom-note">Minzify is an independent Community Hub project. Music streams directly from Audius where the artist has allowed it. Some songs may be unavailable.</div>
+        <div class="bottom-note">Minzify is an independent Community Hub project. Music is streamed from Audius and, when connected, Jamendo, where the artists make streams available. Not every mainstream song is available. Some streams may be unavailable.</div>
       </main>
     </div>
   </div>
