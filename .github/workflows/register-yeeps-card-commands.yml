@@ -2,6 +2,15 @@ name: Register Yeeps Card Bot Commands
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "yeeps-card-bot/register-global-commands.mjs"
+      - ".github/workflows/register-yeeps-card-commands.yml"
+
+concurrency:
+  group: yeeps-command-registration
+  cancel-in-progress: true
 
 permissions:
   contents: read
