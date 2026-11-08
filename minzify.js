@@ -7,11 +7,13 @@
   "use strict";
   const API_BASES=["https://api.audius.co/v1","https://discoveryprovider.audius.co/v1"];
   const STORAGE_PREFIX="minzify-v1:";
+  const JAMENDO_CLIENT_ID=/^[a-zA-Z0-9]{6,64}$/.test(String(window.MINZIFY_JAMENDO_CLIENT_ID||"").trim())
+    ? String(window.MINZIFY_JAMENDO_CLIENT_ID).trim() : "";
   const MAX_TRACKS=300,MAX_PLAYLISTS=50;
   const el=id=>document.getElementById(id);
   const audio=el("audioElement");
   const state={
-    view:"home",searchResults:[],trending:[],fresh:[],current:null,
+    view:"home",searchResults:[],trending:[],fresh:[],underground:[],latest:[],jamendo:[],visibleFresh:25,current:null,
     queue:[],index:-1,shuffle:false,repeat:0,busySearch:null,
     likes:load("likes",{}),playlists:load("playlists",[]),recent:load("recent",[]),
     volume:Number(load("volume",75)),playlistId:null,pendingPlaylistSong:null
@@ -49,6 +51,8 @@
     catch{return ""}
   }
   function trackLink(track){
+    if(track?.source==="jamendo" && /^j-\d{1,20}$/.test(track.id||""))
+      return "https://www.jamendo.com/track/"+track.id.slice(2);
     const raw=track?.permalink;
     if(!raw)return "https://audius.co/";
     try{
@@ -66,7 +70,7 @@
     const artwork=track.artwork||{};
     const art=validUrl(artwork["480x480"]||artwork["150x150"]||artwork["1000x1000"]||track.cover,"");
     return {
-      id,title:cleanText(track.title||"Untitled track",160),
+      id,source:"audius",title:cleanText(track.title||"Untitled track",160),
       artist:cleanText(track.user?.name||track.artist||track.user?.handle||"Unknown artist",100),
       art,genre:cleanText(track.genre||"",80),
       duration:Math.max(0,Number(track.duration)||0),
@@ -77,10 +81,11 @@
   function savedTrack(track){
     if(!track||typeof track!=="object")return null;
     const id=cleanText(track.id,100);
-    if(!/^[A-Za-z0-9_-]{1,100}$/.test(id))return null;
+    const source=track.source==="jamendo"?"jamendo":"audius";
+    if(source==="jamendo"?!/^j-\d{1,20}$/.test(id):!/^[A-Za-z0-9_-]{1,100}$/.test(id))return null;
     const art=validUrl(track.art,"");
     return {
-      id,title:cleanText(track.title||"Untitled",160),
+      id,source,title:cleanText(track.title||"Untitled",160),
       artist:cleanText(track.artist||"Unknown artist",100),
       art,genre:cleanText(track.genre||"",80),
       duration:Math.max(0,Number(track.duration)||0),
@@ -113,6 +118,44 @@
       }
     }
     throw lastError||Error("Music service unavailable");
+  }
+  function normalizeJamendo(track){
+    if(!track||typeof track!=="object"||!/^[0-9]{1,20}$/.test(String(track.id||""))||!track.audio)return null;
+    const id="j-"+track.id;
+    return {
+      id,source:"jamendo",title:cleanText(track.name||"Untitled",160),
+      artist:cleanText(track.artist_name||"Jamendo artist",100),
+      art:validUrl(track.image||track.album_image,""),
+      genre:cleanText(track.musicinfo?.tags?.genres?.[0]||"",80),
+      duration:Math.max(0,Number(track.duration)||0),
+      permalink:"https://www.jamendo.com/track/"+track.id,playCount:0
+    };
+  }
+  async function requestJamendo(params={},signal){
+    if(!JAMENDO_CLIENT_ID)return [];
+    const search=new URLSearchParams({client_id:JAMENDO_CLIENT_ID,format:"json",audioformat:"mp31",type:"single albumtrack",limit:"40",...params});
+    const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),13000);
+    const abort=()=>controller.abort();
+    if(signal){if(signal.aborted)throw new DOMException("Cancelled","AbortError");signal.addEventListener("abort",abort,{once:true})}
+    try{
+      const response=await fetch("https://api.jamendo.com/v3.0/tracks/?"+search,{signal:controller.signal,cache:"no-store"});
+      if(!response.ok)throw Error("Jamendo returned "+response.status);
+      const payload=await response.json();
+      if(payload.headers?.status!=="success"||!Array.isArray(payload.results))throw Error("Jamendo response unavailable");
+      return payload.results.map(normalizeJamendo).filter(Boolean);
+    }finally{clearTimeout(timeout);if(signal)signal.removeEventListener("abort",abort)}
+  }
+  function uniqueTracks(tracks){
+    const seen=new Set();
+    return (tracks||[]).filter(track=>track&&(!seen.has(track.id)&&seen.add(track.id)));
+  }
+  function renderHomeLists(){
+    renderGrid(el("trendingGrid"),state.trending.slice(0,12));
+    renderRows(el("freshGrid"),state.fresh.slice(0,state.visibleFresh));
+    el("freshLoadMore").hidden=state.fresh.length<=state.visibleFresh;
+    renderRows(el("undergroundGrid"),state.underground);
+    renderRows(el("latestGrid"),state.latest);
+    if(JAMENDO_CLIENT_ID)renderRows(el("jamendoGrid"),state.jamendo);
   }
   function cleanArray(tracks){
     const seen=new Set(),out=[];
@@ -193,8 +236,7 @@
   }
   function refreshRows(){
     if(state.view==="home"){
-      renderGrid(el("trendingGrid"),state.trending.slice(0,12));
-      renderRows(el("freshGrid"),state.fresh);
+      renderHomeLists();
     }else if(state.view==="search")renderRows(el("resultsGrid"),state.searchResults);
     else if(state.view==="genre")renderRows(el("resultsGrid"),state.searchResults);
     else renderLibrary();
@@ -335,11 +377,17 @@
     if(!track)return;
     state.current=savedTrack(track);
     el("audioElement").pause();
-    audio.src="https://api.audius.co/v1/tracks/"+encodeURIComponent(state.current.id)+"/stream?app_name=Minzify";
+    if(state.current.source==="jamendo"){
+      if(!JAMENDO_CLIENT_ID){notify("Jamendo is not configured. Ask the site owner to add a Jamendo Client ID.");return;}
+      audio.src="https://api.jamendo.com/v3.0/tracks/file/?"+
+        new URLSearchParams({client_id:JAMENDO_CLIENT_ID,id:state.current.id.slice(2),action:"stream"});
+    }else{
+      audio.src="https://api.audius.co/v1/tracks/"+encodeURIComponent(state.current.id)+"/stream?app_name=Minzify";
+    }
     audio.load();updatePlayer();addHistory(state.current);refreshRows();renderQueue();
     if("mediaSession" in navigator){
       navigator.mediaSession.metadata=new MediaMetadata({
-        title:state.current.title,artist:state.current.artist,album:"Minzify · Audius",
+        title:state.current.title,artist:state.current.artist,album:"Minzify · "+(state.current.source==="jamendo"?"Jamendo":"Audius"),
         artwork:state.current.art?[{src:state.current.art,sizes:"480x480"}]:[]
       });
     }
@@ -387,6 +435,8 @@
     heart.classList.toggle("liked",!!t&&!!state.likes[t.id]);
     heart.setAttribute("aria-pressed",String(!!t&&!!state.likes[t.id]));
     el("audiusLink").href=t?trackLink(t):"https://audius.co/";
+    el("audiusLink").title=t?.source==="jamendo"?"View track on Jamendo":"View track on Audius";
+    el("audiusLink").setAttribute("aria-label",el("audiusLink").title);
     el("playButton").textContent=!audio.paused?"❚❚":"▶";
     el("playButton").setAttribute("aria-label",audio.paused?"Play":"Pause");
     el("playButton").title=audio.paused?"Play":"Pause";
@@ -419,23 +469,38 @@
   }
   async function fetchTrending(){
     const run=++trendingRequest;
-    el("trendingStatus").textContent="Loading songs from Audius…";
-    try{
-      const results=await requestTracks("/tracks/trending",{limit:"35",time:"week"});
-      if(run!==trendingRequest)return;
-      state.trending=results;
-      state.fresh=results.slice(12,25);
-      el("trendingStatus").textContent=results.length?"":"Nothing to show right now.";
-      renderGrid(el("trendingGrid"),results.slice(0,12));
-      renderRows(el("freshGrid"),state.fresh);
-      if(!results.length)empty(el("trendingGrid"),"No trending songs","Try searching for an artist or genre.","Search music",()=>showView("search"));
-    }catch(error){
-      if(run!==trendingRequest)return;
-      el("trendingStatus").textContent="Couldn't load trending tracks. Check your internet connection or try searching.";
-      el("trendingGrid").replaceChildren();
-      empty(el("trendingGrid"),"Music temporarily unavailable","Audius is unreachable right now. You can try again.","↻ Retry",fetchTrending);
-      console.warn("Minzify trending",error);
-    }
+    el("trendingStatus").textContent="Loading more music from Audius…";
+    el("undergroundStatus").textContent="Finding underground artists…";
+    el("latestStatus").textContent="Finding new releases…";
+    el("jamendoSection").hidden=!JAMENDO_CLIENT_ID;
+    if(JAMENDO_CLIENT_ID)el("jamendoStatus").textContent="Finding songs on Jamendo…";
+    const requests=[
+      requestTracks("/tracks/trending",{limit:"65",time:"week"}),
+      requestTracks("/tracks/trending/underground",{limit:"45"}),
+      requestTracks("/tracks/latest",{limit:"45"}),
+      JAMENDO_CLIENT_ID?requestJamendo({limit:"40",order:"popularity_month",groupby:"artist_id"}):Promise.resolve([])
+    ];
+    const results=await Promise.allSettled(requests);
+    if(run!==trendingRequest)return;
+    const result=i=>results[i].status==="fulfilled"?results[i].value:[];
+    const trending=result(0),underground=result(1),latest=result(2),jamendo=result(3);
+    state.trending=trending.length?trending:underground.length?underground:latest;
+    state.underground=uniqueTracks(underground).slice(0,40);
+    state.latest=uniqueTracks(latest).slice(0,40);
+    state.jamendo=uniqueTracks(jamendo).slice(0,40);
+    // The home page shows considerably more real tracks without downloading the audio.
+    state.fresh=uniqueTracks([
+      ...state.trending.slice(12),...state.latest,...state.underground,
+      ...state.jamendo
+    ]).slice(0,145);
+    state.visibleFresh=25;
+    el("trendingStatus").textContent=state.trending.length?"": "No songs could be loaded. Try Refresh.";
+    el("undergroundStatus").textContent=state.underground.length?"":"Couldn't load underground songs right now.";
+    el("latestStatus").textContent=state.latest.length?"":"Couldn't load the newest releases right now.";
+    if(JAMENDO_CLIENT_ID)el("jamendoStatus").textContent=state.jamendo.length?"":"Jamendo didn't return songs. Check the Client ID or service status.";
+    renderHomeLists();
+    if(!state.trending.length)
+      empty(el("trendingGrid"),"Music temporarily unavailable","Check your connection, then try again.","↻ Retry",fetchTrending);
   }
   async function search(query,genre){
     const q=String(query||"").trim().slice(0,90);
@@ -448,22 +513,33 @@
     showView(genre?"genre":"search",false);
     el("resultEyebrow").textContent=genre?"LISTEN TO YOUR MOOD":"SEARCH RESULTS";
     el("resultsTitle").textContent=genre?genre:'Results for “'+q+'”';
-    el("resultsSubtitle").textContent=genre?"Tracks matching "+genre+" · Free-to-stream music by Audius artists":"Discover songs and artists shared for streaming";
+    el("resultsSubtitle").textContent=genre?"Discover artist-shared songs in "+genre:
+      JAMENDO_CLIENT_ID?"Search tracks shared on Audius and Jamendo":"Discover songs and artists shared for streaming on Audius";
     el("resultsGrid").replaceChildren();
     el("searchStatus").textContent="Finding music…";
-    try{
-      const tracks=await requestTracks("/tracks/search",{query:q,limit:"60"},controller.signal);
-      if(thisRequest!==searchRequest||controller.signal.aborted)return;
-      state.searchResults=tracks;
-      el("searchStatus").textContent=tracks.length?tracks.length+" songs found":"";
-      renderRows(el("resultsGrid"),tracks);
-      if(!tracks.length)empty(el("resultsGrid"),"No results found","Try a different artist, song or genre.","See what's trending",()=>showView("home"));
-    }catch(error){
-      if(thisRequest!==searchRequest||controller.signal.aborted)return;
-      el("searchStatus").textContent="Search isn't available right now. Please try again.";
-      empty(el("resultsGrid"),"Couldn't search music","The music service might be offline or your connection is unavailable.","↻ Try again",()=>search(q,genre));
-      console.warn("Minzify search",error);
-    }finally{if(thisRequest===searchRequest)state.busySearch=null}
+    const jobs=[
+      requestTracks("/tracks/search",{query:q,limit:"90"},controller.signal),
+      JAMENDO_CLIENT_ID?requestJamendo(genre?
+        {tags:q.toLowerCase().replace(/[^a-z]/g,""),limit:"45"}:
+        {namesearch:q,limit:"45"},controller.signal):Promise.resolve([])
+    ];
+    const results=await Promise.allSettled(jobs);
+    if(thisRequest!==searchRequest||controller.signal.aborted)return;
+    const a=results[0].status==="fulfilled"?results[0].value:[];
+    const j=results[1].status==="fulfilled"?results[1].value:[];
+    const tracks=uniqueTracks([...a,...j]).slice(0,140);
+    state.searchResults=tracks;
+    el("searchStatus").textContent=tracks.length?
+      tracks.length+" songs found"+(j.length?" · Audius + Jamendo":" · Audius"):
+      "No songs found. Try a different title or genre.";
+    renderRows(el("resultsGrid"),tracks);
+    if(!tracks.length)
+      empty(el("resultsGrid"),"No results found",
+        "Try another artist, song or genre. Music services may be temporarily unavailable.",
+        "See what's trending",()=>showView("home"));
+    if(results[0].status==="rejected")console.warn("Minzify Audius search",results[0].reason);
+    if(JAMENDO_CLIENT_ID&&results[1].status==="rejected")console.warn("Minzify Jamendo search",results[1].reason);
+    if(thisRequest===searchRequest)state.busySearch=null;
   }
 
   // Navigation
@@ -498,6 +574,9 @@
     document.getElementById("genreGrid").scrollIntoView({behavior:"smooth",block:"center"});
   });
   el("refreshTrending").addEventListener("click",fetchTrending);
+  el("freshLoadMore").addEventListener("click",()=>{
+    state.visibleFresh=Math.min(state.fresh.length,state.visibleFresh+25);renderHomeLists();
+  });
   el("newPlaylistSide").addEventListener("click",()=>openPlaylistDialog(null));
   el("createPlaylistMain").addEventListener("click",()=>openPlaylistDialog(null));
   el("newPlaylistForm").addEventListener("submit",e=>{
