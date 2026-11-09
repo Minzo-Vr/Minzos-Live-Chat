@@ -6749,7 +6749,7 @@ $('gameHubChatForm').addEventListener('submit',async e=>{
     install.addEventListener("click",async()=>{
       if(deferredPrompt){
         const prompt=deferredPrompt;deferredPrompt=null;
-        try{await prompt.prompt();const choice=await prompt.userChoice;if(choice?.outcome==="accepted")banner.hidden=true}catch(console.warn)
+        try{await prompt.prompt();const choice=await prompt.userChoice;if(choice?.outcome==="accepted")banner.hidden=true}catch(error){console.warn(error)}
         return;
       }
       const apple=/iPad|iPhone|iPod/.test(navigator.userAgent);
