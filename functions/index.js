@@ -40,6 +40,6 @@ exports.postCommunityAnnouncement=onValueCreated({
 
 // Opt-in background Web Push notifications (callable subscriptions, role/update triggers).
 Object.assign(exports,require("./push-notifications"));
-// Search Firebase accounts through a server-verified admin-only callable.
-Object.assign(exports,require("./admin-user-search"));
+// Admin User Search now runs on the Spark-plan Realtime Database directory.
+// The old callable is intentionally not exported or required by the website.
 
