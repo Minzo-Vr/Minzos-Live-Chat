@@ -37,3 +37,6 @@ exports.postCommunityAnnouncement=onValueCreated({
   }
   logger.info("Discord announcement posted",{releaseId:event.params.releaseId});
 });
+
+// Opt-in background Web Push notifications (callable subscriptions, role/update triggers).
+Object.assign(exports,require("./push-notifications"));
