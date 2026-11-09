@@ -7,6 +7,8 @@ const {onValueCreated,onValueWritten}=require("firebase-functions/v2/database");
 const {defineSecret,defineString}=require("firebase-functions/params");
 const {logger}=require("firebase-functions");
 const {getDatabase}=require("firebase-admin/database");
+const {initializeApp,getApps}=require("firebase-admin/app");
+if(!getApps().length)initializeApp();
 const {createHash}=require("node:crypto");
 const webpush=require("web-push");
 const PRIVATE_KEY=defineSecret("CHAT_PUSH_VAPID_PRIVATE");
