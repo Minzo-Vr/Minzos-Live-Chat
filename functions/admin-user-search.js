@@ -99,7 +99,7 @@ exports.searchCommunityUsers=onCall({
     }
     found.sort((a,b)=>a.name.localeCompare(b.name));
     // No search text, email address or token is stored in logs.
-    void getDatabase().ref("chatActivityLog").push({
+    await getDatabase().ref("chatActivityLog").push({
       uid:admin.uid,
       actorName:cleanDisplayName(admin.displayName,"Admin").slice(0,60),
       action:"admin_user_search",
