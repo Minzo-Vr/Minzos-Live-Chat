@@ -14,6 +14,8 @@
   <link rel="icon" type="image/svg+xml" href="./app-icon.svg">
   <link rel="stylesheet" href="./hub-store.css">
   <script src="./hub-store.js" defer></script>
+  <link rel="stylesheet" href="./community-admin-user-search.css">
+  <script type="module" src="./community-admin-user-search.js"></script>
   <!-- Lilita One: bold, rounded display font for the Community Chat interface. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1702,6 +1704,20 @@ document.addEventListener("click",function(event){
       </section>
       <section id="adminPanel" class="admin-controls" hidden>
         <strong>Verified admin ✓</strong>
+        <details id="adminUserSearchPanel">
+          <summary>🔎 User Search &amp; Profile Inspector</summary>
+          <div class="admin-inspector-inner">
+            <p class="admin-inspector-note">Search member accounts by username, email or Firebase User ID. Inspect profiles and account status without signing in as someone else. Only verified admins can access results; private bios and avatars remain hidden.</p>
+            <form id="adminUserSearchForm" role="search">
+              <input id="adminUserQuery" type="search" required minlength="2" maxlength="80" autocomplete="off" placeholder="Search username, email or user ID…" aria-label="Search Community Hub member accounts">
+              <button id="adminUserSearchSubmit" type="submit">Find user</button>
+            </form>
+            <p id="adminUserSearchStatus" role="status" aria-live="polite">Sign in as an admin to search users.</p>
+            <div id="adminUserSearchResults" aria-label="Member search results"></div>
+            <button type="button" id="adminUserSearchMore" hidden>Search more accounts</button>
+            <div id="adminUserProfile" hidden aria-label="Read-only member account details"></div>
+          </div>
+        </details>
         <details id="auditCollapsible" class="admin-audit-panel" hidden>
           <summary>🔒 Admin Activity Log <span style="opacity:.7;font-size:12px">— click to expand</span></summary>
           <p>View logged actions in a searchable full-screen window.</p>
