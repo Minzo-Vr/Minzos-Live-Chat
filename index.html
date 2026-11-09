@@ -1707,9 +1707,9 @@ document.addEventListener("click",function(event){
         <details id="adminUserSearchPanel">
           <summary>🔎 User Search &amp; Profile Inspector</summary>
           <div class="admin-inspector-inner">
-            <p class="admin-inspector-note">Search member accounts by username, email or Firebase User ID. Inspect profiles and account status without signing in as someone else. Only verified admins can access results; private bios and avatars remain hidden.</p>
+            <p class="admin-inspector-note">Search registered members by username or Firebase User ID, or find verified emails by exact match. Free on Firebase Spark—no Cloud Functions needed. Members appear after signing in once with this update. Profiles remain read-only; private bios and avatars stay hidden.</p>
             <form id="adminUserSearchForm" role="search">
-              <input id="adminUserQuery" type="search" required minlength="2" maxlength="80" autocomplete="off" placeholder="Search username, email or user ID…" aria-label="Search Community Hub member accounts">
+              <input id="adminUserQuery" type="search" required minlength="2" maxlength="100" autocomplete="off" placeholder="Search username, user ID or verified email…" aria-label="Search Community Hub member accounts">
               <button id="adminUserSearchSubmit" type="submit">Find user</button>
             </form>
             <p id="adminUserSearchStatus" role="status" aria-live="polite">Sign in as an admin to search users.</p>
