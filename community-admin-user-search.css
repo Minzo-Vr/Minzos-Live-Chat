@@ -1,0 +1,42 @@
+/* Community Chat Admin User Search.
+   Visible only inside #adminPanel; Firebase Callable validates admin again. */
+#adminUserSearchPanel{margin:14px 0 18px;border:1px solid #899dd188;border-radius:16px;background:linear-gradient(155deg,#142544,#1e2f51);color:#f3f6ff;overflow:hidden}
+#adminUserSearchPanel>summary{cursor:pointer;padding:16px 18px;font:800 16px/1.35 system-ui,sans-serif;list-style-position:inside}
+#adminUserSearchPanel[open]>summary{border-bottom:1px solid #ffffff2b}
+#adminUserSearchPanel .admin-inspector-inner{padding:15px 17px 20px;font-family:system-ui,sans-serif}
+#adminUserSearchPanel .admin-inspector-note{font-size:12px;line-height:1.55;color:#c1cdea;margin:9px 0 14px}
+#adminUserSearchForm{display:flex;gap:9px;flex-wrap:wrap}
+#adminUserQuery{flex:1;min-width:min(200px,100%);width:100%;font:500 14px system-ui,sans-serif;padding:12px 13px;background:#0b1630;color:#fff;border:1px solid #8497ca;border-radius:12px}
+#adminUserQuery::placeholder{color:#bbcae5}
+#adminUserQuery:focus-visible{outline:3px solid #9fb7ff;outline-offset:2px}
+#adminUserSearchPanel button{font:750 13px system-ui,sans-serif;cursor:pointer;padding:10px 14px;border-radius:11px;border:1px solid #849bd7;background:#354e82;color:white}
+#adminUserSearchPanel button:disabled{opacity:.6;cursor:not-allowed}
+#adminUserSearchSubmit{background:#a1baff!important;color:#0c1b37!important;border-color:#a1baff!important}
+#adminUserSearchStatus{color:#cfdbed;font:12px/1.5 system-ui,sans-serif;margin:10px 0}
+#adminUserSearchResults{display:grid;gap:9px;max-height:430px;overflow-y:auto}
+#adminUserSearchResults:empty{display:none}
+#adminUserSearchPanel .admin-inspector-result{padding:10px;display:flex;align-items:center;gap:10px;background:#101d36;border:1px solid #8195c14b;border-radius:12px}
+#adminUserSearchPanel .admin-inspector-avatar{width:43px;height:43px;flex:0 0 43px;border:1px solid #ffffff3f;background:#2d416f;border-radius:12px;display:grid;place-items:center;overflow:hidden;font:24px system-ui}
+#adminUserSearchPanel .admin-inspector-avatar img{width:100%;height:100%;object-fit:cover}
+#adminUserSearchPanel .admin-inspector-copy{flex:1;min-width:0}
+#adminUserSearchPanel .admin-inspector-copy strong{display:block;font:750 14px/1.3 system-ui;overflow-wrap:anywhere}
+#adminUserSearchPanel .admin-inspector-copy small,#adminUserSearchPanel .admin-inspector-copy code{display:block;color:#b6c8e7;font:11px/1.5 system-ui;overflow-wrap:anywhere}
+#adminUserSearchPanel .admin-inspector-copy code{font-family:ui-monospace,monospace}
+#adminUserSearchPanel .admin-inspector-view{white-space:nowrap}
+#adminUserSearchMore{margin:12px 0}
+#adminUserSearchPanel #adminUserSearchMore[hidden],
+#adminUserSearchPanel #adminUserProfile[hidden]{display:none!important}
+#adminUserProfile{border:1px solid #9ab3dc88;border-radius:15px;padding:15px;margin:17px 0 0;background:#0b162b;color:#eaf1ff}
+#adminUserProfile .admin-inspector-profile-head{display:flex;align-items:center;gap:13px;min-width:0}
+#adminUserProfile .admin-inspector-profile-head .admin-inspector-avatar{width:68px;height:68px;flex-basis:68px;font-size:33px}
+#adminUserProfile .admin-inspector-profile-head strong{display:block;font:800 20px system-ui}
+#adminUserProfile .admin-inspector-profile-head small{color:#b9cbea;font:12px system-ui}
+#adminUserProfile .admin-inspector-fields{display:grid;grid-template-columns:minmax(110px,1fr) 2fr;gap:8px 12px;margin:13px 0}
+#adminUserProfile dt{font:700 12px/1.4 system-ui;color:#a8c0ed}
+#adminUserProfile dd{margin:0;overflow-wrap:anywhere;font:13px/1.5 system-ui;color:#f0f5ff}
+@media(max-width:600px){
+ #adminUserSearchPanel .admin-inspector-result{flex-wrap:wrap}
+ #adminUserSearchPanel .admin-inspector-view{margin-left:auto}
+ #adminUserProfile .admin-inspector-fields{grid-template-columns:1fr;gap:4px}
+ #adminUserProfile dd{margin-bottom:8px}
+}
