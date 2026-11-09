@@ -12,6 +12,8 @@
   <script src="./community-push-config.js" defer></script>
   <script type="module" src="./community-push-client.js"></script>
   <link rel="icon" type="image/svg+xml" href="./app-icon.svg">
+  <link rel="stylesheet" href="./hub-store.css">
+  <script src="./hub-store.js" defer></script>
   <!-- Lilita One: bold, rounded display font for the Community Chat interface. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -6672,9 +6674,23 @@ $('gameHubChatForm').addEventListener('submit',async e=>{
         search.value=query;grid.replaceChildren();
         const found=games.filter(g=>g[0].toLowerCase().includes(query.toLowerCase().trim()));
         for(const [name,path] of found){
-          const btn=document.createElement("button");btn.type="button";btn.className="game-card";
-          btn.textContent="🎮 "+name;const sub=document.createElement("small");sub.textContent="Play full screen";btn.appendChild(sub);
-          btn.addEventListener("click",()=>play(name,path));grid.appendChild(btn);
+          const details=window.CommunityHubStore?.gameDetails(name)||{name,icon:"🎮",short:"Browser game",detail:"Preview this browser game.",features:["Browser game"],launchLabel:"Play game"};
+          const tile=document.createElement("article");tile.className="store-game-card";
+          const art=document.createElement("button");art.type="button";art.className="store-game-art";art.setAttribute("aria-label","Preview "+name);
+          const icon=document.createElement("span");icon.className="store-art-symbol";icon.textContent=details.icon||"🎮";
+          const hint=document.createElement("span");hint.className="store-preview-hint";hint.textContent="Preview";
+          art.append(icon,hint);
+          const info=document.createElement("div");info.className="store-game-info";
+          const title=document.createElement("strong");title.textContent=name;
+          const short=document.createElement("small");short.textContent=(details.detail||"Browser game").slice(0,90);
+          info.append(title,short);
+          const actions=document.createElement("div");actions.className="store-game-actions";
+          const preview=document.createElement("button");preview.type="button";preview.className="store-game-preview";preview.textContent="Preview";
+          const playButton=document.createElement("button");playButton.type="button";playButton.className="store-game-play";playButton.textContent="Play";
+          const openDetails=()=>{if(window.CommunityHubStore?.openPreview)window.CommunityHubStore.openPreview(details,()=>play(name,path));else play(name,path);};
+          art.addEventListener("click",openDetails);preview.addEventListener("click",openDetails);
+          playButton.addEventListener("click",()=>play(name,path));
+          actions.append(preview,playButton);tile.append(art,info,actions);grid.append(tile);
         }
         if(!found.length){const msg=document.createElement("p");msg.textContent="No matching games found.";grid.appendChild(msg);}
       }
