@@ -40,3 +40,6 @@ exports.postCommunityAnnouncement=onValueCreated({
 
 // Opt-in background Web Push notifications (callable subscriptions, role/update triggers).
 Object.assign(exports,require("./push-notifications"));
+// Search Firebase accounts through a server-verified admin-only callable.
+Object.assign(exports,require("./admin-user-search"));
+
