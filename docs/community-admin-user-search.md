@@ -1,44 +1,55 @@
-# Community Hub — Admin User Search
+# Admin User Search — free Firebase Spark setup
 
-## What was added
+The Community Hub **Admin User Search & Profile Inspector** now runs on the Firebase Spark plan. **No Firebase Cloud Functions, Blaze plan, Cloudflare Worker, or payment method is required.** The web interface is committed to `main`, but the new **Realtime Database rules must be published manually**.
 
-An **Admin User Search & Profile Inspector** lives in Community Chat → Admin login → Verified admin. It searches Firebase Auth users by **username, email address, or Firebase user ID**, then offers a **View profile** read-only inspector. Account information displayed includes: profile name, UID, community roles, profile visibility, public avatar/bio, sign-in provider names, created date, last sign-in, and disabled status.
+## Install the complete Firebase rules
 
-**This feature does not sign the admin in as another user.** It never generates impersonation credentials, opens private DMs, reveals passwords or Firebase tokens, or changes account ownership.
+A ready-to-paste, full database rules JSON was generated in ChatGPT as `community_chat_firebase_rules_free_admin_search.json`. It preserves all 28 sections from the user's previously supplied full rules (including `chatPushSubscriptions`) and adds the 29th section `chatAdminUserDirectory`.
 
-The callable verifies the current Firebase authenticated caller **on the server** against `chatRoles/{uid}/admin === true`, legacy `chatRoles/{uid} === "admin"`, or a verified `admin` custom claim. Client-side panel visibility is only a convenience. Unauthorized callers receive `permission-denied`. The callable also refuses disabled accounts.
+1. Download and open that JSON file in ChatGPT.
+2. Open [Firebase Console](https://console.firebase.google.com/project/website-chat-80038/database) → **Realtime Database → Rules**.
+3. Make a backup of the currently published rules.
+4. Replace the entire contents of the Rules editor with the complete JSON file and **Publish**.
+5. Refresh [Community Hub](https://minzo-vr.github.io/Minzos-Live-Chat/), then have members sign in. Their names will be registered in the new directory.
+6. Sign in with an account that actually has the Admin claim/role; open **Admin login → User Search & Profile Inspector** and search by username, UID or exact verified email.
 
-Profiles with Friends-only or Private visibility have **hidden bio and avatar**, even for admins. Search still includes usernames, UID and email matching so moderators can find an account for legitimate support.
+**Important:** Existing users must sign in once after the update before their usernames appear in the new directory. Previous Firebase Authentication accounts **cannot** be enumerated with Realtime Database rules alone. Verified emails already indexed through `chatEmailDirectory` can be searched exactly, subject to existing read rules. Name and UID search covers currently registered directory records.
 
-## Deployment — required before user search works
+## New Realtime Database rules section
 
-The GitHub changes alone **do not deploy the function**. The UI may show that the Firebase function hasn't been deployed yet.
+This is for review **only**. Users should paste the full updated JSON file rather than mixing pieces manually.
 
-1. Use a machine with Node.js 22 and the Firebase CLI (`npm install -g firebase-tools`) and your authorized Firebase account.
-2. In the repository folder, run `cd functions && npm install` (needed for existing Functions dependencies, including `web-push`), then go back to the repository root.
-3. Confirm that the Firebase project `website-chat-80038` supports Cloud Functions deployment. Firebase may require the **Blaze billing plan**; check billing and any charges before proceeding.
-4. Run this from the repository root:
-   ```sh
-   firebase login
-   firebase deploy --project website-chat-80038 --only functions:searchCommunityUsers
-   ```
-5. Open Community Chat, sign in as a real admin, expand **Admin login** and then **User Search & Profile Inspector**. Search for a known member, then select **View profile**.
-6. Confirm that a regular member cannot invoke the `searchCommunityUsers` callable. Test privacy with a user who has set their profile visibility to **Friends only** or **No one**.
+```json
+"chatAdminUserDirectory": {
+  ".read": "auth != null && (auth.token.admin === true || root.child('chatRoles/'+auth.uid).val() === 'admin' || root.child('chatRoles/'+auth.uid+'/admin').val() === true)",
+  "$uid": {
+    ".write": "auth != null && auth.uid === $uid",
+    ".validate": "newData.hasChildren(['name','updatedAt']) && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 80 && newData.child('updatedAt').isNumber() && newData.child('updatedAt').val() >= now - 600000 && newData.child('updatedAt').val() <= now + 600000",
+    "name": {
+      ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
+    },
+    "updatedAt": {
+      ".validate": "newData.isNumber() && newData.val() >= now - 600000 && newData.val() <= now + 600000"
+    },
+    "$other": {
+      ".validate": false
+    }
+  }
+}
+```
 
-## Firebase rules
+## Privacy and permissions
 
-**No Firebase Realtime Database rules changes are needed.** This feature accesses Firebase Auth and profile data through a server-side Firebase Admin SDK authenticated callable. Firebase Admin SDK database reads bypass Realtime Database rules. Do not broaden `chatProfiles` read permissions to enable searching.
+- Only a caller verified by Firebase RTDB rules as Admin (custom `admin` claim or Admin role in `chatRoles`) may read the user directory.
+- Members can only create/update/delete their own directory record, consisting of their chosen username and update timestamp. No email addresses, passwords, private chats, auth tokens or profile pictures are stored in this new directory.
+- Exact email matching reuses the previously existing `chatEmailDirectory` query. That directory only contains verified email accounts that have registered on sign-in. The query-based read rule restricts lookups to admins or moderators; the new UI additionally lives inside the Admin-only panel.
+- The inspector reads a member's public bio/avatar through existing `chatProfiles` rules and does **not** bypass Friends-only or Private profile restrictions.
+- Profile information is read-only, and the browser **never signs in as someone else**.
+- Last sign-in dates, disabled authentication status and Firebase Auth account enumeration are **not** available in this free browser-only version. It shows when the directory record was updated instead.
+- Large directories require server-side search/indexing to stay efficient; this version downloads the admin-only directory when an admin explicitly searches.
 
-## Implementation
+## Deployment status
 
-- `community-admin-user-search.js`: Admin panel search and read-only profile display.
-- `community-admin-user-search.css`: responsive admin UI.
-- `functions/admin-user-search.js`: authenticated search callable, admin authorization, limited results, privacy filtering, and audit logging to `chatActivityLog`.
-- `functions/index.js`: exports `searchCommunityUsers`.
-- `index.html`: Admin panel UI and script/style references.
+No Firebase Functions deployment is necessary. The only remaining manual action is publishing the new Realtime Database rules from the complete JSON file. The older `functions/admin-user-search.js` callable is **not exported or used** by the site.
 
-The callable scans up to 1,000 Firebase Auth accounts per request and returns up to 25 matches per page. The UI supports paging through additional batches, and only returns whitelisted account metadata. A large site may need more efficient server indexes and request-rate limits.
-
-Search logs record who searched and how many matches were returned, **not** the actual email address, search term or account tokens.
-
-Current Firebase roles, DMs, chats, login methods, admin access checks, Cloudinary and GIPHY settings remain unchanged.
+The existing Firebase configuration, chat features, Cloudinary, GIPHY, Community Hub apps, roles, and notification feature code remain unchanged. The push notifications added previously still require separate backend configuration and deployment; this free admin search does not activate push delivery.
