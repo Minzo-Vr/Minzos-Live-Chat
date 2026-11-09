@@ -5,7 +5,7 @@
  */
 import {getApps} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {getAuth,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import {getDatabase,ref,get,onValue,set,query,orderByChild,equalTo} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+import {getDatabase,ref,get,onValue,set,push,serverTimestamp,query,orderByChild,equalTo} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 (()=>{
  "use strict";
  const $=id=>document.getElementById(id);
@@ -47,7 +47,7 @@ import {getDatabase,ref,get,onValue,set,query,orderByChild,equalTo} from "https:
  }
  function publishMyDirectoryEntry(user,name){
   if(auth.currentUser?.uid!==user.uid)return;
-  const record={name:cleanName(name),updatedAt:Date.now()};
+  const record={name:cleanName(name),updatedAt:serverTimestamp()};
   // Users can register only their own name. This path never stores a password,
   // session token, private message or email address.
   void set(ref(db,DIRECTORY+"/"+user.uid),record).catch(error=>
@@ -145,6 +145,14 @@ import {getDatabase,ref,get,onValue,set,query,orderByChild,equalTo} from "https:
     knownRoles=rolesSnap.val()||{};hasRoleData=true;
    }catch{knownRoles={};hasRoleData=false}
    showPage();
+   // Best-effort audit; never store search text or email addresses in logs.
+   void push(ref(db,"chatActivityLog"),{
+    uid:account.uid,
+    actorName:cleanName(account.displayName||"Admin").slice(0,60),
+    action:"admin_user_search",
+    detail:"matches="+matches.length,
+    at:serverTimestamp()
+   }).catch(()=>{});
   }catch(error){
    status.textContent=String(error?.code||"").includes("permission-denied")?
     "Access denied by Firebase. Sign in as a verified Community Hub admin and publish the updated Realtime Database rules.":
