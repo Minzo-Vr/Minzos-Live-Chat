@@ -1,0 +1,100 @@
+/* Community Hub App Store-style launcher (apps + game library). */
+/* Focused on the launcher only; chat, accounts, and authorization are unchanged. */
+#gatewaySelection .gateway-main{align-items:stretch;justify-content:flex-start;text-align:left;padding:clamp(72px,7vw,96px) clamp(18px,4vw,64px) 36px;overflow:auto;min-height:0}
+#gatewaySelection .gateway-brand{margin:0 0 3px;font-size:clamp(33px,5vw,54px);letter-spacing:-1px}
+#gatewaySelection .gateway-subtitle{margin:0 0 14px;color:#b9c6e8;max-width:780px}
+.gateway-store-kicker{color:#9faeff;font-size:11px;letter-spacing:.17em;font-weight:900;text-transform:uppercase}
+.gateway-store-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0 25px}
+#gatewayAppSearch{max-width:430px;width:100%;min-width:0;padding:13px 17px;border-radius:14px;border:1px solid #7482b26b;background:#111a32;color:#fff;font:500 15px system-ui,sans-serif}
+#gatewayAppSearch::placeholder{color:#adb7ce}
+#gatewayAppSearch:focus-visible{outline:3px solid #9eafff;outline-offset:2px}
+#gatewayStoreCount{font-size:12px;color:#b2c1e2;font-family:system-ui,sans-serif}
+#gatewaySelection .gateway-options{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));align-content:start;gap:17px;width:100%;max-height:none;overflow:visible;padding:0 3px 25px;scrollbar-color:auto}
+.store-card{min-width:0;display:flex;flex-direction:column;gap:9px;border:1px solid #8599d538;border-radius:23px;background:linear-gradient(165deg,#1f2944 0%,#11182c 100%);padding:14px;box-shadow:0 12px 28px #0002;transition:transform .18s ease,border-color .18s ease;position:relative}
+.store-card:hover{border-color:#9ab3ff92;transform:translateY(-3px)}
+.store-card[hidden],.store-game-card[hidden]{display:none!important}
+.store-app-art{position:relative;border:0;width:100%;aspect-ratio:1/1;border-radius:20px;display:grid;place-items:center;overflow:hidden;isolation:isolate;cursor:pointer;color:white;background:linear-gradient(135deg,#314dd4,#151d5c)}
+.store-app-art::before,.store-game-art::before{content:"";position:absolute;width:125%;height:125%;border:1px solid #ffffff38;border-radius:32%;transform:translate(33%,35%) rotate(-32deg);pointer-events:none}
+.store-app-art::after,.store-game-art::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 24% 15%,#ffffff50,transparent 53%);pointer-events:none}
+.store-app-art img{width:49%;height:49%;object-fit:contain;filter:drop-shadow(0 10px 10px #0004)}
+.store-art-symbol{font:normal clamp(48px,8vw,80px)/1 system-ui,sans-serif;filter:drop-shadow(0 8px 10px #0005);position:relative;z-index:1}
+.store-app-art .store-preview-hint,.store-game-art .store-preview-hint{position:absolute;bottom:9px;left:9px;z-index:2;background:#07132cbf;border:1px solid #ffffff43;padding:5px 10px;border-radius:999px;color:white;font:700 11px system-ui,sans-serif;backdrop-filter:blur(6px)}
+.store-theme-chat{background:linear-gradient(145deg,#526df5,#2441a8)}
+.store-theme-ai{background:linear-gradient(145deg,#9657ff,#342a79)}
+.store-theme-shapes{background:linear-gradient(145deg,#ef8a5b,#9c257f)}
+.store-theme-music{background:linear-gradient(145deg,#12ad94,#144875)}
+.store-theme-apps{background:linear-gradient(145deg,#72baff,#3b407e)}
+.store-theme-updates{background:linear-gradient(145deg,#ddaa50,#805032)}
+.store-theme-games{background:linear-gradient(145deg,#ab69ff,#2854b5)}
+.store-theme-soon{background:linear-gradient(145deg,#4b5877,#272f49)}
+.store-card-copy{min-width:0;min-height:71px}
+.store-card-copy strong{display:block;font:800 17px/1.3 system-ui,sans-serif;letter-spacing:-.02em;color:#f5f7ff}
+.store-card-copy small{display:block;font:400 12px/1.5 system-ui,sans-serif;color:#b9c6e0;margin-top:5px}
+.store-card-type{color:#92a7e4;font:800 10px/1.3 system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px}
+.store-card-actions{display:flex;gap:8px;align-items:center;margin-top:auto}
+#gatewaySelection .store-card-actions .gateway-option{height:38px;min-height:38px;width:auto;flex:1;justify-content:center;border-radius:999px;background:#9cb1ff;color:#121b3c;font:800 12px system-ui,sans-serif;padding:8px 11px;border:0;text-align:center;white-space:nowrap;text-decoration:none;display:inline-flex}
+#gatewaySelection .store-card-actions .gateway-option:hover{background:#c1ccff}
+#gatewaySelection .store-card-actions .gateway-option:focus-visible{outline:3px solid #fff}
+.store-preview-button{padding:9px 12px;min-height:38px;background:#ffffff10;color:#e3ebff;border:1px solid #879bd477;border-radius:999px;font:800 12px system-ui,sans-serif;cursor:pointer}
+.store-preview-button:hover{background:#ffffff25}
+.store-disabled .store-app-art{cursor:default;opacity:.8}
+.store-disabled .store-card-actions{margin-top:auto}
+.store-disabled-label{font:800 12px system-ui,sans-serif;color:#c7d0e4;padding:7px 0}
+#gatewayStoreEmpty{font:600 14px system-ui,sans-serif;color:#d4ddef;padding:22px}
+#gatewayStoreEmpty[hidden]{display:none!important}
+/* Game hub: square tiles matching the app launcher */
+#communityGameHub #gameBrowse{flex:1;min-height:0;overflow:auto;background:radial-gradient(circle at 70% 0%,#203765,#0b1020 56%);padding:10px clamp(12px,3vw,32px) 25px}
+#communityGameHub .game-search{position:sticky;top:0;z-index:1;padding:15px 4px 19px;background:#0b1020ec;backdrop-filter:blur(8px)}
+#communityGameHub #gameGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:17px;padding:0 4px 20px;overflow:visible;align-content:start}
+#communityGameHub .store-game-card{min-width:0;background:#17233b;border:1px solid #7485ae55;border-radius:21px;padding:12px;display:flex;flex-direction:column;gap:9px}
+#communityGameHub .store-game-card:hover{border-color:#a6b8f9a0}
+#communityGameHub .store-game-art{width:100%;aspect-ratio:1;display:grid;place-items:center;position:relative;background:linear-gradient(145deg,#4857ac,#2c214e);border-radius:17px;border:0;cursor:pointer;color:white;overflow:hidden}
+#communityGameHub .store-game-art .store-art-symbol{font-size:clamp(44px,5vw,68px)}
+#communityGameHub .store-game-info strong{display:block;font:800 15px/1.3 system-ui,sans-serif}
+#communityGameHub .store-game-info small{display:block;color:#bcc9e0;font:12px/1.4 system-ui,sans-serif;margin-top:5px}
+#communityGameHub .store-game-actions{display:flex;gap:7px;margin-top:auto}
+#communityGameHub .store-game-actions button{min-height:38px;border-radius:999px;padding:8px 10px;font:800 12px system-ui,sans-serif}
+#communityGameHub .store-game-actions .store-game-play{background:#93a9ff;color:#0d1b3a;border-color:transparent;flex:1}
+#communityGameHub .store-game-actions .store-game-preview{background:transparent;border:1px solid #8498cc;color:#eff4ff}
+/* App details / preview panel: a descriptive, illustrative preview, never an iframe */
+#hubStorePreview[hidden]{display:none!important}
+#hubStorePreview{position:fixed;inset:0;z-index:2147483100;background:#070c1dd9;backdrop-filter:blur(12px);display:grid;place-items:center;padding:12px;color:#f5f7ff;font:14px/1.5 system-ui,sans-serif}
+#hubStorePreview .store-dialog{width:min(95vw,820px);max-height:94dvh;overflow:auto;border:1px solid #8fa3d366;border-radius:27px;background:linear-gradient(155deg,#243154,#121929 60%);box-shadow:0 30px 80px #0009;padding:clamp(17px,3vw,27px);position:relative}
+#hubStorePreview .store-dialog-head{display:flex;align-items:start;gap:16px;margin-bottom:18px}
+#hubStorePreview .store-dialog-head .store-dialog-icon{flex:none;width:100px;height:100px;border-radius:24px;display:grid;place-items:center}
+#hubStorePreview .store-dialog-head .store-dialog-icon .store-art-symbol{font-size:48px}
+#hubStorePreview h2{font-size:clamp(23px,3vw,33px);line-height:1.1;letter-spacing:-.03em;margin:6px 0}
+#hubStorePreview .store-dialog-type{color:#aac2ff;font:800 11px system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase}
+#hubStorePreview .store-dialog-description{margin:7px 0;color:#d1dcf1}
+#hubStorePreview .store-dialog-close{margin-left:auto;flex:none;width:38px;height:38px;border:1px solid #ffffff44;border-radius:50%;color:white;background:#ffffff1a;font:900 18px system-ui;cursor:pointer}
+#hubStorePreview .store-preview-visual{border-radius:22px;border:1px solid #ffffff26;min-height:174px;overflow:hidden;display:grid;grid-template-columns:1fr 1fr;background:linear-gradient(135deg,#324a8c,#182340);margin:18px 0}
+#hubStorePreview .store-preview-visual-art{display:grid;place-items:center;background:radial-gradient(circle,#ffffff35,transparent 70%)}
+#hubStorePreview .store-preview-visual-art .store-art-symbol{font-size:clamp(66px,11vw,110px)}
+#hubStorePreview .store-preview-visual-info{padding:23px;display:flex;flex-direction:column;justify-content:center;gap:8px}
+#hubStorePreview .store-preview-visual-info strong{font-size:21px}
+#hubStorePreview .store-preview-visual-info small{color:#c7d8fa}
+#hubStorePreview .store-preview-list{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:20px}
+#hubStorePreview .store-preview-list span{background:#ffffff15;border:1px solid #ffffff38;border-radius:999px;padding:7px 12px;font-size:12px;color:#e2eafe}
+#hubStorePreview .store-preview-foot{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;align-items:center}
+#hubStorePreview .store-preview-foot button{border:1px solid #7188b9;border-radius:12px;padding:11px 18px;background:#263759;color:#fff;font:800 13px system-ui;cursor:pointer}
+#hubStorePreview .store-preview-foot #hubStoreLaunch{background:#96adff;border-color:#96adff;color:#111a3b}
+#hubStorePreview button:focus-visible{outline:3px solid #c7d4ff;outline-offset:2px}
+@media(max-width:670px){
+ #gatewaySelection .gateway-main{padding:68px 14px 20px!important}
+ #gatewaySelection .gateway-options{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ #gatewaySelection .store-card{padding:9px;border-radius:17px;gap:7px}
+ #gatewaySelection .store-app-art{border-radius:13px}
+ #gatewaySelection .store-art-symbol{font-size:48px}
+ #gatewaySelection .store-card-copy strong{font-size:13px}
+ #gatewaySelection .store-card-copy small{font-size:11px}
+ #gatewaySelection .store-card-actions{gap:5px;flex-wrap:wrap}
+ #gatewaySelection .store-card-actions .gateway-option{font-size:11px;min-width:48px;padding:7px}
+ #gatewaySelection .store-preview-button{font-size:11px;padding:8px}
+ #communityGameHub #gameGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ #hubStorePreview .store-dialog-head .store-dialog-icon{width:72px;height:72px;border-radius:17px}
+ #hubStorePreview .store-dialog-head .store-dialog-icon .store-art-symbol{font-size:38px}
+ #hubStorePreview .store-preview-visual{grid-template-columns:1fr 1.3fr}
+ #hubStorePreview .store-preview-visual-info{padding:12px}
+ #hubStorePreview .store-preview-visual-info strong{font-size:17px}
+}
+@media(prefers-reduced-motion:reduce){.store-card{transition:none!important}.store-card:hover{transform:none!important}}
