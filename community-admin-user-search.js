@@ -1,150 +1,231 @@
-/* Admin User Search — Community Hub.
- * All account searches are verified by Firebase Cloud Functions.
- * This is a read-only profile inspector, never Firebase Auth impersonation.
+/* Free (Spark-plan) Community Hub Admin User Search.
+ * Uses Firebase Realtime Database rules, not Cloud Functions or account impersonation.
+ * Only self-registered usernames are indexed. Exact verified emails use the
+ * existing private chatEmailDirectory. Private profile fields stay private.
  */
 import {getApps} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {getAuth,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import {getFunctions,httpsCallable} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
+import {getDatabase,ref,get,onValue,set,query,orderByChild,equalTo} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 (()=>{
  "use strict";
  const $=id=>document.getElementById(id);
- const form=$("adminUserSearchForm");
- const query=$("adminUserQuery");
- const submit=$("adminUserSearchSubmit");
- const results=$("adminUserSearchResults");
- const status=$("adminUserSearchStatus");
- const detail=$("adminUserProfile");
- const more=$("adminUserSearchMore");
- if(!form||!query||!submit||!results||!status||!detail||!more)return;
- let auth=null,account=null,searchCallable=null,requestId=0,currentQuery="",nextPageToken=null,loading=false;
- let records=new Map();
+ const form=$("adminUserSearchForm"),input=$("adminUserQuery");
+ const submit=$("adminUserSearchSubmit"),results=$("adminUserSearchResults");
+ const status=$("adminUserSearchStatus"),detail=$("adminUserProfile"),more=$("adminUserSearchMore");
+ if(!form||!input||!submit||!results||!status||!detail||!more)return;
+ const DIRECTORY="chatAdminUserDirectory";
+ let auth=null,db=null,account=null,unwatchName=null,searchSequence=0,loading=false;
+ let matches=[],offset=0,knownRoles={},hasRoleData=false;
  const create=(tag,cls,text)=>{
-  const el=document.createElement(tag);
-  if(cls)el.className=cls;
-  if(text!==undefined)el.textContent=text;
-  return el;
+  const element=document.createElement(tag);
+  if(cls)element.className=cls;
+  if(text!==undefined)element.textContent=text;
+  return element;
  };
- const friendlyDate=raw=>{
-  if(typeof raw!=="string")return "Not available";
-  const date=new Date(raw);
-  return Number.isNaN(date.getTime())?"Not available":date.toLocaleString(undefined,{dateStyle:"medium",timeStyle:"short"});
+ const friendlyDate=value=>{
+  const time=Number(value);
+  if(!Number.isFinite(time)||time<=0)return "Not available";
+  return new Date(time).toLocaleString(undefined,{dateStyle:"medium",timeStyle:"short"});
  };
- function clearProfile(){detail.hidden=true;detail.replaceChildren()}
- function clearSearch(){
-  records.clear();results.replaceChildren();clearProfile();nextPageToken=null;more.hidden=true;
+ function reset(){
+  matches=[];offset=0;results.replaceChildren();detail.replaceChildren();detail.hidden=true;more.hidden=true;
  }
- function updateBusy(on){
-  loading=on;
-  submit.disabled=on||!account;
-  query.disabled=on||!account;
-  more.disabled=on||!account;
+ function busy(value){
+  loading=value;
+  submit.disabled=value||!account;
+  input.disabled=value||!account;
+  more.disabled=value||!account;
  }
- function renderProfile(user){
-  detail.replaceChildren();
+ function getRoles(uid){
+  const source=knownRoles[uid];
+  if(typeof source==="string")return source==="member"?[]:[source];
+  if(source&&typeof source==="object")return Object.keys(source).filter(key=>source[key]===true).slice(0,12);
+  return [];
+ }
+ function cleanName(value){
+  return typeof value==="string"&&value.trim()?value.trim().slice(0,80):"Community member";
+ }
+ function publishMyDirectoryEntry(user,name){
+  if(auth.currentUser?.uid!==user.uid)return;
+  const record={name:cleanName(name),updatedAt:Date.now()};
+  // Users can register only their own name. This path never stores a password,
+  // session token, private message or email address.
+  void set(ref(db,DIRECTORY+"/"+user.uid),record).catch(error=>
+   console.warn("Community user directory registration unavailable:",error?.code||error?.message)
+  );
+ }
+ function watchOwnProfile(user){
+  if(unwatchName){unwatchName();unwatchName=null}
   if(!user)return;
-  const heading=create("div","admin-inspector-profile-head");
+  const uid=user.uid;
+  const fallback=cleanName(user.displayName||"Community member");
+  unwatchName=onValue(ref(db,"chatProfiles/"+uid+"/name"),snapshot=>{
+   if(auth.currentUser?.uid!==uid)return;
+   publishMyDirectoryEntry(user,snapshot.val()||fallback);
+  },error=>{
+   console.warn("Couldn't read your own profile name for directory:",error?.code||error?.message);
+   publishMyDirectoryEntry(user,fallback);
+  });
+ }
+ function row(item){
+  const article=create("article","admin-inspector-result");
   const avatar=create("div","admin-inspector-avatar","👤");
-  if(user.avatar){
-   const image=create("img");image.alt="";image.src=user.avatar;image.loading="lazy";
+  const copy=create("div","admin-inspector-copy");
+  copy.append(create("strong",null,item.name));
+  const roles=getRoles(item.uid);
+  copy.append(create("small",null,(hasRoleData?(roles.length?roles.join(", "):"Member"):"Roles unavailable")+" · Account lookup"));
+  copy.append(create("code",null,item.uid));
+  const button=create("button","admin-inspector-view","View profile");
+  button.type="button";
+  button.addEventListener("click",()=>void inspect(item));
+  article.append(avatar,copy,button);
+  return article;
+ }
+ function showPage(){
+  const end=Math.min(offset+25,matches.length);
+  for(;offset<end;offset++)results.append(row(matches[offset]));
+  more.hidden=offset>=matches.length;
+  status.textContent=matches.length?
+   "Showing "+offset+" of "+matches.length+" matching registered members.":
+   "No matches. Members appear here after their next sign-in; email lookups require a verified account.";
+ }
+ async function readEmailMatch(q){
+  // The existing chatEmailDirectory rules permit admin/moderator reads only
+  // for a query ordered by email and scoped to an exact value.
+  const options=[q];
+  if(q.toLowerCase()!==q)options.push(q.toLowerCase());
+  for(const email of options){
+   const snap=await get(query(ref(db,"chatEmailDirectory"),orderByChild("email"),equalTo(email)));
+   if(snap.exists()){
+    const records=[];
+    snap.forEach(child=>{
+     const item=child.val();
+     if(item&&child.key)records.push({uid:child.key,name:cleanName(item.name),source:"Verified email lookup"});
+    });
+    return records;
+   }
+  }
+  return [];
+ }
+ async function doSearch(){
+  if(loading||!db||!account)return;
+  const q=input.value.trim();
+  if(q.length<2||q.length>100){status.textContent="Enter 2–100 characters to search.";return}
+  const sequence=++searchSequence;
+  reset();busy(true);status.textContent="Searching registered community accounts…";
+  try{
+   // This read is only allowed to admins, checked by Realtime Database rules.
+   const directorySnap=await get(ref(db,DIRECTORY));
+   if(sequence!==searchSequence)return;
+   const entries=directorySnap.val()||{};
+   const needle=q.toLocaleLowerCase();
+   const found=new Map();
+   for(const [uid,data] of Object.entries(entries)){
+    if(!data||typeof data.name!=="string")continue;
+    const name=cleanName(data.name);
+    if(name.toLocaleLowerCase().includes(needle)||uid.toLocaleLowerCase().includes(needle)){
+     found.set(uid,{uid,name,updatedAt:Number(data.updatedAt)||null,source:"Community directory"});
+    }
+   }
+   if(q.includes("@")){
+    // The existing private email index is restricted to admins/moderators.
+    // A match may exist even before the user has registered in our new directory.
+    try{
+     for(const item of await readEmailMatch(q)){
+      found.set(item.uid,{...item,...(found.get(item.uid)||{})});
+     }
+    }catch(error){
+     console.warn("Admin email lookup unavailable:",error?.code||error?.message);
+    }
+   }
+   if(sequence!==searchSequence)return;
+   matches=[...found.values()].sort((a,b)=>a.name.localeCompare(b.name)||a.uid.localeCompare(b.uid));
+   try{
+    const rolesSnap=await get(ref(db,"chatRoles"));
+    knownRoles=rolesSnap.val()||{};hasRoleData=true;
+   }catch{knownRoles={};hasRoleData=false}
+   showPage();
+  }catch(error){
+   status.textContent=String(error?.code||"").includes("permission-denied")?
+    "Access denied by Firebase. Sign in as a verified Community Hub admin and publish the updated Realtime Database rules.":
+    "Search unavailable: "+String(error?.message||error).slice(0,190);
+  }finally{
+   if(sequence===searchSequence)busy(false);
+  }
+ }
+ function field(list,label,value){
+  list.append(create("dt",null,label),create("dd",null,String(value??"")));
+ }
+ async function inspect(item){
+  const sequence=searchSequence;
+  const uid=item.uid;
+  detail.replaceChildren();detail.hidden=false;
+  detail.append(create("p","admin-inspector-note","Loading this member's public profile…"));
+  // Database rules enforce the user's profile privacy. An admin does not get
+  // unrestricted access to photos, bios, messages or another user's session.
+  let privacy="everyone";
+  try{
+   const privacySnap=await get(ref(db,"chatProfiles/"+uid+"/privacy"));
+   if(sequence!==searchSequence)return;
+   const value=privacySnap.val();
+   if(["everyone","friends","none"].includes(value))privacy=value;
+  }catch{privacy="none"} // Fail closed when visibility cannot be checked.
+  const fields={avatar:"",bio:""};
+  if(privacy==="everyone"){
+   for(const key of ["avatar","bio"]){
+    try{
+     const value=(await get(ref(db,"chatProfiles/"+uid+"/"+key))).val();
+     if(typeof value==="string")fields[key]=value;
+    }catch{} // Keep private profile fields unavailable.
+   }
+  }
+  if(sequence!==searchSequence)return;
+  detail.replaceChildren();
+  const head=create("div","admin-inspector-profile-head");
+  const avatar=create("div","admin-inspector-avatar","👤");
+  if(/^https:\/\/res\.cloudinary\.com\/lplbbbdh\/image\/upload\//.test(fields.avatar)){
+   const image=create("img");image.src=fields.avatar;image.alt="";image.loading="lazy";
    avatar.replaceChildren(image);
   }
   const title=create("div");
-  title.append(create("strong",null,user.name||"Community member"));
-  const roles=Array.isArray(user.roles)&&user.roles.length?user.roles.join(", "):"Member";
-  title.append(create("small",null,"Roles: "+roles));
-  heading.append(avatar,title);
-  detail.append(heading);
-  const note=create("p","admin-inspector-note","Read-only account profile. You are still signed in as yourself; no user sessions, messages or passwords are accessible here.");
-  detail.append(note);
-  const fields=[
-   ["User ID",user.uid],
-   ["Profile visibility",user.privacy==="everyone"?"Everyone":user.privacy==="friends"?"Friends only":"Private"],
-   ["Bio",user.privacy==="everyone"?(user.bio||"No bio added"):"Hidden by member's profile privacy settings"],
-   ["Account created",friendlyDate(user.createdAt)],
-   ["Last sign-in",friendlyDate(user.lastSignInAt)],
-   ["Account status",user.disabled?"Disabled":"Active"],
-   ["Linked sign-in providers",(user.providers||[]).join(", ")||"Not listed"]
-  ];
+  title.append(create("strong",null,item.name));
+  const roles=getRoles(uid);
+  title.append(create("small",null,hasRoleData?(roles.length?roles.join(", "):"Member"):"Roles not available"));
+  head.append(avatar,title);detail.append(head);
+  detail.append(create("p","admin-inspector-note","Read-only profile. You're signed in as yourself—not this member. Private messages and passwords cannot be accessed."));
   const dl=create("dl","admin-inspector-fields");
-  for(const [label,value] of fields){
-   dl.append(create("dt",null,label),create("dd",null,String(value??"")));
-  }
+  field(dl,"User ID",uid);
+  field(dl,"Visibility",privacy==="everyone"?"Public":privacy==="friends"?"Friends only":"Private");
+  field(dl,"Bio",privacy==="everyone"?(fields.bio||"No public bio"):"Hidden by this member's privacy settings");
+  field(dl,"Directory updated",friendlyDate(item.updatedAt));
+  field(dl,"Record source",item.source);
   detail.append(dl);
   const close=create("button","admin-inspector-back","Close profile");close.type="button";
-  close.addEventListener("click",()=>{clearProfile();query.focus()});
-  detail.append(close);detail.hidden=false;
+  close.addEventListener("click",()=>{detail.hidden=true;detail.replaceChildren();input.focus()});
+  detail.append(close);
   detail.scrollIntoView({block:"nearest",behavior:"smooth"});
  }
- function appendUser(user){
-  if(!user||typeof user.uid!=="string"||records.has(user.uid))return;
-  records.set(user.uid,user);
-  const item=create("article","admin-inspector-result");
-  const avatar=create("div","admin-inspector-avatar","👤");
-  if(user.avatar){const img=create("img");img.src=user.avatar;img.alt="";img.loading="lazy";avatar.replaceChildren(img)}
-  const copy=create("div","admin-inspector-copy");
-  copy.append(create("strong",null,user.name||"Community member"));
-  copy.append(create("small",null,(user.roles?.length?user.roles.join(", "):"Member")+" · "+(user.privacy==="everyone"?"Public profile":"Restricted profile")));
-  // UIDs are used for exact moderation/account support, never credentials.
-  copy.append(create("code",null,user.uid));
-  const inspect=create("button","admin-inspector-view","View profile");
-  inspect.type="button";
-  inspect.setAttribute("aria-label","View read-only profile for "+(user.name||"Community member"));
-  inspect.addEventListener("click",()=>renderProfile(user));
-  item.append(avatar,copy,inspect);results.append(item);
- }
- async function search(page=false){
-  if(loading||!account||!searchCallable)return;
-  const text=query.value.trim();
-  if(text.length<2||text.length>80){
-   status.textContent="Enter at least 2 characters to search by name, email or Firebase user ID.";
-   return;
-  }
-  if(!page){clearSearch();currentQuery=text}
-  else if(!nextPageToken||text!==currentQuery)return;
-  const session=requestId;
-  updateBusy(true);status.textContent="Searching verified user accounts…";
-  try{
-   const payload={query:currentQuery};
-   if(page)payload.pageToken=nextPageToken;
-   const response=await searchCallable(payload);
-   if(session!==requestId||!account)return;
-   const data=response.data||{};
-   for(const user of Array.isArray(data.users)?data.users:[])appendUser(user);
-   nextPageToken=typeof data.nextPageToken==="string"?data.nextPageToken:null;
-   more.hidden=!nextPageToken;
-   const count=records.size;
-   status.textContent=count?count+" member"+(count===1?"":"s")+" found"+(nextPageToken?" in pages checked so far. Search more to continue.":"."):
-    (nextPageToken?"No matches in this page. Search more to continue.":"No matches found. Try another username, UID or email.");
-  }catch(err){
-   const code=String(err?.code||"");
-   if(code.includes("permission-denied"))status.textContent="Access denied. This feature requires a verified Community Hub admin account.";
-   else if(code.includes("not-found")||code.includes("unimplemented"))status.textContent="The account search function hasn't been deployed to Firebase yet.";
-   else status.textContent="Search failed: "+String(err?.message||"Firebase account search unavailable.").slice(0,200);
-  }finally{
-   if(session===requestId)updateBusy(false);
-  }
- }
- form.addEventListener("submit",event=>{event.preventDefault();void search(false)});
- more.addEventListener("click",()=>void search(true));
- query.addEventListener("input",()=>{
-  // Clear stale search results immediately when search text changes.
-  requestId++;clearSearch();
-  status.textContent="Search by name, email, or Firebase user ID. Admin access is checked on the server.";
+ form.addEventListener("submit",event=>{event.preventDefault();void doSearch()});
+ more.addEventListener("click",showPage);
+ input.maxLength=100;
+ input.placeholder="Search username, user ID or verified email…";
+ input.addEventListener("input",()=>{
+  searchSequence++;reset();
+  status.textContent="Search by name or user ID, or by an exact verified email address.";
  });
  async function init(){
-  // Game Hub and Chat both use the default Firebase app, loaded asynchronously.
-  for(let i=0;i<30&&!getApps().length;i++)await new Promise(resolve=>setTimeout(resolve,250));
-  const app=getApps().find(item=>item.name==="[DEFAULT]")||getApps()[0];
-  if(!app){status.textContent="Firebase sign-in isn't ready. Refresh the page.";return}
-  auth=getAuth(app);
-  searchCallable=httpsCallable(getFunctions(app,"us-central1"),"searchCommunityUsers",{timeout:30000});
+  for(let i=0;i<32&&!getApps().length;i++)await new Promise(resolve=>setTimeout(resolve,250));
+  const app=getApps().find(a=>a.name==="[DEFAULT]")||getApps()[0];
+  if(!app){status.textContent="Firebase sign-in hasn't loaded. Refresh and try again.";return}
+  auth=getAuth(app);db=getDatabase(app);
   onAuthStateChanged(auth,next=>{
-   requestId++;account=next;clearSearch();updateBusy(false);
+   searchSequence++;account=next;reset();busy(false);
+   if(next)watchOwnProfile(next);else if(unwatchName){unwatchName();unwatchName=null}
    status.textContent=next?
-    "Search by name, email, or Firebase user ID. Admin access is verified on the server.":
-    "Sign in as a verified Community Hub admin to search users.";
+    "Search by username, user ID, or exact verified email. Results are available to verified admins only.":
+    "Sign in as a verified Community Hub admin to search registered members.";
   });
  }
- clearProfile();updateBusy(true);
- void init().catch(err=>{status.textContent="Couldn't load admin search: "+String(err?.message||err).slice(0,150)});
+ busy(true);
+ void init().catch(error=>{busy(false);status.textContent="Couldn't start user search: "+String(error?.message||error).slice(0,150)});
 })();
