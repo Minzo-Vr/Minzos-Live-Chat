@@ -222,8 +222,8 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
   for(const [buttonId,key] of Object.entries(KEY_FOR_BUTTON)){
    const button=$(buttonId);
    if(!button)continue;
-   const locked=disabled(key)&&!isAdmin;
-   if(button.tagName==="BUTTON")button.disabled=locked;
+   const locked=disabled(key)&&!canUse(key);
+   if(button.tagName==="BUTTON")button.disabled=locked&&!isAdmin;
    else button.setAttribute("aria-disabled",String(locked));
    const card=button.closest(".store-card");
    if(!card)continue;
@@ -231,16 +231,16 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
    let state=card.querySelector(".hub-app-state");
    if(!state){state=n("div","hub-app-state","Disabled by admin");state.hidden=true;card.querySelector(".store-card-copy")?.append(state)}
    state.hidden=!locked;
-   if(locked&&button.tagName!=="BUTTON")button.setAttribute("tabindex","-1");
+   if(locked&&!isAdmin&&button.tagName!=="BUTTON")button.setAttribute("tabindex","-1");
    else button.removeAttribute("tabindex");
   }
   for(const card of document.querySelectorAll(".store-game-card")){
    const key=card.dataset.hubGame;
    if(!key)continue;
-   const locked=!isAdmin&&(disabled("game-hub")||disabled(key));
+   const locked=!canUse("game-hub")||!canUse(key);
    card.classList.toggle("hub-app-disabled",locked);
    const play=card.querySelector(".store-game-play");
-   if(play)play.disabled=locked;
+   if(play)play.disabled=locked&&!isAdmin;
    const preview=card.querySelector(".store-game-preview");
    if(preview)preview.setAttribute("aria-label","Preview "+(card.dataset.hubGameName||"game")+(locked?" (disabled)":""));
   }
@@ -250,14 +250,13 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
   window.alert(name+" has been disabled by a Community Hub administrator.");
  }
  function enforceActiveGame(){
-  if(isAdmin)return;
   const browser=$("browserSidebar");
-  if(disabled("community-browser")&&browser&&!browser.hidden)$("browserSidebarClose")?.click();
+  if(!canUse("community-browser")&&browser&&!browser.hidden)$("browserSidebarClose")?.click();
   const gameHub=$("communityGameHub");
   if(!gameHub||gameHub.hidden)return;
-  if(disabled("game-hub")){ $("gameClose")?.click();unavailableToast("game-hub");return; }
+  if(!canUse("game-hub")){ $("gameClose")?.click();return; }
   const frame=$("gamePlayFrame");
-  if(frame&&!frame.hidden&&frame.dataset.hubGame&&disabled(frame.dataset.hubGame)){
+  if(frame&&!frame.hidden&&frame.dataset.hubGame&&!canUse(frame.dataset.hubGame)){
    $("gameBack")?.click();
    unavailableToast(frame.dataset.hubGame);
   }
@@ -271,14 +270,19 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
   card.append(n("div",null,"🔒"),n("strong",null,"Temporarily unavailable"));
   const message=n("p");message.id="hubSiteDownText";message.textContent="This Community Hub app has been disabled by an administrator.";
   const link=n("a",null,"← Back to Community Hub");link.href=RETURN_URL;
-  card.append(message,link);overlay.append(card);
+  const unlockButton=n("button",null,"🔐 Unlock with Admin PIN");
+  unlockButton.id="hubSiteDownUnlock";unlockButton.type="button";unlockButton.hidden=true;
+  unlockButton.addEventListener("click",()=>{if(currentPage)void requestAccess(currentPage)});
+  card.append(message,unlockButton,link);overlay.append(card);
   document.body.append(overlay);return overlay;
  }
  function enforcePage(){
   if(currentPage){
    const overlay=createPageBlock();
-   const locked=disabled(currentPage)&&!isAdmin;
+   const locked=!canUse(currentPage);
    overlay.hidden=!locked;
+   const button=$("hubSiteDownUnlock");
+   if(button)button.hidden=!locked||!isAdmin;
    if(locked) document.getElementById("hubSiteDownText").textContent=
     (entries.find(x=>x.key===currentPage)?.name||"This site")+" is temporarily disabled by a Community Hub administrator.";
    return;
@@ -301,7 +305,7 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
   adminSection=n("details");adminSection.id="hubSiteAdminPanel";adminSection.hidden=true;
   const summary=n("summary",null,"🌐 Website & Game Controls");
   const body=n("div","hub-site-admin-body");
-  body.append(n("p",null,"Turn Community Hub apps and games on or off for members. Changes sync across devices. Admins can still open disabled apps so you can turn them back on."));
+  body.append(n("p",null,"Turn Hub apps and games on or off for everyone, including admins. Opening a disabled experience requires verified Admin sign-in and the separate 4-digit PIN. My Account and these controls remain available for recovery."));
   adminStatus=n("div");adminStatus.id="hubSiteAdminStatus";adminStatus.setAttribute("role","status");
   body.append(adminStatus);
   let lastCategory="";
@@ -338,7 +342,7 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
     }
    });
   }
-  body.append(n("p","hub-site-admin-help","The Hub homepage stays available. Disabling an app prevents access through Community Hub and shows an unavailable screen on its pages; public GitHub Pages source files and unrelated websites remain accessible."));
+  body.append(n("p","hub-site-admin-help","Admin unlocks last 15 minutes per experience in this tab. These are interface restrictions only: public GitHub Pages files and unrelated websites remain accessible; a short browser PIN is not tamper-proof security."));
   adminSection.append(summary,body);
   signed.append(adminButton,adminSection);
   adminButton.addEventListener("click",()=>openAdminPanel());
@@ -388,7 +392,9 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
   if(!el)return;
   const key=KEY_FOR_BUTTON[el.id];
   if(key&&!canUse(key)){
-   event.preventDefault();event.stopImmediatePropagation();unavailableToast(key);
+   event.preventDefault();event.stopImmediatePropagation();
+   if(isAdmin)void requestAccess(key).then(ok=>{if(ok&&el.isConnected)el.click()});
+   else unavailableToast(key);
   }
  }
  document.addEventListener("click",guardDirectLaunch,true);
@@ -411,13 +417,20 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
   auth=getAuth(app);db=getDatabase(app);
   onAuthStateChanged(auth,user=>{
    latestAuth++;account=user;
+   if(pinResolve)closePin(false);
+   loadUnlocks(user);
    if(roleOff){roleOff();roleOff=null}
    roleListenerFor(user);
    const gameAdmin=$("gameHubAdminOpen");
    if(gameAdmin)gameAdmin.hidden=true;
   });
   onValue(ref(db,PATH),snapshot=>{
-   settings=snapshot.val()||{};ready=true;refresh();
+   const previous=settings;
+   settings=snapshot.val()||{};
+   if(ready)for(const key of ALL_KEYS){
+    if((previous[key]===true)!==(settings[key]===true))clearUnlock(key);
+   }
+   ready=true;refresh();
   },error=>{
    console.warn("Website availability rules unavailable:",error.code||error.message);
    settings={};ready=false;refresh();
