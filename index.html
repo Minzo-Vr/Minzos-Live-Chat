@@ -6099,9 +6099,18 @@ try{
         await stopMyPresence();
         const credential=await signInWithEmailAndPassword(auth,$("adminEmail").value.trim(),$("adminPassword").value);
         const token=await credential.user.getIdTokenResult(true);
-        if(token.claims.admin!==true){
+        let verifiedAdmin=token.claims.admin===true;
+        if(!verifiedAdmin){
+          // A manually assigned Admin database role is also a verified Admin.
+          // The Realtime Database rules independently enforce all Admin writes.
+          try{
+            const adminRole=(await get(ref(db,"chatRoles/"+credential.user.uid))).val();
+            verifiedAdmin=adminRole==="admin"||adminRole?.admin===true;
+          }catch(error){console.warn("Could not check the admin role",error.code||error.message);}
+        }
+        if(!verifiedAdmin){
           await signOut(auth);
-          $("adminFeedback").textContent="This account does not have the admin claim.";
+          $("adminFeedback").textContent="This account needs an Admin role or admin custom claim.";
           return;
         }
         $("adminPassword").value="";
@@ -6153,7 +6162,7 @@ try{
       $("adminFeedback").textContent = "Deleting messages…";
       try {
         const token = await auth.currentUser.getIdTokenResult(true);
-        if (token.claims.admin !== true) throw new Error("Admin permission missing");
+        if (token.claims.admin !== true && !hasRole(auth.currentUser.uid,"admin")) throw new Error("Admin permission missing");
         await remove(ref(db, "chatMessages"));
         $("adminFeedback").textContent = "All chat messages deleted from Realtime Database. No backup was created.";
       } catch (err) {
@@ -6175,7 +6184,7 @@ try{
       $("adminFeedback").textContent = "Checking oldest messages…";
       try {
         const token = await auth.currentUser.getIdTokenResult(true);
-        if (token.claims.admin !== true) throw new Error("Admin permission missing");
+        if (token.claims.admin !== true && !hasRole(auth.currentUser.uid,"admin")) throw new Error("Admin permission missing");
         const snapshot = await get(query(ref(db, "chatMessages"), orderByKey(), limitToFirst(count)));
         const keys = [];
         snapshot.forEach(child => { keys.push(child.key); });
@@ -6229,7 +6238,7 @@ try{
       if (prompt("Type APPROVE CLEAR to confirm:") !== "APPROVE CLEAR") return;
       try {
         const token = await auth.currentUser.getIdTokenResult(true);
-        if (token.claims.admin !== true) throw new Error("Admin permission missing");
+        if (token.claims.admin !== true && !hasRole(auth.currentUser.uid,"admin")) throw new Error("Admin permission missing");
         await remove(ref(db,"chatMessages"));
         await remove(ref(db,"chatSettings/voteRound"));
         await remove(ref(db,`chatVotes/${voteRound}`));
