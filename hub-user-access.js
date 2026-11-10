@@ -217,7 +217,7 @@ import {getDatabase,ref,get,onValue,set,remove,push,serverTimestamp} from "https
   const gameBar=$("communityGameHub")?.querySelector(".game-top");
   if(gameBar){
    gameEntry=n("button");gameEntry.id="gameHubBlockUsers";gameEntry.type="button";gameEntry.textContent="🚫 Block users";gameEntry.hidden=true;
-   gameEntry.addEventListener("click",open);
+   gameEntry.addEventListener("click",()=>open());
    gameBar.insertBefore(gameEntry,$("gameClose"));
   }
   refreshAdminUI();
