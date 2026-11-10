@@ -208,6 +208,14 @@ import {getDatabase,ref,get,onValue,set,push,serverTimestamp,query,orderByChild,
   field(dl,"Directory updated",friendlyDate(item.updatedAt));
   field(dl,"Record source",item.source);
   detail.append(dl);
+  const blockButton=create("button","admin-block-user-button","🚫 Block from Community Hub");
+  blockButton.type="button";
+  blockButton.addEventListener("click",()=>{
+   if(!window.HubUserAccess?.selectUser(uid,item.name)){
+    status.textContent="The Block Users panel is only available to verified admins. Open My Account → Block / Unblock Users.";
+   }
+  });
+  detail.append(blockButton);
   const close=create("button","admin-inspector-back","Close profile");close.type="button";
   close.addEventListener("click",()=>{detail.hidden=true;detail.replaceChildren();input.focus()});
   detail.append(close);
