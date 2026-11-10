@@ -208,9 +208,16 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
  }
  function renderAdmin(){
   if(!adminSection)return;
-  adminButton.hidden=!account||!isAdmin;
-  adminSection.hidden=!account||!isAdmin;
-  if(!isAdmin){adminSection.open=false;return}
+  const allowed=!!account&&isAdmin;
+  adminButton.hidden=!allowed;
+  if(!allowed){
+   adminSection.open=false;
+   adminSection.hidden=true;
+   adminButton.setAttribute("aria-expanded","false");
+   return;
+  }
+  // The inner settings panel is not a separate visible card until opened.
+  if(!adminSection.open)adminSection.hidden=true;
   for(const [key,refs] of adminRows){
    refs.input.checked=disabled(key);
    refs.input.disabled=pending.has(key)||!ready;
@@ -314,6 +321,8 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
   if(!signed||adminSection)return;
   adminButton=n("button");adminButton.id="hubSiteAdminOpen";adminButton.type="button";
   adminButton.textContent="🛠 Admin Website Controls";adminButton.hidden=true;
+  adminButton.setAttribute("aria-controls","hubSiteAdminPanel");
+  adminButton.setAttribute("aria-expanded","false");
   adminSection=n("details");adminSection.id="hubSiteAdminPanel";adminSection.hidden=true;
   const summary=n("summary",null,"🌐 Website & Game Controls");
   const body=n("div","hub-site-admin-body");
@@ -357,7 +366,12 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
   body.append(n("p","hub-site-admin-help","Admin unlocks last 15 minutes per experience in this tab. These are interface restrictions only: public GitHub Pages files and unrelated websites remain accessible; a short browser PIN is not tamper-proof security."));
   adminSection.append(summary,body);
   signed.append(adminButton,adminSection);
-  adminButton.addEventListener("click",()=>openAdminPanel());
+  adminButton.addEventListener("click",()=>openAdminPanel(true));
+  adminSection.addEventListener("toggle",()=>{
+   const visible=adminSection.open&&!!account&&isAdmin;
+   adminSection.hidden=!visible;
+   adminButton.setAttribute("aria-expanded",String(visible));
+  });
   const gameTop=$("communityGameHub")?.querySelector(".game-top");
   if(gameTop&&!$("gameHubMyAccount")){
    const accountButton=n("button");accountButton.id="gameHubMyAccount";accountButton.type="button";accountButton.textContent="👤 My Account";
@@ -370,11 +384,20 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
   }
   renderAdmin();
  }
- function openAdminPanel(){
+ function openAdminPanel(toggle=false){
   if(!account||!isAdmin||!adminSection)return;
+  if(toggle&&adminSection.open&&!adminSection.hidden){
+   adminSection.open=false;
+   adminSection.hidden=true;
+   adminButton.setAttribute("aria-expanded","false");
+   adminButton.focus();
+   return;
+  }
   const modal=$("hubAccountModal");
   if(modal?.hidden)$("gatewayAccountButton")?.click();
-  adminSection.hidden=false;adminSection.open=true;
+  adminSection.hidden=false;
+  adminSection.open=true;
+  adminButton.setAttribute("aria-expanded","true");
   adminSection.scrollIntoView({block:"nearest"});
   adminSection.querySelector("summary")?.focus();
  }
