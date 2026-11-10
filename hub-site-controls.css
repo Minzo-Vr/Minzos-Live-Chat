@@ -1,0 +1,42 @@
+/* Community Hub admin website availability settings.
+ * Staff UI only. Security is enforced by Realtime Database rules. */
+#hubSiteAdminPanel[hidden],#hubSiteAdminOpen[hidden],#gameHubAdminOpen[hidden],
+#hubSiteDownOverlay[hidden]{display:none!important}
+#hubSiteAdminPanel{margin:19px 0 4px;border-radius:17px;border:1px solid #829bd0;background:#111d36;overflow:hidden;color:#f5f7ff;font-family:system-ui,sans-serif}
+#hubSiteAdminOpen{width:100%;padding:12px 15px;margin:14px 0 0;border:1px solid #97b4ff;background:#304f93;color:#fff;border-radius:12px;font-weight:800;font-size:13px;cursor:pointer}
+#hubSiteAdminPanel>summary{padding:13px 15px;cursor:pointer;font-weight:800;font-size:15px;background:#263a65}
+#hubSiteAdminPanel .hub-site-admin-body{padding:14px}
+#hubSiteAdminPanel p{margin:0 0 12px;font:12px/1.5 system-ui;color:#c4d1ed}
+#hubSiteAdminPanel h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin:20px 0 10px;color:#aac3ff}
+#hubSiteAdminPanel h3:first-of-type{margin-top:5px}
+#hubSiteAdminPanel .hub-site-admin-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 4px;border-bottom:1px solid #7082ae50}
+#hubSiteAdminPanel .hub-site-admin-row strong{display:block;color:#fff;font-size:13px}
+#hubSiteAdminPanel .hub-site-admin-row small{display:block;color:#bdcae4;font-size:11px;margin-top:4px}
+#hubSiteAdminPanel .hub-site-admin-switch{position:relative;display:flex;align-items:center;gap:6px;flex:none;font-size:11px;font-weight:700;cursor:pointer}
+#hubSiteAdminPanel .hub-site-admin-switch input{appearance:none;width:47px;height:27px;border-radius:99px;border:1px solid #8499c9;background:#4b5771;position:relative;cursor:pointer;margin:0;transition:background .14s}
+#hubSiteAdminPanel .hub-site-admin-switch input::after{content:"";position:absolute;width:19px;height:19px;left:3px;top:3px;border-radius:50%;background:#fff;transition:transform .14s}
+#hubSiteAdminPanel .hub-site-admin-switch input:checked{background:#e08842}
+#hubSiteAdminPanel .hub-site-admin-switch input:checked::after{transform:translateX(19px)}
+#hubSiteAdminPanel .hub-site-admin-switch input:focus-visible{outline:3px solid #b1c6ff;outline-offset:2px}
+#hubSiteAdminPanel .hub-site-admin-switch input:disabled{opacity:.5;cursor:wait}
+#hubSiteAdminStatus{font:12px/1.5 system-ui;color:#d5e6ff;padding:7px 0;min-height:25px}
+#hubSiteAdminPanel .hub-site-admin-help{font-size:11px;color:#acbddb;margin-top:16px}
+#communityGameHub .game-top #gameHubMyAccount,#communityGameHub .game-top #gameHubAdminOpen{background:#37558a;border-color:#809dcb}
+.store-card.hub-app-disabled{opacity:.77;border-color:#e6a567aa}
+.store-card.hub-app-disabled .store-app-art{filter:grayscale(.75)}
+.store-card .hub-app-state{font:800 11px system-ui;color:#ffcb95;background:#4c2b22;border:1px solid #d89d65;border-radius:99px;padding:5px 9px;align-self:flex-start}
+.store-card .hub-app-state[hidden]{display:none!important}
+.store-card.hub-app-disabled .store-launch{opacity:.5;cursor:not-allowed!important}
+#communityGameHub .store-game-card.hub-app-disabled{opacity:.68;border-color:#d39b6c}
+#communityGameHub .store-game-card.hub-app-disabled .store-game-art{filter:grayscale(.9)}
+#communityGameHub .store-game-card.hub-app-disabled .store-game-play{opacity:.45;cursor:not-allowed}
+#hubSiteDownOverlay{position:fixed;inset:0;z-index:2147483600;display:grid;place-items:center;background:#080f20fa;color:#f2f6ff;font:15px/1.5 system-ui,sans-serif;padding:20px}
+#hubSiteDownOverlay .hub-site-down-card{max-width:480px;width:100%;padding:30px;border:1px solid #8498c8;border-radius:23px;background:linear-gradient(150deg,#233556,#111a2b);text-align:center;box-shadow:0 18px 68px #0008}
+#hubSiteDownOverlay .hub-site-down-card strong{display:block;font-size:28px;margin:12px 0}
+#hubSiteDownOverlay .hub-site-down-card p{color:#d4def4}
+#hubSiteDownOverlay a{display:inline-flex;align-items:center;padding:12px 20px;border-radius:13px;color:#102149;background:#acc1ff;text-decoration:none;font-weight:800}
+@media(max-width:600px){
+ #hubSiteAdminPanel .hub-site-admin-row{gap:6px}
+ #hubSiteAdminPanel .hub-site-admin-row strong{font-size:12px}
+ #hubSiteAdminPanel .hub-site-admin-row small{font-size:10px}
+}
