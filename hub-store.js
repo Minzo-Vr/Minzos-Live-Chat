@@ -88,9 +88,12 @@
   const foot=node("div","store-preview-foot");
   const cancel=node("button",null,"Close");cancel.type="button";cancel.addEventListener("click",()=>closePreview());
   const launch=node("button",null,"Open app");launch.type="button";launch.id="hubStoreLaunch";
-  launch.addEventListener("click",()=>{
-   const open=activeLaunch;closePreview(false);
-   if(typeof open==="function")open();
+  launch.addEventListener("click",async()=>{
+   const open=activeLaunch,meta=currentPreviewMeta,gate=window.HubSiteControls;
+   if(typeof open!=="function")return;
+   if(gate&&meta?.category==="Browser game"&&!await gate.requestAccess("game-hub"))return;
+   if(gate&&meta?.hubKey&&!await gate.requestAccess(meta.hubKey))return;
+   closePreview(false);open();
   });
   foot.append(cancel,launch);
   panel.append(head,visual,featureHeading,tags,foot);dialog.append(panel);
@@ -132,8 +135,8 @@
   const availability=window.HubSiteControls;
   const key=meta.hubKey;
   const blocked=!!availability&&!!key&&(!availability.canUse(key)||(meta.category==="Browser game"&&!availability.canUse("game-hub")));
-  launchButton.disabled=blocked;
-  if(blocked)launchButton.textContent="Disabled by admin";
+  launchButton.disabled=blocked&&!(availability?.isAdmin?.());
+  if(blocked)launchButton.textContent=availability?.isAdmin?.()?"🔐 Unlock to open":"Disabled by admin";
   dialog.hidden=false;$("hubStorePreviewClose").focus();
  }
  function addAppCard(option,meta){
@@ -224,7 +227,7 @@
   const blocked=!!gate&&!!key&&(!gate.canUse(key)||
     (currentPreviewMeta.category==="Browser game"&&!gate.canUse("game-hub")));
   const action=$("hubStoreLaunch");
-  if(action){action.disabled=blocked;action.textContent=blocked?"Disabled by admin":(currentPreviewMeta.launchLabel||"Open app");}
+  if(action){action.disabled=blocked&&!(gate?.isAdmin?.());action.textContent=blocked?(gate?.isAdmin?.()?"🔐 Unlock to open":"Disabled by admin"):(currentPreviewMeta.launchLabel||"Open app");}
  });
  window.CommunityHubStore={openPreview,gameDetails};
  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",prepareGateway,{once:true});
