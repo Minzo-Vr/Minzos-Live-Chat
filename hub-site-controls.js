@@ -119,6 +119,8 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
  }
  function enforceActiveGame(){
   if(isAdmin)return;
+  const browser=$("browserSidebar");
+  if(disabled("community-browser")&&browser&&!browser.hidden)$("browserSidebarClose")?.click();
   const gameHub=$("communityGameHub");
   if(!gameHub||gameHub.hidden)return;
   if(disabled("game-hub")){ $("gameClose")?.click();unavailableToast("game-hub");return; }
