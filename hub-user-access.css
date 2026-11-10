@@ -1,0 +1,31 @@
+/* Community Hub member access control panel and blocked account screen. */
+#hubUserBlockOpen[hidden],#hubUserBlockPanel[hidden],#gameHubBlockUsers[hidden],#hubUserBlockedOverlay[hidden]{display:none!important}
+#hubUserBlockOpen{display:block;width:100%;padding:13px 16px;margin-top:12px;background:#59334a!important;border:1px solid #dd8eae!important;color:#fff!important;border-radius:12px;cursor:pointer;font:800 13px system-ui}
+#hubUserBlockPanel{margin:14px 0 0;background:#16223c;color:#edf3ff;border:1px solid #b083ba;border-radius:15px;overflow:hidden;font:13px/1.5 system-ui}
+#hubUserBlockPanel>summary{cursor:pointer;font-weight:800;background:#2c3055;padding:14px}
+#hubUserBlockPanel .hub-user-block-body{padding:15px}
+#hubUserBlockPanel p{color:#cbd7ec;margin:8px 0 13px}
+#hubUserBlockPanel form{display:grid;gap:11px}
+#hubUserBlockPanel label{display:grid;gap:4px;color:#e8f0ff;font-weight:750}
+#hubUserBlockPanel input,#hubUserBlockPanel textarea{background:#101932;color:#fff;border:1px solid #768bb8;border-radius:10px;width:100%;box-sizing:border-box;padding:10px;font:13px system-ui}
+#hubUserBlockPanel .hub-block-actions{display:flex;flex-wrap:wrap;gap:8px}
+#hubUserBlockPanel button{background:#38507d;color:#fff;border:1px solid #9daed8;border-radius:9px;padding:9px 12px;cursor:pointer;font:700 12px system-ui}
+#hubUserBlockPanel button[type="submit"]{background:#8e2635;border-color:#c76d7b}
+#hubUserBlockPanel h3{font:800 15px system-ui;margin-top:19px}
+#hubUserBlockStatus{font:12px/1.5 system-ui}
+#hubUserBlockList{max-height:370px;overflow-y:auto;display:grid;gap:10px}
+#hubUserBlockList .hub-block-member{border:1px solid #6279a4;background:#111d37;border-radius:11px;padding:10px;display:flex;align-items:center;gap:12px}
+#hubUserBlockList .hub-block-member>div{flex:1;min-width:0}
+#hubUserBlockList .hub-block-member strong{display:block;color:#fff}
+#hubUserBlockList .hub-block-member code{display:block;overflow-wrap:anywhere;color:#c9d7f1;font:11px/1.6 ui-monospace,monospace}
+#hubUserBlockList .hub-block-member small{color:#d9c7dc;display:block;font-size:11px;margin-top:4px;overflow-wrap:anywhere}
+#hubUserBlockList .hub-block-empty{color:#bcd0f2}
+#hubUserBlockedOverlay{position:fixed;inset:0;z-index:2147483640;display:grid;place-items:center;padding:18px;background:#080b14f7;color:#fff;font-family:system-ui,sans-serif}
+#hubUserBlockedOverlay .hub-user-blocked-card{width:min(100%,520px);padding:clamp(24px,5vw,38px);background:linear-gradient(140deg,#202948,#111728);border:1px solid #e399b0;border-radius:22px;text-align:center;box-shadow:0 22px 60px #0008}
+#hubUserBlockedOverlay .hub-block-icon{font-size:43px}
+#hubUserBlockedOverlay h1{font:900 clamp(25px,4vw,34px) system-ui;margin:10px 0 12px}
+#hubUserBlockedOverlay p{color:#d8e1f5;line-height:1.5}
+#hubUserBlockedOverlay .hub-block-reason{margin:14px auto;background:#4d253c;padding:12px;border-radius:11px;max-width:410px;overflow-wrap:anywhere}
+#hubUserBlockedOverlay button{cursor:pointer;background:#9eb7fa;color:#101a30;border:0;border-radius:12px;padding:12px 19px;font-weight:800}
+#adminUserProfile .admin-block-user-button{background:#922f46;border:1px solid #dc7f99;border-radius:10px;color:#fff;padding:10px 13px;cursor:pointer;font:800 12px system-ui;margin:10px 0}
+#communityGameHub .game-top #gameHubBlockUsers{background:#7a324b;border-color:#c5859c}
