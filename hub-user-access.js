@@ -223,9 +223,15 @@ import {getDatabase,ref,get,onValue,set,remove,push,serverTimestamp} from "https
    stopSelf=onValue(ref(db,BLOCKS+"/"+user.uid),snapshot=>{
     if(id!==revision)return;
     checked=true;
+    const wasBlocked=blocked;
     const record=snapshot.val();
     blocked=record?.blocked===true;
     showOverlay(blocked?record:false);
+    if(wasBlocked&&!blocked){
+     // Reconnect any Firebase listeners that were denied during suspension.
+     window.location.reload();
+     return;
+    }
     refreshAdminUI();
     window.dispatchEvent(new CustomEvent("community-hub-user-block-change",{detail:{blocked,uid:user.uid}}));
    },error=>{
