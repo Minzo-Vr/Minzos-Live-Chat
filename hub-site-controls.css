@@ -40,3 +40,47 @@
  #hubSiteAdminPanel .hub-site-admin-row strong{font-size:12px}
  #hubSiteAdminPanel .hub-site-admin-row small{font-size:10px}
 }
+
+
+/* Per-app admin PIN prompt. This is an interface lock only, not hosting security. */
+#hubAdminPinModal[hidden],#hubSiteDownUnlock[hidden]{display:none!important}
+#hubAdminPinModal{
+  position:fixed;inset:0;z-index:2147483642;
+  display:grid;place-items:center;padding:16px;
+  background:rgba(6,12,27,.92);backdrop-filter:blur(10px);
+  color:#f8faff;font:14px/1.5 system-ui,-apple-system,sans-serif
+}
+#hubAdminPinModal .hub-admin-pin-card{
+  width:min(100%,410px);max-height:min(90vh,700px);overflow:auto;
+  padding:clamp(20px,4vw,30px);border-radius:24px;
+  background:linear-gradient(155deg,#24345d,#111c31 72%);
+  border:1px solid #a0b4ec;box-shadow:0 24px 80px #000a;
+}
+#hubAdminPinModal h2{margin:0 0 10px;font-size:clamp(22px,3vw,27px);line-height:1.25}
+#hubAdminPinModal p{margin:0 0 16px;color:#d1dff7}
+#hubAdminPinModal label{display:block;font-weight:750;color:#fff}
+#hubAdminPinModal input{
+  display:block;width:100%;box-sizing:border-box;margin:8px 0 14px;
+  border:1px solid #9eb2e5;border-radius:13px;
+  background:#0e1930;color:#fff;padding:13px;font-size:20px;
+  letter-spacing:.28em;text-align:center;font-family:ui-monospace,monospace;
+}
+#hubAdminPinModal input:focus-visible,#hubAdminPinModal button:focus-visible{
+  outline:3px solid #a7c8ff;outline-offset:2px
+}
+#hubAdminPinModal .hub-admin-pin-status{
+  min-height:20px;color:#f9bdac;font-size:12px;margin:0 0 11px
+}
+#hubAdminPinModal .hub-admin-pin-actions{display:flex;justify-content:flex-end;gap:9px}
+#hubAdminPinModal button{
+  cursor:pointer;border:1px solid #8ca7d8;padding:11px 15px;
+  border-radius:12px;background:#2a3f66;color:white;font:800 13px system-ui
+}
+#hubAdminPinModal button[type="submit"]{border-color:#abc4ff;background:#a6bfff;color:#12223e}
+#hubAdminPinModal button:disabled{opacity:.55;cursor:wait}
+#hubSiteDownUnlock{
+  display:inline-flex;align-items:center;margin:5px 8px 10px 0;
+  border:1px solid #adc2ff;padding:12px 15px;border-radius:12px;
+  background:#2b497f;color:#fff;font:800 13px system-ui;cursor:pointer
+}
+#hubSiteDownUnlock:hover{background:#3d5e9b}
