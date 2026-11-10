@@ -453,6 +453,7 @@
     /* Give the admin controls their own scroll area instead of clipping lower settings. */
     #adminPanel {max-height:min(72dvh,720px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable;}
     #adminPanel:focus-within {scroll-behavior:auto;}
+    html.chat-timestamps-disabled .chat-message-timestamp {display:none!important;}
     .admin-controls button {margin:3px;background:#6b7280}
     .lockdown-banner { margin:0; padding:10px 14px; background:#fff2d9; color:#713d00; font-size:13px; }
     .attach-wrap {position:relative;display:flex;align-items:center}
@@ -1746,6 +1747,11 @@ document.addEventListener("click",function(event){
         <label for="slowSeconds">Delay between messages:</label>
         <select id="slowSeconds"><option value="0">Off</option><option value="5">5 seconds</option><option value="10">10 seconds</option><option value="30">30 seconds</option><option value="60">60 seconds</option></select>
         <button type="button" id="slowSave">Save slowmode</button>
+        <div class="anonymous-admin-setting">
+          <label><input type="checkbox" id="timestampsDisabledAdmin" disabled> 🕒 Disable message timestamps for everyone</label>
+          <p class="hint">Hides the time beside every message in General Chat, group chats and DMs for all members. Original timestamps are kept in Firebase.</p>
+          <p id="timestampsAdminStatus" role="status" class="hint">Checking timestamp setting…</p>
+        </div>
         <p><strong>Community vote:</strong> <span id="voteAdminStatus">Checking…</span></p>
         <button type="button" id="voteStart">Start new vote</button>
         <button type="button" id="voteClose">Close vote</button>
@@ -2215,6 +2221,7 @@ try{
       refreshRoleNameEffects();
       updateRoleAppearanceOptions();
       updateLockdownUI();
+      renderTimestampSetting();
       updateExperimentalAccess();
       refreshReactionPermissions();
       if(!hasExperimentalAccess()&&activeRoom!==0)switchRoom(0).catch(console.warn);
@@ -3488,7 +3495,7 @@ try{
           nameSpan.classList.toggle("plus-gold-name",effect==="plus");
           nameSpan.classList.toggle("testsubject-metal-name",effect==="testsubject");
           if(customRoles[effect]){nameSpan.style.color=customRoles[effect].color;nameSpan.style.fontWeight="800";}
-          const time=document.createElement("span");
+          const time=document.createElement("span");time.className="chat-message-timestamp";
           time.textContent=" · "+new Date(msg.at||Date.now()).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
           meta.append(nameSpan,time);
           const bubble=document.createElement("div");bubble.className="bubble";
@@ -3683,7 +3690,7 @@ try{
       for(const [role,cls] of [["admin","admin-rgb-name"],["moderator","moderator-blue-name"],["plus","plus-gold-name"],["testsubject","testsubject-metal-name"]])
         usernameSpan.classList.toggle(cls,effect===role);
       if(customRoles[effect]){usernameSpan.style.color=customRoles[effect].color;usernameSpan.style.fontWeight="800";}
-      const time=document.createElement("span");
+      const time=document.createElement("span");time.className="chat-message-timestamp";
       time.textContent=" · "+new Date(msg.at||Date.now()).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
       meta.append(usernameSpan,time);
       const bubble=document.createElement("div");bubble.className="bubble";renderTextWithEmbed(bubble,msg.text);
@@ -4442,6 +4449,18 @@ try{
       });
     }
     let lockdown = false, lockdownLoaded = false, lockdownPending = false;
+    let timestampsDisabled = false, timestampSettingLoaded = false, timestampSettingPending = false;
+    function renderTimestampSetting(){
+      document.documentElement.classList.toggle("chat-timestamps-disabled",timestampsDisabled);
+      const checkbox=$("timestampsDisabledAdmin"),status=$("timestampsAdminStatus");
+      if(!checkbox||!status)return;
+      checkbox.checked=timestampsDisabled;
+      checkbox.disabled=!user||!isAdmin||!timestampSettingLoaded||timestampSettingPending;
+      if(!timestampSettingLoaded)status.textContent="Checking timestamp setting…";
+      else if(!timestampSettingPending)status.textContent=timestampsDisabled
+        ?"Message timestamps are hidden for everyone."
+        :"Message timestamps are visible for everyone.";
+    }
     let stopSettings = [];
     let slowSeconds = 0, lastSentAt = 0, slowTimer = null, voteRound = "", voteCount = 0, voted = false, stopVotes = null;
     function updateSlowUI() {
@@ -4932,7 +4951,7 @@ try{
       nameSpan.classList.toggle("plus-gold-name",effect==="plus");
       nameSpan.classList.toggle("testsubject-metal-name",effect==="testsubject");
       if(customRoles[effect]){nameSpan.style.color=customRoles[effect].color;nameSpan.style.fontWeight="800";}
-      const timeSpan=document.createElement("span");
+      const timeSpan=document.createElement("span");timeSpan.className="chat-message-timestamp";
       timeSpan.textContent=` · ${new Date(data.createdAt || Date.now()).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}`;
       meta.append(nameSpan,timeSpan);
       meta.classList.add("profile-click");meta.tabIndex=0;meta.setAttribute("role","button");
@@ -5155,9 +5174,18 @@ try{
     function subscribeSettings() {
       for (const unsubscribe of stopSettings) unsubscribe();
       stopSettings = [];
+      timestampSettingLoaded = false;renderTimestampSetting();
       lockdownLoaded = false;
       lastSeenKickEpoch = null;
       updateLockdownUI();
+      stopSettings.push(onValue(ref(db, "chatSettings/timestampsDisabled"), snap => {
+        timestampsDisabled=snap.val()===true;
+        timestampSettingLoaded=true;
+        renderTimestampSetting();
+      }, err => {
+        console.error("Timestamp setting read failed:",err);
+        timestampSettingLoaded=false;renderTimestampSetting();
+      }));
       stopSettings.push(onValue(ref(db, "chatSettings/kickEpoch"), snap => {
         const value = typeof snap.val() === "number" ? snap.val() : 0;
         if (lastSeenKickEpoch !== null && value > lastSeenKickEpoch) {
@@ -5201,6 +5229,8 @@ try{
       if(stopChangedMessages){stopChangedMessages();stopChangedMessages=null;}
       stopAllReactionStreams();
       for(const off of stopSettings)off();stopSettings=[];
+      timestampSettingLoaded=false;timestampSettingPending=false;
+      timestampsDisabled=false;renderTimestampSetting();
       if(stopVotes){stopVotes();stopVotes=null;}
       if(stopPresenceList){stopPresenceList();stopPresenceList=null;}
       if(stopConnection){stopConnection();stopConnection=null;}
@@ -6131,6 +6161,26 @@ try{
       } finally {
         lockdownPending = false;
         updateLockdownUI();
+      }
+    });
+    $("timestampsDisabledAdmin").addEventListener("change", async event => {
+      const checkbox=event.currentTarget;
+      if(!isAdmin||!auth?.currentUser||!db||!timestampSettingLoaded||timestampSettingPending){
+        renderTimestampSetting();return;
+      }
+      const value=checkbox.checked;
+      timestampSettingPending=true;renderTimestampSetting();
+      $("timestampsAdminStatus").textContent=value?"Hiding timestamps for everyone…":"Showing timestamps for everyone…";
+      try{
+        await set(ref(db,"chatSettings/timestampsDisabled"),value);
+        $("adminFeedback").textContent=value?"Message timestamps disabled globally.":"Message timestamps enabled globally.";
+      }catch(err){
+        console.error("Timestamp setting update failed:",err);
+        $("timestampsAdminStatus").textContent="Could not update timestamps: "+(err.code||err.message);
+        checkbox.checked=timestampsDisabled;
+      }finally{
+        timestampSettingPending=false;
+        checkbox.disabled=!user||!isAdmin||!timestampSettingLoaded;
       }
     });
     $("kickAllBtn").addEventListener("click", async () => {
