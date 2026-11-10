@@ -224,10 +224,11 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
    if(!button)continue;
    const locked=disabled(key)&&!canUse(key);
    if(button.tagName==="BUTTON")button.disabled=locked&&!isAdmin;
-   else button.setAttribute("aria-disabled",String(locked));
+   else button.setAttribute("aria-disabled",String(locked&&!isAdmin));
    const card=button.closest(".store-card");
    if(!card)continue;
    card.classList.toggle("hub-app-disabled",locked);
+   card.classList.toggle("hub-pin-available",locked&&isAdmin);
    if(button.classList.contains("store-launch")){
     button.textContent=locked&&isAdmin?"🔐 Unlock":"Open";
     if(locked&&isAdmin)button.setAttribute("aria-label","Unlock "+(entries.find(item=>item.key===key)?.name||"app")+" with Admin PIN");
@@ -246,6 +247,7 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
    if(!key)continue;
    const locked=!canUse("game-hub")||!canUse(key);
    card.classList.toggle("hub-app-disabled",locked);
+   card.classList.toggle("hub-pin-available",locked&&isAdmin);
    const play=card.querySelector(".store-game-play");
    if(play){
     play.disabled=locked&&!isAdmin;
