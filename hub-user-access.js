@@ -236,11 +236,16 @@ import {getDatabase,ref,get,onValue,set,remove,push,serverTimestamp} from "https
     window.dispatchEvent(new CustomEvent("community-hub-user-block-change",{detail:{blocked,uid:user.uid}}));
    },error=>{
     if(id!==revision)return;
-    blocked=true;
+    // A missing/unpublished block-list rule must not lock out every real user.
+    // Actual blocked accounts remain restricted by their database permissions.
+    blocked=false;
     checked=false;
-    showOverlay({error:true,reason:"Unable to verify account access. Check your connection or ask an administrator to publish the updated Firebase rules."});
+    showOverlay(false);
     refreshAdminUI();
-    console.warn("Community Hub block lookup failed:",error.code||error.message);
+    console.warn("Community Hub block lookup unavailable; check Firebase rules:",error.code||error.message);
+    window.dispatchEvent(new CustomEvent("community-hub-access-verification-error",{
+      detail:{code:String(error.code||"unavailable")}
+    }));
    });
    stopRole=onValue(ref(db,"chatRoles/"+user.uid),snapshot=>{
     if(id!==revision||blocked)return;
@@ -254,9 +259,9 @@ import {getDatabase,ref,get,onValue,set,remove,push,serverTimestamp} from "https
    });
   }catch(error){
    if(id!==revision)return;
-   checked=false;blocked=true;
-   showOverlay({error:true,reason:"Could not verify this account's access. Please sign in again."});
-   console.warn("Community Hub auth verification:",error.code||error.message);
+   checked=false;blocked=false;
+   showOverlay(false);
+   console.warn("Community Hub auth verification unavailable:",error.code||error.message);
   }
  }
  const config={
