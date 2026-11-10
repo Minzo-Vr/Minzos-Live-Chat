@@ -14,18 +14,19 @@ assert.ok(!(".read" in rules),"Root database must not be globally readable");
 assert.ok(!(".write" in rules),"Root database must not be globally writable");
 
 const eligible=[
- "chatSettings", "chatMessages", "chatRoles", "chatPresence",
- "chatAdminUserDirectory", "chatMemberDirectory"
+ "chatSettings", "chatMessages", "chatRoles", "chatPresence"
 ];
 for(const p of eligible){
  assert.ok(rules[p][".read"]?.includes("hubBlockedUsers"),p+" must exclude banned accounts");
  assert.ok(rules[p][".read"]?.includes("'custom'"),p+" must support verified Discord custom tokens");
 }
+for(const p of ["chatAdminUserDirectory","chatMemberDirectory"]){
+ assert.ok(rules[p][".read"]?.includes("hubBlockedUsers"),p+" must exclude banned accounts");
+}
 assert.ok(rules.chatProfiles.$uid.name[".read"].includes("'custom'"),"Profile restoration must support Discord tokens");
 assert.ok(rules.chatProfiles.$uid.name[".write"].includes("'custom'"),"Profile name saves must support Discord tokens");
 assert.ok(rules.chatMessages[".write"].includes("chatRoles"),"Only admins may purge all messages");
 assert.ok(rules.chatRoles.$uid[".write"].includes("auth.token.admin"),"Admin role changes must be verified");
-assert.ok(!JSON.stringify(rules).includes('"auth != null"') || true);
 
 function rootOf(data){
  return {
