@@ -64,6 +64,7 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
   isAdmin:()=>isAdmin,
   keyForGame,
   openAdmin:()=>openAdminPanel(),
+  refreshUI:()=>renderLaunchers(),
   available:()=>ready
  };
  window.HubSiteControls=api;
