@@ -228,9 +228,16 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
    const card=button.closest(".store-card");
    if(!card)continue;
    card.classList.toggle("hub-app-disabled",locked);
+   if(button.classList.contains("store-launch")){
+    button.textContent=locked&&isAdmin?"🔐 Unlock":"Open";
+    if(locked&&isAdmin)button.setAttribute("aria-label","Unlock "+(entries.find(item=>item.key===key)?.name||"app")+" with Admin PIN");
+    else button.removeAttribute("aria-label");
+   }
    let state=card.querySelector(".hub-app-state");
    if(!state){state=n("div","hub-app-state","Disabled by admin");state.hidden=true;card.querySelector(".store-card-copy")?.append(state)}
    state.hidden=!locked;
+   if(locked&&isAdmin)state.textContent="🔐 PIN required";
+   else state.textContent="Disabled by admin";
    if(locked&&!isAdmin&&button.tagName!=="BUTTON")button.setAttribute("tabindex","-1");
    else button.removeAttribute("tabindex");
   }
@@ -240,7 +247,10 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
    const locked=!canUse("game-hub")||!canUse(key);
    card.classList.toggle("hub-app-disabled",locked);
    const play=card.querySelector(".store-game-play");
-   if(play)play.disabled=locked&&!isAdmin;
+   if(play){
+    play.disabled=locked&&!isAdmin;
+    play.textContent=locked&&isAdmin?"🔐 Unlock":"Play";
+   }
    const preview=card.querySelector(".store-game-preview");
    if(preview)preview.setAttribute("aria-label","Preview "+(card.dataset.hubGameName||"game")+(locked?" (disabled)":""));
   }
@@ -333,7 +343,7 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
       action:"website_availability",detail:item.key+"="+(disable?"disabled":"enabled"),
       at:serverTimestamp()
      }).catch(()=>{});
-     adminStatus.textContent=item.name+" "+(disable?"disabled":"enabled")+" for members.";
+     adminStatus.textContent=item.name+" "+(disable?"disabled for everyone, including admins":"enabled for everyone")+".";
     }catch(error){
      input.checked=disabled(item.key);
      adminStatus.textContent="Change failed: "+String(error?.code||error?.message||"Check Firebase rules.").slice(0,130);
