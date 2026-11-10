@@ -151,8 +151,7 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
   }
   // index.html doubles as Community Chat and the always-available Hub launcher.
   // A disabled chat must never remove the My Account admin recovery path.
-  if(!canUse("chats")&&$("interfaceGateway")?.hidden&&
-     window.sessionStorage?.getItem("communityChatEntered")==="yes"){
+  if(!canUse("chats")&&$("interfaceGateway")?.hidden){
     if(typeof window.communityShowLoader==="function")window.communityShowLoader();
     else $("backToLoader")?.click();
   }
