@@ -9,11 +9,13 @@
    inside My Account (including touch scrolling on iPads and phones). */
 #hubSiteAdminPanel[open]{
  display:flex;flex-direction:column;
- max-height:min(68dvh,650px);min-height:0;
+ height:min(68dvh,650px);max-height:min(68dvh,650px);
+ min-height:0;overflow:hidden;
 }
 #hubSiteAdminPanel[open]>summary{flex:0 0 auto;list-style-position:inside}
 #hubSiteAdminPanel .hub-site-admin-body{
- padding:14px;min-height:0;overflow-y:auto;overflow-x:hidden;
+ flex:1 1 0%;height:0;max-height:100%;box-sizing:border-box;
+ padding:14px;min-height:0;overflow-y:scroll!important;overflow-x:hidden;
  overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;
  touch-action:pan-y;scrollbar-width:thin;scrollbar-color:#829ddd #172743;
 }
@@ -56,7 +58,7 @@
 #hubSiteDownOverlay .hub-site-down-card p{color:#d4def4}
 #hubSiteDownOverlay a{display:inline-flex;align-items:center;padding:12px 20px;border-radius:13px;color:#102149;background:#acc1ff;text-decoration:none;font-weight:800}
 @media(max-width:600px){
- #hubSiteAdminPanel[open]{max-height:min(60dvh,500px)}
+ #hubSiteAdminPanel[open]{height:min(60dvh,500px);max-height:min(60dvh,500px)}
  #hubSiteAdminPanel .hub-site-admin-row{gap:6px}
  #hubSiteAdminPanel .hub-site-admin-row strong{font-size:12px}
  #hubSiteAdminPanel .hub-site-admin-row small{font-size:10px}
