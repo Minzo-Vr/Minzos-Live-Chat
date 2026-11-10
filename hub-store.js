@@ -42,7 +42,7 @@
   "Gorilla Tag":{icon:"🦍",detail:"Open a browser-hosted Gorilla Tag-inspired game experience.",features:["Movement","Browser game","External source"]},
   "Twerk Race 3D":{icon:"🏃",detail:"Race through a colourful 3D obstacle course.",features:["Racing","Obstacles","Casual game"]}
  };
- let dialog=null,activeLaunch=null,previousFocus=null;
+ let dialog=null,activeLaunch=null,previousFocus=null,currentPreviewMeta=null;
  function node(tag,cls,text){
   const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el;
  }
@@ -57,7 +57,7 @@
  }
  function closePreview(restoreFocus=true){
   if(!dialog||dialog.hidden)return;
-  dialog.hidden=true;activeLaunch=null;
+  dialog.hidden=true;activeLaunch=null;currentPreviewMeta=null;
   if(restoreFocus&&previousFocus?.isConnected)previousFocus.focus();
   previousFocus=null;
  }
@@ -115,7 +115,7 @@
  }
  function openPreview(meta,launch){
   if(!meta)return;
-  makeDialog();previousFocus=document.activeElement;activeLaunch=launch;
+  makeDialog();previousFocus=document.activeElement;activeLaunch=launch;currentPreviewMeta=meta;
   $("hubStorePreviewType").textContent=(meta.category||"Game")+" · Preview";
   $("hubStorePreviewTitle").textContent=meta.name||"Preview";
   $("hubStorePreviewDescription").textContent=meta.detail||meta.short||"Explore this app.";
@@ -129,10 +129,20 @@
   for(const item of (meta.features||[]).slice(0,6))tags.append(node("span",null,item));
   const launchButton=$("hubStoreLaunch");launchButton.textContent=meta.launchLabel||"Open app";
   launchButton.hidden=typeof launch!=="function";
+  const availability=window.HubSiteControls;
+  const key=meta.hubKey;
+  const blocked=!!availability&&!!key&&(!availability.canUse(key)||(meta.category==="Browser game"&&!availability.canUse("game-hub")));
+  launchButton.disabled=blocked;
+  if(blocked)launchButton.textContent="Disabled by admin";
   dialog.hidden=false;$("hubStorePreviewClose").focus();
  }
  function addAppCard(option,meta){
   const card=node("article","store-card");
+  meta.hubKey={
+   gatewayOpenChat:"chats",gatewayOpenAI:"admin-ai",gatewayOpenShapes:"shapes-colours",
+   gatewayOpenMinzify:"minzify",gatewayOpenMinzSign:"minz-apps",gatewayOpenUpdates:"update-centre",
+   gatewayOpenGames:"game-hub"
+  }[option.id]||"";
   card.dataset.search=[meta.name,meta.short,meta.category,meta.detail].join(" ").toLowerCase();
   const art=createArt(meta);
   art.addEventListener("click",()=>openPreview(meta,()=>option.click()));
@@ -204,8 +214,18 @@
  function gameDetails(name){
   const details=GAMES[name]||{icon:"🎮",detail:"Preview this browser game before launching it.",features:["Browser game"]};
   return {name,short:details.detail,category:"Browser game",icon:details.icon,theme:"games",detail:details.detail,
+   hubKey:window.HubSiteControls?.keyForGame(name)||"game-"+name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""),
    features:details.features,launchLabel:"Play game"};
  }
+ window.addEventListener("community-hub-availability-change",()=>{
+  if(!dialog||dialog.hidden||!currentPreviewMeta)return;
+  const key=currentPreviewMeta.hubKey;
+  const gate=window.HubSiteControls;
+  const blocked=!!gate&&!!key&&(!gate.canUse(key)||
+    (currentPreviewMeta.category==="Browser game"&&!gate.canUse("game-hub")));
+  const action=$("hubStoreLaunch");
+  if(action){action.disabled=blocked;action.textContent=blocked?"Disabled by admin":(currentPreviewMeta.launchLabel||"Open app");}
+ });
  window.CommunityHubStore={openPreview,gameDetails};
  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",prepareGateway,{once:true});
  else prepareGateway();
