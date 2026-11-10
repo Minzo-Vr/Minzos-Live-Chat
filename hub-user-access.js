@@ -46,8 +46,11 @@ import {getDatabase,ref,get,onValue,set,remove,push,serverTimestamp} from "https
   const active=!!value;
   overlay.hidden=!active;
   if(active){
+   const pending=value?.pending===true;
+   const failed=value?.error===true;
+   $("hubBlockTitle").textContent=pending?"Checking account access…":failed?"Unable to verify access":"Access suspended";
    const message=typeof value.reason==="string"?value.reason.trim().slice(0,180):"";
-   $("hubBlockReason").textContent=message?"Reason: "+message:"Your account has been blocked by a Community Hub administrator.";
+   $("hubBlockReason").textContent=message?(pending||failed?message:"Reason: "+message):"Your account has been blocked by a Community Hub administrator.";
    // Do not let already-open chat, game players or browser frames keep running.
    const gameFrame=$("gamePlayFrame");
    if(gameFrame){gameFrame.removeAttribute("src");gameFrame.hidden=true;}
@@ -180,6 +183,9 @@ import {getDatabase,ref,get,onValue,set,remove,push,serverTimestamp} from "https
   unblockButton.addEventListener("click",()=>void setUserBlocked(uidInput.value.trim(),false,selected?.name||""));
   buttons.append(blockButton,unblockButton);
   form.append(uidLabel,reasonLabel,buttons);
+  uidInput.addEventListener("input",()=>{
+   if(selected&&selected.uid!==uidInput.value.trim())selected=null;
+  });
   form.addEventListener("submit",event=>{event.preventDefault();void setUserBlocked(uidInput.value.trim(),true,selected?.name||"")});
   status=n("p");status.id="hubUserBlockStatus";status.setAttribute("role","status");status.textContent="Only verified admins can change account access.";
   list=n("div");list.id="hubUserBlockList";
@@ -205,7 +211,7 @@ import {getDatabase,ref,get,onValue,set,remove,push,serverTimestamp} from "https
   if(!user)return;
   // An authenticated account is not admitted into the Hub until the block status
   // has been read. Database check failure is shown instead of silently accepting.
-  const waiting={reason:"Checking your Community Hub access…"};
+  const waiting={pending:true,reason:"Checking your Community Hub access…"};
   showOverlay(waiting);
   checked=false;
   try{
@@ -226,7 +232,7 @@ import {getDatabase,ref,get,onValue,set,remove,push,serverTimestamp} from "https
     if(id!==revision)return;
     blocked=true;
     checked=false;
-    showOverlay({reason:"Unable to verify account access. Check your connection or ask an administrator to publish the updated Firebase rules."});
+    showOverlay({error:true,reason:"Unable to verify account access. Check your connection or ask an administrator to publish the updated Firebase rules."});
     refreshAdminUI();
     console.warn("Community Hub block lookup failed:",error.code||error.message);
    });
@@ -243,7 +249,7 @@ import {getDatabase,ref,get,onValue,set,remove,push,serverTimestamp} from "https
   }catch(error){
    if(id!==revision)return;
    checked=false;blocked=true;
-   showOverlay({reason:"Could not verify this account's access. Please sign in again."});
+   showOverlay({error:true,reason:"Could not verify this account's access. Please sign in again."});
    console.warn("Community Hub auth verification:",error.code||error.message);
   }
  }
