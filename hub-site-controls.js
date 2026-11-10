@@ -329,6 +329,8 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
   adminSection=n("details");adminSection.id="hubSiteAdminPanel";adminSection.hidden=true;
   const summary=n("summary",null,"🌐 Website & Game Controls");
   const body=n("div","hub-site-admin-body");
+  body.tabIndex=0;body.setAttribute("role","region");
+  body.setAttribute("aria-label","Scroll through all website and game availability switches");
   body.append(n("p",null,"Turn Hub apps and games on or off for everyone, including admins. Opening a disabled experience requires verified Admin sign-in and the separate 4-digit PIN. My Account and these controls remain available for recovery."));
   adminStatus=n("div");adminStatus.id="hubSiteAdminStatus";adminStatus.setAttribute("role","status");
   body.append(adminStatus);
