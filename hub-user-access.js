@@ -62,8 +62,13 @@ import {getDatabase,ref,get,onValue,set,remove,push,serverTimestamp} from "https
   const allowed=!!account&&admin&&!blocked;
   if(entry)entry.hidden=!allowed;
   if(panel){
-   panel.hidden=!allowed;
-   if(!allowed)panel.open=false;
+   if(!allowed){
+    panel.open=false;
+    panel.hidden=true;
+    if(entry)entry.setAttribute("aria-expanded","false");
+   }else if(!panel.open){
+    panel.hidden=true;
+   }
   }
   if(gameEntry)gameEntry.hidden=!allowed;
   if(allowed&&status&&!listLoaded)status.textContent="Open the panel to view blocked accounts.";
@@ -111,11 +116,20 @@ import {getDatabase,ref,get,onValue,set,remove,push,serverTimestamp} from "https
   open();
   return true;
  }
- function open(){
+ function open(toggle=false){
   if(!admin||!account||blocked||!panel)return;
+  if(toggle&&panel.open&&!panel.hidden){
+   panel.open=false;
+   panel.hidden=true;
+   entry?.setAttribute("aria-expanded","false");
+   entry?.focus();
+   return;
+  }
   const modal=$("hubAccountModal");
   if(modal?.hidden)$("gatewayAccountButton")?.click();
-  panel.open=true;panel.hidden=false;
+  panel.hidden=false;
+  panel.open=true;
+  entry?.setAttribute("aria-expanded","true");
   startBlockList();
   panel.scrollIntoView({block:"nearest"});
   uidInput?.focus();
@@ -167,6 +181,8 @@ import {getDatabase,ref,get,onValue,set,remove,push,serverTimestamp} from "https
   if(!signed)return;
   entry=n("button");entry.id="hubUserBlockOpen";entry.type="button";
   entry.textContent="🚫 Block / Unblock Users";entry.hidden=true;
+  entry.setAttribute("aria-controls","hubUserBlockPanel");
+  entry.setAttribute("aria-expanded","false");
   panel=n("details");panel.id="hubUserBlockPanel";panel.hidden=true;
   const summary=n("summary",null,"🔐 Account Access Controls");
   const body=n("div","hub-user-block-body");
@@ -191,8 +207,13 @@ import {getDatabase,ref,get,onValue,set,remove,push,serverTimestamp} from "https
   list=n("div");list.id="hubUserBlockList";
   body.append(form,status,n("h3",null,"Currently blocked accounts"),list);
   panel.append(summary,body);signed.append(entry,panel);
-  entry.addEventListener("click",open);
-  panel.addEventListener("toggle",()=>{if(panel.open)startBlockList()});
+  entry.addEventListener("click",()=>open(true));
+  panel.addEventListener("toggle",()=>{
+   const visible=panel.open&&!!account&&admin&&!blocked;
+   panel.hidden=!visible;
+   entry.setAttribute("aria-expanded",String(visible));
+   if(visible)startBlockList();
+  });
   const gameBar=$("communityGameHub")?.querySelector(".game-top");
   if(gameBar){
    gameEntry=n("button");gameEntry.id="gameHubBlockUsers";gameEntry.type="button";gameEntry.textContent="🚫 Block users";gameEntry.hidden=true;
