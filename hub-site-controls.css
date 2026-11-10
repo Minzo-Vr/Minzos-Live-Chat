@@ -5,7 +5,27 @@
 #hubSiteAdminPanel{margin:19px 0 4px;border-radius:17px;border:1px solid #829bd0;background:#111d36;overflow:hidden;color:#f5f7ff;font-family:system-ui,sans-serif}
 #hubSiteAdminOpen{width:100%;padding:12px 15px;margin:14px 0 0;border:1px solid #97b4ff;background:#304f93;color:#fff;border-radius:12px;font-weight:800;font-size:13px;cursor:pointer}
 #hubSiteAdminPanel>summary{padding:13px 15px;cursor:pointer;font-weight:800;font-size:15px;background:#263a65}
-#hubSiteAdminPanel .hub-site-admin-body{padding:14px}
+/* Keep the header visible while the app/game list scrolls independently
+   inside My Account (including touch scrolling on iPads and phones). */
+#hubSiteAdminPanel[open]{
+ display:flex;flex-direction:column;
+ max-height:min(68dvh,650px);min-height:0;
+}
+#hubSiteAdminPanel[open]>summary{flex:0 0 auto;list-style-position:inside}
+#hubSiteAdminPanel .hub-site-admin-body{
+ padding:14px;min-height:0;overflow-y:auto;overflow-x:hidden;
+ overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;
+ touch-action:pan-y;scrollbar-width:thin;scrollbar-color:#829ddd #172743;
+}
+#hubSiteAdminPanel .hub-site-admin-body:focus-visible{
+ outline:2px solid #a6c5ff;outline-offset:-2px
+}
+#hubSiteAdminPanel .hub-site-admin-body::-webkit-scrollbar{width:9px}
+#hubSiteAdminPanel .hub-site-admin-body::-webkit-scrollbar-thumb{
+ background:#829ddd;border:2px solid #172743;border-radius:10px
+}
+#hubSiteAdminPanel .hub-site-admin-body::-webkit-scrollbar-track{background:#172743}
+
 #hubSiteAdminPanel p{margin:0 0 12px;font:12px/1.5 system-ui;color:#c4d1ed}
 #hubSiteAdminPanel h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin:20px 0 10px;color:#aac3ff}
 #hubSiteAdminPanel h3:first-of-type{margin-top:5px}
@@ -36,6 +56,7 @@
 #hubSiteDownOverlay .hub-site-down-card p{color:#d4def4}
 #hubSiteDownOverlay a{display:inline-flex;align-items:center;padding:12px 20px;border-radius:13px;color:#102149;background:#acc1ff;text-decoration:none;font-weight:800}
 @media(max-width:600px){
+ #hubSiteAdminPanel[open]{max-height:min(60dvh,500px)}
  #hubSiteAdminPanel .hub-site-admin-row{gap:6px}
  #hubSiteAdminPanel .hub-site-admin-row strong{font-size:12px}
  #hubSiteAdminPanel .hub-site-admin-row small{font-size:10px}
