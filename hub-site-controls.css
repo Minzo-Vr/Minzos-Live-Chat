@@ -84,3 +84,11 @@
   background:#2b497f;color:#fff;font:800 13px system-ui;cursor:pointer
 }
 #hubSiteDownUnlock:hover{background:#3d5e9b}
+
+/* An Admin can open a disabled experience after supplying the PIN. */
+.store-card.hub-pin-available .store-launch,
+#communityGameHub .store-game-card.hub-pin-available .store-game-play{
+  cursor:pointer!important;opacity:1!important;background:#a6bfff!important;
+  color:#0d1931!important;border-color:#a6bfff!important
+}
+.store-card.hub-pin-available .hub-app-state{color:#c7ddff;background:#263958;border-color:#7796c9}
