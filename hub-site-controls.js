@@ -51,6 +51,137 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
  let settings={},auth=null,db=null,account=null,isAdmin=false,roleOff=null,ready=false;
  let adminSection=null,adminButton=null,adminRows=new Map(),adminStatus=null;
  let pending=new Set(),latestAuth=0;
+
+ // The PIN is only checked after the Admin role has been verified by Firebase.
+ // A PIN in public GitHub Pages JavaScript is a convenience lock, not security.
+ // Store a one-way hash instead of the PIN itself.
+ const PIN_DIGEST="115609c5335582ade0da8f19a7e778797a2247532c386aae158d5eb7197dacae";
+ const PIN_CONTEXT="community-hub-maintenance-unlock:v1:";
+ const UNLOCK_CACHE="community-hub-admin-unlocks-v1";
+ const UNLOCK_MS=15*60*1000;
+ const unlocked=new Map();
+ let pinModal=null,pinInput=null,pinStatus=null,pinResolve=null,pinKey=null;
+ function rememberUnlock(key){
+  if(!account?.uid||!isAdmin)return;
+  const expires=Date.now()+UNLOCK_MS;
+  unlocked.set(key,{uid:account.uid,expires});
+  try{
+   const data={uid:account.uid,expires:{}};
+   for(const [k,record] of unlocked){
+    if(record.uid===account.uid&&record.expires>Date.now())data.expires[k]=record.expires;
+   }
+   sessionStorage.setItem(UNLOCK_CACHE,JSON.stringify(data));
+  }catch{}
+ }
+ function loadUnlocks(user){
+  unlocked.clear();
+  if(!user)return;
+  try{
+   const data=JSON.parse(sessionStorage.getItem(UNLOCK_CACHE)||"null");
+   if(data?.uid!==user.uid)return;
+   for(const [key,expires] of Object.entries(data.expires||{})){
+    if(ALL_KEYS.has(key)&&typeof expires==="number"&&expires>Date.now()&&expires<Date.now()+UNLOCK_MS+60000){
+     unlocked.set(key,{uid:user.uid,expires});
+    }
+   }
+  }catch{}
+ }
+ function clearUnlock(key){
+  unlocked.delete(key);
+  try{
+   const data=JSON.parse(sessionStorage.getItem(UNLOCK_CACHE)||"null");
+   if(data?.uid===account?.uid&&data.expires){
+    delete data.expires[key];
+    sessionStorage.setItem(UNLOCK_CACHE,JSON.stringify(data));
+   }
+  }catch{}
+ }
+ function isUnlocked(key){
+  const record=unlocked.get(key);
+  if(!isAdmin||!account||record?.uid!==account.uid)return false;
+  if(record.expires<=Date.now()){clearUnlock(key);return false}
+  return true;
+ }
+ async function verifyPin(pin){
+  if(!crypto?.subtle||typeof TextEncoder==="undefined")return false;
+  const bytes=new TextEncoder().encode(PIN_CONTEXT+String(pin));
+  const hash=await crypto.subtle.digest("SHA-256",bytes);
+  const hex=Array.from(new Uint8Array(hash),x=>x.toString(16).padStart(2,"0")).join("");
+  return hex===PIN_DIGEST;
+ }
+ function closePin(allowed=false){
+  const resolve=pinResolve;
+  pinResolve=null;pinKey=null;
+  if(pinModal)pinModal.hidden=true;
+  if(pinInput)pinInput.value="";
+  if(resolve)resolve(allowed);
+ }
+ function ensurePinModal(){
+  if(pinModal)return;
+  pinModal=n("div");pinModal.id="hubAdminPinModal";pinModal.hidden=true;
+  pinModal.setAttribute("role","dialog");pinModal.setAttribute("aria-modal","true");
+  pinModal.setAttribute("aria-labelledby","hubAdminPinTitle");
+  const card=n("div","hub-admin-pin-card");
+  const title=n("h2",null,"🔐 Admin unlock required");title.id="hubAdminPinTitle";
+  const explanation=n("p");explanation.id="hubAdminPinDescription";
+  const form=n("form");form.autocomplete="off";
+  const label=n("label",null,"4-digit admin PIN");
+  pinInput=n("input");pinInput.type="password";pinInput.inputMode="numeric";
+  pinInput.name="hubAdminPin";pinInput.required=true;pinInput.minLength=4;pinInput.maxLength=4;
+  pinInput.pattern="[0-9]{4}";pinInput.autocomplete="off";
+  pinInput.setAttribute("aria-describedby","hubAdminPinStatus");
+  label.append(pinInput);form.append(label);
+  pinStatus=n("p","hub-admin-pin-status");pinStatus.id="hubAdminPinStatus";pinStatus.setAttribute("role","status");
+  const actions=n("div","hub-admin-pin-actions");
+  const cancel=n("button",null,"Cancel");cancel.type="button";
+  const unlock=n("button",null,"Unlock app");unlock.type="submit";
+  actions.append(cancel,unlock);form.append(pinStatus,actions);
+  card.append(title,explanation,form);pinModal.append(card);document.body.append(pinModal);
+  cancel.addEventListener("click",()=>closePin(false));
+  pinModal.addEventListener("click",event=>{if(event.target===pinModal)closePin(false)});
+  pinModal.addEventListener("keydown",event=>{
+   if(event.key==="Escape"){event.preventDefault();event.stopImmediatePropagation();closePin(false)}
+   if(event.key==="Tab"){
+    const tabs=[pinInput,cancel,unlock],idx=tabs.indexOf(document.activeElement);
+    if(event.shiftKey&&idx===0){event.preventDefault();tabs.at(-1).focus()}
+    else if(!event.shiftKey&&idx===tabs.length-1){event.preventDefault();tabs[0].focus()}
+   }
+  },true);
+  form.addEventListener("submit",async event=>{
+   event.preventDefault();
+   const key=pinKey,owner=account?.uid;
+   if(!key||!isAdmin||!owner){closePin(false);return}
+   const pin=pinInput.value;unlock.disabled=true;
+   pinStatus.textContent="Checking PIN…";
+   try{
+    if(await verifyPin(pin)&&pinKey===key&&account?.uid===owner&&isAdmin){
+     rememberUnlock(key);
+     closePin(true);refresh();
+    }else{
+     pinInput.value="";pinStatus.textContent="Incorrect PIN. Try again.";
+     pinInput.focus();
+    }
+   }catch(error){
+    pinStatus.textContent="PIN check unavailable in this browser.";
+    console.warn("PIN verification unavailable",error?.message||error);
+   }finally{unlock.disabled=false}
+  });
+ }
+ function requestAccess(key){
+  if(!disabled(key)||isUnlocked(key))return Promise.resolve(true);
+  if(!isAdmin||!account){unavailableToast(key);return Promise.resolve(false)}
+  ensurePinModal();
+  if(pinResolve)closePin(false);
+  pinKey=key;
+  const name=entries.find(item=>item.key===key)?.name||"this app";
+  $("hubAdminPinDescription").textContent=name+" is disabled. Enter the Admin PIN to unlock only this experience for 15 minutes in this browser tab.";
+  pinStatus.textContent="";
+  pinInput.value="";
+  pinModal.hidden=false;
+  pinInput.focus();
+  return new Promise(resolve=>{pinResolve=resolve});
+ }
+
  const n=(tag,cls,text)=>{
   const el=document.createElement(tag);
   if(cls)el.className=cls;
@@ -58,10 +189,11 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
   return el;
  };
  function disabled(key){return ALL_KEYS.has(key)&&settings[key]===true;}
- function canUse(key){return isAdmin||!disabled(key);}
+ function canUse(key){return !disabled(key)||isUnlocked(key);}
  const api={
   isDisabled:disabled,
   canUse,
+  requestAccess,
   isAdmin:()=>isAdmin,
   keyForGame,
   openAdmin:()=>openAdminPanel(),
