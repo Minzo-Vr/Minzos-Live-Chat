@@ -19,7 +19,8 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
   ["minzify","Minzify","Music search and playlists","🎧"],
   ["minz-apps","Minz Apps","Apps and download catalogue","📱"],
   ["update-centre","Update Centre","Updates and releases","📦"],
-  ["game-hub","Game Hub","Browser games and game chat","🎮"]
+  ["game-hub","Game Hub","Browser games and game chat","🎮"],
+  ["community-browser","Community Browser","Built-in browser sidebar","🌐"]
  ];
  const GAME_ITEMS=[
   ["2048","🔢"],["Cookie Clicker","🍪"],["Google Dino","🦖"],
@@ -38,7 +39,7 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
  const KEY_FOR_BUTTON={
   gatewayOpenChat:"chats",gatewayOpenAI:"admin-ai",gatewayOpenShapes:"shapes-colours",
   gatewayOpenMinzify:"minzify",gatewayOpenMinzSign:"minz-apps",gatewayOpenUpdates:"update-centre",
-  gatewayOpenGames:"game-hub",gameHubToggle:"game-hub"
+  gatewayOpenGames:"game-hub",gameHubToggle:"game-hub",browserSidebarToggle:"community-browser"
  };
  const pageFile=(location.pathname.split("/").pop()||"index.html").toLowerCase();
  const PAGE_KEYS={
