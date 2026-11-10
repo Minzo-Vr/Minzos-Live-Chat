@@ -1,0 +1,63 @@
+name: Publish Firebase Realtime Database Rules
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "database.rules.json"
+      - "firebase.json"
+      - "scripts/test-firebase-rules.mjs"
+      - ".github/workflows/publish-firebase-rules.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firebase-realtime-rules-production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate database access policies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run rules smoke tests
+        run: node scripts/test-firebase-rules.mjs
+
+  publish:
+    name: Deploy reviewed database rules
+    needs: [validate]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify secret is configured
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        shell: bash
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT_JSON" ]; then
+            echo "::error::Missing FIREBASE_SERVICE_ACCOUNT_JSON. Add your Firebase service account key to GitHub Settings > Secrets and variables > Actions before publishing."
+            exit 1
+          fi
+      - name: Authenticate securely with Firebase
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          create_credentials_file: true
+          export_environment_variables: true
+      - name: Install Firebase CLI
+        run: npm install --global firebase-tools
+      - name: Deploy only Realtime Database rules
+        run: firebase deploy --project website-chat-80038 --only database --non-interactive
