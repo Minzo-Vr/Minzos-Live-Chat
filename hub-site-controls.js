@@ -5,7 +5,7 @@
  */
 import {initializeApp,getApps} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {getAuth,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
 (()=>{
  "use strict";
@@ -50,6 +50,7 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
  const currentPage=PAGE_KEYS[pageFile]||null;
  let settings={},auth=null,db=null,account=null,isAdmin=false,roleOff=null,ready=false;
  let adminSection=null,adminButton=null,adminRows=new Map(),adminStatus=null;
+ let disableAllButton=null,enableAllButton=null,bulkPending=false;
  let pending=new Set(),latestAuth=0;
 
  // The PIN is only checked after the Admin role has been verified by Firebase.
@@ -220,9 +221,11 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
   if(!adminSection.open)adminSection.hidden=true;
   for(const [key,refs] of adminRows){
    refs.input.checked=disabled(key);
-   refs.input.disabled=pending.has(key)||!ready;
+   refs.input.disabled=bulkPending||pending.has(key)||!ready;
    refs.status.textContent=disabled(key)?"Disabled":"Enabled";
   }
+  if(disableAllButton)disableAllButton.disabled=!ready||bulkPending||pending.size>0||entries.every(item=>disabled(item.key));
+  if(enableAllButton)enableAllButton.disabled=!ready||bulkPending||pending.size>0||entries.every(item=>!disabled(item.key));
   if(adminStatus&&!ready)adminStatus.textContent="Connecting to website settings…";
  }
  function renderLaunchers(){
@@ -329,6 +332,44 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
   body.append(n("p",null,"Turn Hub apps and games on or off for everyone, including admins. Opening a disabled experience requires verified Admin sign-in and the separate 4-digit PIN. My Account and these controls remain available for recovery."));
   adminStatus=n("div");adminStatus.id="hubSiteAdminStatus";adminStatus.setAttribute("role","status");
   body.append(adminStatus);
+  // Batch controls go above the individual blocked-app switches.
+  const bulkActions=n("div","hub-site-admin-bulk-actions");
+  bulkActions.style.cssText="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0;";
+  disableAllButton=n("button",null,"⛔ Disable All");
+  disableAllButton.type="button";disableAllButton.disabled=true;
+  enableAllButton=n("button",null,"✅ Enable All");
+  enableAllButton.type="button";enableAllButton.disabled=true;
+  bulkActions.append(disableAllButton,enableAllButton);body.append(bulkActions);
+  body.append(n("p","hub-site-admin-help","Disable All blocks every listed app and game, including for admins. My Account and Admin Website Controls remain accessible so you can restore access."));
+  async function changeAll(disable){
+   if(!account||!isAdmin||!db||!ready||bulkPending||pending.size)return;
+   const targets=entries.filter(item=>disabled(item.key)!==disable);
+   if(!targets.length)return;
+   const question=disable
+    ?"Disable ALL "+entries.length+" apps and games for everyone, including admins? Admin PIN unlocks are still required for disabled experiences."
+    :"Enable ALL apps and games for everyone?";
+   if(!window.confirm(question))return;
+   const actor=account;
+   bulkPending=true;renderAdmin();
+   adminStatus.textContent=disable?"Disabling all apps and games…":"Enabling all apps and games…";
+   try{
+    await update(ref(db,PATH),Object.fromEntries(targets.map(item=>[item.key,disable])));
+    void push(ref(db,"chatActivityLog"),{
+     uid:actor.uid,actorName:String(actor.displayName||"Admin").slice(0,60),
+     action:"website_availability",detail:disable?"all=disabled":"all=enabled",
+     at:serverTimestamp()
+    }).catch(()=>{});
+    adminStatus.textContent=disable
+     ?"All apps and games disabled for everyone. My Account and admin controls remain accessible."
+     :"All apps and games enabled for everyone.";
+   }catch(error){
+    adminStatus.textContent="Bulk change failed: "+String(error?.code||error?.message||"Check Firebase rules.").slice(0,130);
+   }finally{
+    bulkPending=false;renderAdmin();
+   }
+  }
+  disableAllButton.addEventListener("click",()=>void changeAll(true));
+  enableAllButton.addEventListener("click",()=>void changeAll(false));
   let lastCategory="";
   for(const item of entries){
    if(item.category!==lastCategory){lastCategory=item.category;body.append(n("h3",null,lastCategory))}
@@ -342,7 +383,7 @@ import {getDatabase,ref,onValue,set,push,serverTimestamp} from "https://www.gsta
    label.append(input,caption);row.append(info,label,state);body.append(row);
    adminRows.set(item.key,{input,status:state});
    input.addEventListener("change",async()=>{
-    if(!account||!isAdmin||!db){input.checked=disabled(item.key);return}
+    if(!account||!isAdmin||!db||bulkPending){input.checked=disabled(item.key);return}
     const disable=input.checked;
     pending.add(item.key);renderAdmin();
     adminStatus.textContent=(disable?"Disabling ":"Enabling ")+item.name+"…";
