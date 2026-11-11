@@ -15,7 +15,8 @@
 #hubSiteAdminPanel[open]>summary{flex:0 0 auto;list-style-position:inside}
 #hubSiteAdminPanel .hub-site-admin-body{
  flex:1 1 0%;height:0;max-height:100%;box-sizing:border-box;
- padding:14px;min-height:0;overflow-y:scroll!important;overflow-x:hidden;
+ padding:14px;min-height:0;background:#172743;color:#f5f7ff;
+ overflow-y:scroll!important;overflow-x:hidden;
  overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;
  touch-action:pan-y;scrollbar-width:thin;scrollbar-color:#829ddd #172743;
 }
