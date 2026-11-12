@@ -65,6 +65,7 @@ import {getDatabase,ref,get,onValue,set,remove,push,serverTimestamp} from "https
    if(!allowed){
     panel.open=false;
     panel.hidden=true;
+    window.HubAdminPin?.lock("users");
     if(entry)entry.setAttribute("aria-expanded","false");
    }else if(!panel.open){
     panel.hidden=true;
@@ -113,18 +114,22 @@ import {getDatabase,ref,get,onValue,set,remove,push,serverTimestamp} from "https
   selected={uid:cleaned,name:String(name||"").trim().slice(0,80)};
   uidInput.value=cleaned;
   if(status)status.textContent="Selected "+(selected.name||"user")+" ("+cleaned+"). Enter a reason and press Block user.";
-  open();
+  void open();
   return true;
  }
- function open(toggle=false){
+ async function open(toggle=false){
   if(!admin||!account||blocked||!panel)return;
   if(toggle&&panel.open&&!panel.hidden){
    panel.open=false;
    panel.hidden=true;
+   window.HubAdminPin?.lock("users");
    entry?.setAttribute("aria-expanded","false");
    entry?.focus();
    return;
   }
+  const uid=account.uid;
+  if(!await window.HubAdminPin?.request({scope:"users",uid,label:"Block / Unblock Users"}))return;
+  if(!account||account.uid!==uid||!admin||blocked){window.HubAdminPin?.lock("users");return;}
   const modal=$("hubAccountModal");
   if(modal?.hidden)$("gatewayAccountButton")?.click();
   panel.hidden=false;
@@ -207,17 +212,18 @@ import {getDatabase,ref,get,onValue,set,remove,push,serverTimestamp} from "https
   list=n("div");list.id="hubUserBlockList";
   body.append(form,status,n("h3",null,"Currently blocked accounts"),list);
   panel.append(summary,body);signed.append(entry,panel);
-  entry.addEventListener("click",()=>open(true));
+  entry.addEventListener("click",()=>void open(true));
   panel.addEventListener("toggle",()=>{
    const visible=panel.open&&!!account&&admin&&!blocked;
    panel.hidden=!visible;
+   if(!visible)window.HubAdminPin?.lock("users");
    entry.setAttribute("aria-expanded",String(visible));
    if(visible)startBlockList();
   });
   const gameBar=$("communityGameHub")?.querySelector(".game-top");
   if(gameBar){
    gameEntry=n("button");gameEntry.id="gameHubBlockUsers";gameEntry.type="button";gameEntry.textContent="🚫 Block users";gameEntry.hidden=true;
-   gameEntry.addEventListener("click",()=>open());
+   gameEntry.addEventListener("click",()=>void open());
    gameBar.insertBefore(gameEntry,$("gameClose"));
   }
   refreshAdminUI();
@@ -227,7 +233,7 @@ import {getDatabase,ref,get,onValue,set,remove,push,serverTimestamp} from "https
   stopSelf=null;stopRole=null;stopList=null;listLoaded=false;blockedRecords={};
  }
  async function syncUser(user){
-  const id=++revision;unwatch();account=user;admin=false;tokenAdmin=false;blocked=false;checked=!user;selected=null;
+  const id=++revision;unwatch();window.HubAdminPin?.lock("users");account=user;admin=false;tokenAdmin=false;blocked=false;checked=!user;selected=null;
   showOverlay(false);refreshAdminUI();
   if(!user)return;
   // An authenticated account is not admitted into the Hub until the block status
