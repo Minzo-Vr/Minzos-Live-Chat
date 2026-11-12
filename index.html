@@ -1029,7 +1029,7 @@ function communityShowLoader(){
  if(loading)loading.hidden=true;
  if(selection)selection.hidden=false;
  const ai=document.getElementById("adminAiOverlay");
- if(ai){ai.hidden=true;ai.style.setProperty("display","none","important");}
+ if(ai){ai.hidden=true;ai.style.setProperty("display","none","important");window.HubAdminPin?.lock("admin-ai");}
 }
 document.addEventListener("click",function(e){
  const back=e.target.closest?.("#backToLoader");
@@ -1044,7 +1044,7 @@ document.addEventListener("click",function(event){
  event.preventDefault();
  event.stopPropagation();
  const panel=document.getElementById("adminAiOverlay");
- if(panel){panel.hidden=true;panel.style.setProperty("display","none","important");}
+ if(panel){panel.hidden=true;panel.style.setProperty("display","none","important");window.HubAdminPin?.lock("admin-ai");}
 },true);
 </script>
 
