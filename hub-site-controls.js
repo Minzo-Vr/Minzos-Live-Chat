@@ -214,6 +214,7 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
   if(!allowed){
    adminSection.open=false;
    adminSection.hidden=true;
+   window.HubAdminPin?.lock("site");
    adminButton.setAttribute("aria-expanded","false");
    return;
   }
@@ -413,6 +414,7 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
   adminSection.addEventListener("toggle",()=>{
    const visible=adminSection.open&&!!account&&isAdmin;
    adminSection.hidden=!visible;
+   if(!visible)window.HubAdminPin?.lock("site");
    adminButton.setAttribute("aria-expanded",String(visible));
   });
   const gameTop=$("communityGameHub")?.querySelector(".game-top");
@@ -427,15 +429,19 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
   }
   renderAdmin();
  }
- function openAdminPanel(toggle=false){
+ async function openAdminPanel(toggle=false){
   if(!account||!isAdmin||!adminSection)return;
   if(toggle&&adminSection.open&&!adminSection.hidden){
    adminSection.open=false;
    adminSection.hidden=true;
+   window.HubAdminPin?.lock("site");
    adminButton.setAttribute("aria-expanded","false");
    adminButton.focus();
    return;
   }
+  const uid=account.uid;
+  if(!await window.HubAdminPin?.request({scope:"site",uid,label:"Website & Game Admin Controls"}))return;
+  if(!account||account.uid!==uid||!isAdmin){window.HubAdminPin?.lock("site");return;}
   const modal=$("hubAccountModal");
   if(modal?.hidden)$("gatewayAccountButton")?.click();
   adminSection.hidden=false;
@@ -446,7 +452,7 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
  }
  function roleListenerFor(user){
   if(roleOff){roleOff();roleOff=null}
-  isAdmin=false;renderAdmin();
+  isAdmin=false;window.HubAdminPin?.lock("site");renderAdmin();
   if(!user){refresh();return}
   const request=++latestAuth;
   user.getIdTokenResult().then(result=>{
@@ -494,7 +500,7 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
   const app=getApps().find(a=>a.name==="[DEFAULT]")||initializeApp(config);
   auth=getAuth(app);db=getDatabase(app);
   onAuthStateChanged(auth,user=>{
-   latestAuth++;account=user;
+   latestAuth++;account=user;window.HubAdminPin?.lock("site");
    if(pinResolve)closePin(false);
    loadUnlocks(user);
    if(roleOff){roleOff();roleOff=null}
