@@ -1257,6 +1257,7 @@ document.addEventListener("click",function(event){
           <div><h2 id="announcementsTitle">📢 What's New?</h2><p>Community Chat updates and new features! 🎉</p></div>
           <button type="button" id="announcementsClose" aria-label="Close announcements">✕</button>
         </div>
+        <button type="button" id="announcementAdminUnlock" hidden>🔐 Open admin announcement editor</button>
         <section id="announcementAdminDraft" class="announcement-draft" hidden>
           <div class="draft-topline">🔒 <strong>Admin-only unpublished announcement</strong> <span class="draft-pill">DRAFT · NOT PUBLIC</span></div>
           <label for="announcementDraftVersion">Version</label>
@@ -2309,6 +2310,11 @@ try{
       try{
         if(action==="role"){
           if(!isAdmin)throw Error("Admin only");
+          const actorUid=user.uid;
+          if(!window.HubAdminPin?.isUnlocked(actorUid,"roles")){
+            if(!await window.HubAdminPin?.request({scope:"roles",uid:actorUid,label:"Manage Admin Roles"}))return;
+            if(!isAdmin||user?.uid!==actorUid)return;
+          }
           const selected=[...$("profileRoleChoices").querySelectorAll("input:checked")].map(x=>x.value);
           if(uid===user?.uid && baseAdminClaim && !selected.includes("admin"))selected.push("admin");
           const roleData=Object.fromEntries(selected.map(k=>[k,true]));
@@ -3259,7 +3265,7 @@ try{
       return {version,features};
     }
     $("announcementSaveDraft").addEventListener("click",async()=>{
-      if(!isAdmin||!user||!db)return;
+      if(!isAdmin||!user||!db||!window.HubAdminPin?.isUnlocked(user.uid,"announcements"))return;
       try{
         const draft=readAnnouncementDraft();
         // Firebase represents an empty array as null; omit it for blank drafts.
@@ -3268,7 +3274,7 @@ try{
       }catch(err){$("announcementDraftStatus").textContent="Could not save: "+(err.code||err.message);}
     });
     $("announcementPublishNow").addEventListener("click",async()=>{
-      if(!isAdmin||!user||!db)return;
+      if(!isAdmin||!user||!db||!window.HubAdminPin?.isUnlocked(user.uid,"announcements"))return;
       try{
         const draft=readAnnouncementDraft();
         if(!draft.features.length)throw Error("Add at least one announcement entry before publishing.");
@@ -3287,12 +3293,21 @@ try{
       }catch(err){$("announcementDraftStatus").textContent="Publish failed: "+(err.code||err.message);}
       finally{$("announcementPublishNow").disabled=false;}
     });
+    $("announcementAdminUnlock").addEventListener("click",async()=>{
+      if(!isAdmin||!user)return;
+      const uid=user.uid;
+      if(!await window.HubAdminPin?.request({scope:"announcements",uid,label:"Admin Announcements"}))return;
+      if(!isAdmin||user?.uid!==uid){window.HubAdminPin?.lock("announcements");return;}
+      $("announcementAdminDraft").hidden=false;
+      $("announcementAdminUnlock").hidden=true;
+    });
     function startAnnouncementListeners(){
       if(announcementsUnsub){announcementsUnsub();announcementsUnsub=null;}
       if(draftUnsub){draftUnsub();draftUnsub=null;}
       if(editorVersionUnsub){editorVersionUnsub();editorVersionUnsub=null;}
       publishedReleases=[];
-      $("announcementAdminDraft").hidden=!isAdmin;
+      $("announcementAdminUnlock").hidden=!isAdmin||!!window.HubAdminPin?.isUnlocked(user?.uid,"announcements");
+      $("announcementAdminDraft").hidden=!isAdmin||!window.HubAdminPin?.isUnlocked(user?.uid,"announcements");
       renderAnnouncements();updateAnnouncementPreferences();
       if(!db||!user)return;
       announcementsUnsub=onValue(ref(db,"chatAnnouncementPublished"),snap=>{
@@ -3322,7 +3337,11 @@ try{
     // Drafts remain empty until the admin types or explicitly clicks Log recent changes.
     renderDraftPreview();
     updatePreviousDraftButton();
-    function closeAnnouncements(){announcementsOverlay.hidden=true;announcementPreviousFocus?.focus();}
+    function closeAnnouncements(){
+      announcementsOverlay.hidden=true;window.HubAdminPin?.lock("announcements");
+      $("announcementAdminDraft").hidden=true;$("announcementAdminUnlock").hidden=!isAdmin;
+      announcementPreviousFocus?.focus();
+    }
     announcementsToggle.addEventListener("click",()=>{
       announcementPreviousFocus=document.activeElement;
       renderAnnouncements();announcementsOverlay.hidden=false;
