@@ -74,13 +74,35 @@ body{background:linear-gradient(180deg,#6cc6ee 0%,#a5e5f5 52%,#d8f0e1 85%,#d5e9b
 @media(max-width:1000px){#itemGrid{grid-template-columns:repeat(6,minmax(0,1fr))}.itemBubble:nth-child(n+7){display:none}.brand-title{font-size:18px}#tipBar{display:none}}
 @media(max-width:580px){#topbar{left:8px;right:8px;top:max(env(safe-area-inset-top),6px)}.brand{padding:7px 9px;min-width:127px;border-radius:15px}.brand-title{font-size:16px}.brand-sub{font-size:8px}.actions{gap:3px}.topbtn{padding:7px 8px;font-size:10px;border-radius:10px}#status{top:69px;left:8px}.status-pill{font-size:9px;padding:6px 8px}#lookTip{top:68px;right:7px;font-size:9px}#joystick{width:111px;height:111px;left:14px;bottom:max(15px,env(safe-area-inset-bottom))}#stick{width:55px;height:55px}#rightActions{right:11px;bottom:134px;gap:5px}.gamebtn{min-width:56px;height:52px;border-radius:15px;font-size:9px}.gamebtn span{font-size:20px}#bubbleDock{right:9px;bottom:max(6px,env(safe-area-inset-bottom))}.bubble-button.primary{width:99px;height:99px}.bubble-button.secondary{width:66px;height:66px}#inventoryPanel{width:98vw;border-radius:19px;padding:9px}#itemGrid{grid-template-columns:repeat(3,minmax(0,1fr))}.itemBubble{height:102px}.itemBubble:nth-child(n+7){display:none}.tab{padding:7px 10px}.panelhead strong{font-size:16px}#targetHint{font-size:9px}}
 @media(max-height:525px){#joystick{width:90px;height:90px;left:17px;bottom:15px}#stick{width:45px;height:45px}#rightActions{bottom:105px}#bubbleDock .primary{width:91px;height:91px}#bubbleDock .secondary{width:65px;height:65px}#inventoryPanel{max-height:92vh}.itemBubble{height:81px}.itemBubble .itemName{font-size:9px}}
+
+/* Immersive, low-clutter creative HUD: keeps every tool accessible through the menu. */
+#topbar{left:auto;right:max(12px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));display:block}
+#topbar .brand{display:none}
+#topbar .actions{display:none;position:absolute;top:49px;right:0;width:190px;padding:10px;border:1px solid #ffffff88;border-radius:17px;background:#d9f2f5e8;box-shadow:0 10px 35px #10394c66;backdrop-filter:blur(15px);flex-direction:column;align-items:stretch;z-index:9}
+#topbar .actions.open{display:flex}
+#topbar .actions .topbtn{width:100%;text-align:left}
+#hudMenu{display:block;pointer-events:auto;position:absolute;right:0;top:0;width:43px;height:43px;border-radius:50%;border:1.5px solid #ffffffa8;background:#c8f3ff8c;color:#164f66;font-size:24px;font-weight:900;backdrop-filter:blur(10px);box-shadow:0 4px 15px #163f4b44}
+#status,#lookTip,#tipBar{display:none!important}
+#targetHint{opacity:.72}
+#joystick{background:#b9eff34f;box-shadow:inset 0 0 10px #fff7;border:1px solid #fff7}
+#joystick::after{display:none}
+#stick{background:radial-gradient(circle at 28% 22%,#ffffffd9,#9cdee0a8 65%,#53a7b69e);border:2px solid #ffffffa8}
+#rightActions{right:12px;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 112px);gap:5px}
+.gamebtn{min-width:49px;width:49px;height:49px;border-radius:50%;font-size:0;padding:0;background:#c8f1f8a8;border:1px solid #fffc;box-shadow:0 3px 14px #24566b35}
+.gamebtn span{font-size:23px}
+#bubbleDock{right:12px;bottom:max(12px,env(safe-area-inset-bottom));gap:8px}
+.bubble-button.primary{width:100px;height:100px}
+.bubble-button.secondary{width:67px;height:67px}
+.bubble-button .button-label{font-size:9px}
+#inventoryPanel{background:#e1f5f2ee}
+@media(max-width:580px){#topbar{left:auto;right:12px}#rightActions{right:12px;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 104px)}.gamebtn{min-width:42px;width:42px;height:42px}.gamebtn span{font-size:20px}#bubbleDock .primary{width:91px;height:91px}#bubbleDock .secondary{width:61px;height:61px}}
 </style>
 </head>
 <body>
 <div id="sun"></div><canvas id="game" aria-label="3D creative building world"></canvas><div id="vignette"></div>
 <div id="hud">
  <div id="topbar"><div class="brand"><div class="brand-title">🫧 BUBBLE<b>BUILDER</b></div><div class="brand-sub">3D · Creative sandbox</div></div>
- <div class="actions"><button id="undoBtn" class="topbtn" title="Undo">↶ Undo</button><button id="saveBtn" class="topbtn" title="Export world">↓ Save</button><button id="loadBtn" class="topbtn" title="Load your world">↑ Load</button><button id="clearBtn" class="topbtn" title="Clear all blocks">Reset</button><button id="helpButton" class="topbtn">?</button></div></div>
+ <button id="hudMenu" type="button" aria-label="Open game menu" aria-expanded="false">☰</button><div class="actions" id="hudActions"><button id="undoBtn" class="topbtn" title="Undo">↶ Undo</button><button id="saveBtn" class="topbtn" title="Export world">↓ Save</button><button id="loadBtn" class="topbtn" title="Load your world">↑ Load</button><button id="clearBtn" class="topbtn" title="Clear all blocks">Reset</button><button id="helpButton" class="topbtn">?</button></div></div>
  <div id="status"><span class="status-pill"><span class="dot"></span>CREATIVE MODE</span><span class="status-pill" id="countText">0 BLOCKS</span></div>
  <div id="lookTip">↔ DRAG TO LOOK</div><div id="reticle"></div><div id="targetHint">AIM • PLACE • BUILD</div>
  <div id="joystick"><div id="stick"></div></div>
@@ -229,5 +251,14 @@ init().catch(e=>{$('loadingText').textContent='Could not start: '+e.message;cons
 })();
 
 </script>
-</body>
+<script>
+(function(){
+ const menu=document.getElementById('hudMenu'),actions=document.getElementById('hudActions');
+ if(!menu||!actions)return;
+ function toggle(open){actions.classList.toggle('open',open);menu.setAttribute('aria-expanded',String(open));menu.setAttribute('aria-label',open?'Close game menu':'Open game menu');}
+ menu.addEventListener('click',()=>toggle(!actions.classList.contains('open')));
+ actions.addEventListener('click',e=>{if(e.target.closest('button'))toggle(false);});
+ document.addEventListener('pointerdown',e=>{if(!e.target.closest('#topbar'))toggle(false);});
+})();
+</script></body>
 </html>
