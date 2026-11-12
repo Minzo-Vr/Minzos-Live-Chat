@@ -11,6 +11,9 @@
   gatewayOpenAI:{name:"Admin AI",short:"An AI workspace for admins",category:"Admin only",icon:"🤖",theme:"ai",
    detail:"Ask questions, review project ideas, and work with the admin-only Community Hub AI tools. Verified administrator access is required.",
    features:["Verified admin access","Chat and project memory","Review suggested edits"]},
+  gatewayOpenBubbleBuilder:{name:"BubbleBuilder 3D",short:"Build with 3D bubbles",category:"Creative",icon:"🫧",theme:"shapes",
+   detail:"Explore a colourful first-person building world using touch controls, 3D item bubbles, and models from the Yeeps building pack.",
+   features:["First-person thumbstick movement","3D inventory bubbles","Place, rotate, erase and save builds"]},
   gatewayOpenShapes:{name:"Shapes & Colours",short:"Build your own 3D scenes",category:"Creative",icon:"🎨",theme:"shapes",
    detail:"Make colourful 3D scenes, place and transform objects, experiment with building tools and explore shared building features.",
    features:["3D shapes and colours","Move, rotate and scale","MultiBuilder tools"]},
@@ -142,7 +145,7 @@
  function addAppCard(option,meta){
   const card=node("article","store-card");
   meta.hubKey={
-   gatewayOpenChat:"chats",gatewayOpenAI:"admin-ai",gatewayOpenShapes:"shapes-colours",
+   gatewayOpenChat:"chats",gatewayOpenAI:"admin-ai",gatewayOpenShapes:"shapes-colours",gatewayOpenBubbleBuilder:"bubblebuilder",
    gatewayOpenMinzify:"minzify",gatewayOpenMinzSign:"minz-apps",gatewayOpenUpdates:"update-centre",
    gatewayOpenGames:"game-hub"
   }[option.id]||"";
