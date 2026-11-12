@@ -74,35 +74,13 @@ body{background:linear-gradient(180deg,#6cc6ee 0%,#a5e5f5 52%,#d8f0e1 85%,#d5e9b
 @media(max-width:1000px){#itemGrid{grid-template-columns:repeat(6,minmax(0,1fr))}.itemBubble:nth-child(n+7){display:none}.brand-title{font-size:18px}#tipBar{display:none}}
 @media(max-width:580px){#topbar{left:8px;right:8px;top:max(env(safe-area-inset-top),6px)}.brand{padding:7px 9px;min-width:127px;border-radius:15px}.brand-title{font-size:16px}.brand-sub{font-size:8px}.actions{gap:3px}.topbtn{padding:7px 8px;font-size:10px;border-radius:10px}#status{top:69px;left:8px}.status-pill{font-size:9px;padding:6px 8px}#lookTip{top:68px;right:7px;font-size:9px}#joystick{width:111px;height:111px;left:14px;bottom:max(15px,env(safe-area-inset-bottom))}#stick{width:55px;height:55px}#rightActions{right:11px;bottom:134px;gap:5px}.gamebtn{min-width:56px;height:52px;border-radius:15px;font-size:9px}.gamebtn span{font-size:20px}#bubbleDock{right:9px;bottom:max(6px,env(safe-area-inset-bottom))}.bubble-button.primary{width:99px;height:99px}.bubble-button.secondary{width:66px;height:66px}#inventoryPanel{width:98vw;border-radius:19px;padding:9px}#itemGrid{grid-template-columns:repeat(3,minmax(0,1fr))}.itemBubble{height:102px}.itemBubble:nth-child(n+7){display:none}.tab{padding:7px 10px}.panelhead strong{font-size:16px}#targetHint{font-size:9px}}
 @media(max-height:525px){#joystick{width:90px;height:90px;left:17px;bottom:15px}#stick{width:45px;height:45px}#rightActions{bottom:105px}#bubbleDock .primary{width:91px;height:91px}#bubbleDock .secondary{width:65px;height:65px}#inventoryPanel{max-height:92vh}.itemBubble{height:81px}.itemBubble .itemName{font-size:9px}}
-
-/* Immersive, low-clutter creative HUD: keeps every tool accessible through the menu. */
-#topbar{left:auto;right:max(12px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));display:block}
-#topbar .brand{display:none}
-#topbar .actions{display:none;position:absolute;top:49px;right:0;width:190px;padding:10px;border:1px solid #ffffff88;border-radius:17px;background:#d9f2f5e8;box-shadow:0 10px 35px #10394c66;backdrop-filter:blur(15px);flex-direction:column;align-items:stretch;z-index:9}
-#topbar .actions.open{display:flex}
-#topbar .actions .topbtn{width:100%;text-align:left}
-#hudMenu{display:block;pointer-events:auto;position:absolute;right:0;top:0;width:43px;height:43px;border-radius:50%;border:1.5px solid #ffffffa8;background:#c8f3ff8c;color:#164f66;font-size:24px;font-weight:900;backdrop-filter:blur(10px);box-shadow:0 4px 15px #163f4b44}
-#status,#lookTip,#tipBar{display:none!important}
-#targetHint{opacity:.72}
-#joystick{background:#b9eff34f;box-shadow:inset 0 0 10px #fff7;border:1px solid #fff7}
-#joystick::after{display:none}
-#stick{background:radial-gradient(circle at 28% 22%,#ffffffd9,#9cdee0a8 65%,#53a7b69e);border:2px solid #ffffffa8}
-#rightActions{right:12px;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 112px);gap:5px}
-.gamebtn{min-width:49px;width:49px;height:49px;border-radius:50%;font-size:0;padding:0;background:#c8f1f8a8;border:1px solid #fffc;box-shadow:0 3px 14px #24566b35}
-.gamebtn span{font-size:23px}
-#bubbleDock{right:12px;bottom:max(12px,env(safe-area-inset-bottom));gap:8px}
-.bubble-button.primary{width:100px;height:100px}
-.bubble-button.secondary{width:67px;height:67px}
-.bubble-button .button-label{font-size:9px}
-#inventoryPanel{background:#e1f5f2ee}
-@media(max-width:580px){#topbar{left:auto;right:12px}#rightActions{right:12px;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 104px)}.gamebtn{min-width:42px;width:42px;height:42px}.gamebtn span{font-size:20px}#bubbleDock .primary{width:91px;height:91px}#bubbleDock .secondary{width:61px;height:61px}}
-</style>
+#topbar{left:auto;right:max(12px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));display:block}#topbar .brand{display:none}#topbar .actions{display:none;position:absolute;top:49px;right:0;width:190px;padding:10px;border:1px solid #ffffff88;border-radius:17px;background:#d9f2f5e8;box-shadow:0 10px 35px #10394c66;backdrop-filter:blur(15px);flex-direction:column;align-items:stretch;z-index:9}#topbar .actions.open{display:flex}#topbar .actions .topbtn{width:100%;text-align:left}#hudMenu{display:block;pointer-events:auto;position:absolute;right:0;top:0;width:43px;height:43px;border-radius:50%;border:1.5px solid #ffffffa8;background:#c8f3ff8c;color:#164f66;font-size:24px;font-weight:900;backdrop-filter:blur(10px);box-shadow:0 4px 15px #163f4b44}#status,#lookTip,#tipBar{display:none!important}#targetHint{opacity:.72}#joystick{background:#b9eff34f;box-shadow:inset 0 0 10px #fff7;border:1px solid #fff7}#joystick::after{display:none}#stick{background:radial-gradient(circle at 28% 22%,#ffffffd9,#9cdee0a8 65%,#53a7b69e);border:2px solid #ffffffa8}#rightActions{right:12px;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 112px);gap:5px}.gamebtn{min-width:49px;width:49px;height:49px;border-radius:50%;font-size:0;padding:0;background:#c8f1f8a8;border:1px solid #fffc;box-shadow:0 3px 14px #24566b35}.gamebtn span{font-size:23px}#bubbleDock{right:12px;bottom:max(12px,env(safe-area-inset-bottom));gap:8px}.bubble-button.primary{width:100px;height:100px}.bubble-button.secondary{width:67px;height:67px}.bubble-button .button-label{font-size:9px}#inventoryPanel{background:#e1f5f2ee}@media(max-width:580px){#rightActions{right:12px;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 104px)}.gamebtn{min-width:42px;width:42px;height:42px}.gamebtn span{font-size:20px}#bubbleDock .primary{width:91px;height:91px}#bubbleDock .secondary{width:61px;height:61px}}</style>
 </head>
 <body>
 <div id="sun"></div><canvas id="game" aria-label="3D creative building world"></canvas><div id="vignette"></div>
 <div id="hud">
  <div id="topbar"><div class="brand"><div class="brand-title">🫧 BUBBLE<b>BUILDER</b></div><div class="brand-sub">3D · Creative sandbox</div></div>
- <button id="hudMenu" type="button" aria-label="Open game menu" aria-expanded="false">☰</button><div class="actions" id="hudActions"><button id="undoBtn" class="topbtn" title="Undo">↶ Undo</button><button id="saveBtn" class="topbtn" title="Export world">↓ Save</button><button id="loadBtn" class="topbtn" title="Load your world">↑ Load</button><button id="clearBtn" class="topbtn" title="Clear all blocks">Reset</button><button id="helpButton" class="topbtn">?</button></div></div>
+ <button id="hudMenu" type="button" aria-label="Open game menu" aria-expanded="false">☰</button><div class="actions" id="hudActions"><button id="undoBtn" class="topbtn" title="Undo">↶ Undo</button><button id="saveBtn" class="topbtn" title="Export world">↓ Save</button><button id="loadBtn" class="topbtn" title="Load your world">↑ Load</button><button id="starterBtn" class="topbtn" title="Load a ready-made building island">🏗️ Starter Island</button><button id="clearBtn" class="topbtn" title="Clear all blocks">Reset</button><button id="helpButton" class="topbtn">?</button></div></div>
  <div id="status"><span class="status-pill"><span class="dot"></span>CREATIVE MODE</span><span class="status-pill" id="countText">0 BLOCKS</span></div>
  <div id="lookTip">↔ DRAG TO LOOK</div><div id="reticle"></div><div id="targetHint">AIM • PLACE • BUILD</div>
  <div id="joystick"><div id="stick"></div></div>
@@ -131,7 +109,7 @@ const $=id=>document.getElementById(id);
 const canvas=$('game'),gl=canvas.getContext('webgl2',{antialias:true,alpha:true,powerPreference:'high-performance'})||canvas.getContext('webgl',{antialias:true,alpha:true,powerPreference:'high-performance'});
 if(!gl){$('noWebGL').style.display='block';$('loadScreen').style.display='none';return;}
 const ITEMS=ITEM_LIST, itemById=new Map(ITEMS.map(x=>[x.id,x])), models=new Map();
-let selected=0, rotation=0, invOpen=false, group='pillows',page=0, world=[], staticWorld=[], lastId=0, undo=[], currentGhost=null, currentHit=null, tNow=0, lastTime=0, lastAutosave=0, tick=0, toastTimer=0, loaded=false;
+let selected=0, rotation=0, invOpen=false, group='building',page=0, world=[], staticWorld=[], lastId=0, undo=[], currentGhost=null, currentHit=null, tNow=0, lastTime=0, lastAutosave=0, tick=0, toastTimer=0, loaded=false;
 const player={x:0,y:0,z:6,vy:0,yaw:0,pitch:-.22,bob:0,grounded:true};
 const keys=new Set(),joy={x:0,y:0}, movingLook={id:null,x:0,y:0,travel:0,when:0}, playerRadius=.27;
 const COLORS=['#f0a5cd','#f5c874','#a3daae','#9bc9fa','#c6aeed','#f6f2e5'];
@@ -193,11 +171,24 @@ const groupLabels={pillows:'🩷 Pillows',blocks:'🪵 Building',world:'🌿 Ter
 function drawTabs(){$('tabs').innerHTML='';for(const [id,name]of Object.entries(groupLabels)){const b=document.createElement('button');b.className='tab'+(group===id?' selected':'');b.textContent=name;b.addEventListener('click',()=>{group=id;page=0;drawTabs();drawItems();});$('tabs').appendChild(b);}}
 function drawItems(){const list=groupItems(),pp=currentPageCount(),maxPage=Math.max(0,Math.ceil(list.length/pp)-1);page=Math.min(page,maxPage);$('itemGrid').innerHTML='';for(const it of list.slice(page*pp,page*pp+pp)){const b=document.createElement('button');b.className='itemBubble'+(it.originalIndex===selected?' selected':'');b.dataset.model=it.id;b.dataset.color=it.color;b.title=it.name;b.innerHTML='<span class="itemName">'+it.name+'<small>'+it.size.map(v=>Number(v.toFixed(1))).join(' × ')+'</small></span>';b.addEventListener('click',()=>{changeSelected(it.originalIndex);toggleInventory(false);});$('itemGrid').appendChild(b);}$('pageText').textContent=(page+1)+' / '+(maxPage+1);$('prevPage').disabled=page===0;$('nextPage').disabled=page===maxPage;}
 function turn(){rotation=(rotation+1)%4;toast('↻ Rotated 90°');}
-function makeBaseWorld(){const add=(type,p,r=0,c)=>{const it=itemById.get(type);if(it)world.push({id:++lastId,type,p,r,c:c||it.color,solid:it.solid});};
- add('4x4_wooden',[0,.25,-5]);add('2x2_stuffed',[-1.5,.25,-5]);add('2x2_stuffed',[1.5,.25,-5]);add('2x2_trampoline2',[0,.28,-9]);add('2x2x2_grassRock2',[-4,.5,-11]);add('2x2x2_grassRock2',[-4,1.5,-11]);add('2x2_springPad',[4,.18,-8]);add('2x2x2_wooden',[6,.5,-12]);add('2x2x2_wooden',[6,1.5,-12]);add('2x4_wooden',[6,2.25,-11]);add('2x2_boostPad',[-6,.18,-5]);}
+function makeBaseWorld(){
+ const add=(type,p,r=0,c)=>{const it=itemById.get(type);if(it)world.push({id:++lastId,type,p,r,c:c||it.color,solid:it.solid});};
+ // Editable building island, jump course, block samples, and climbing towers.
+ for(let x=-6;x<=6;x+=2)for(let z=-14;z<=-2;z+=2)add('2x2x2_wooden',[x,.5,z]);
+ for(let x=-6;x<=6;x+=2){add('2x2_stuffed',[x,1.25,-14]);add('2x2_stuffed',[x,1.25,-2]);}
+ for(let z=-12;z<=-4;z+=2){add('2x2_stuffed',[-6,1.25,z]);add('2x2_stuffed',[6,1.25,z]);}
+ for(let y=1;y<=5;y++){add('2x2x2_wooden',[-4,y+.5,-11]);add('2x2x2_wooden',[4,y+.5,-11]);}
+ add('2x4_wooden',[0,6.25,-11]);add('2x4_wooden',[0,6.25,-9]);
+ for(let i=0;i<6;i++)add('2x2_stuffed',[-10+i*2,.25,-18-i*2],i%2);
+ for(let i=0;i<5;i++)add('2x2_trampoline2',[9+i*2,.28,-5-i*3]);
+ for(let i=0;i<4;i++)add('2x2x2_grassRock2',[-13-i*2,.5,-6-i*3]);
+ add('2x2_springPad',[0,.18,2]);add('2x2_boostPad',[3,.18,2]);
+ for(let i=0;i<8;i++)add(i%2?'2x2_stuffed':'2x2x2_wooden',[-8+i*2,i%2?.25:.5,5]);
+}
 function restoreWorld(){try{const x=JSON.parse(localStorage.getItem('bubblebuilder3d-world-v1')||'null');if(x&&Array.isArray(x.blocks)){world=x.blocks.slice(0,1800).filter(a=>itemById.has(a.type)&&Array.isArray(a.p)&&a.p.length===3&&a.p.every(n=>typeof n==='number'&&Number.isFinite(n)&&Math.abs(n)<100)).map(a=>({id:++lastId,type:a.type,p:a.p,r:Math.round(a.r||0)%4,c:/^#[0-9a-fA-F]{6}$/.test(a.c)?a.c:itemById.get(a.type).color,solid:itemById.get(a.type).solid}));return;}}catch(e){}makeBaseWorld();}
 function exportWorld(){const blob=new Blob([JSON.stringify({app:'BubbleBuilder3D',version:1,exported:new Date().toISOString(),blocks:world},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='My_BubbleBuilder_World.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);toast('💾 World exported');}
 function importWorld(file){if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const obj=JSON.parse(reader.result);if(!obj||!Array.isArray(obj.blocks))throw Error('World file needs a blocks array');if(obj.blocks.length>1800)throw Error('This version supports up to 1800 blocks');world=[];lastId=0;for(const a of obj.blocks){if(!itemById.has(a.type)||!Array.isArray(a.p)||a.p.length!==3||a.p.some(v=>!Number.isFinite(v)||Math.abs(v)>100))continue;world.push({id:++lastId,type:a.type,p:a.p,r:Math.abs(Math.round(a.r||0))%4,c:/^#[0-9a-fA-F]{6}$/.test(a.c)?a.c:itemById.get(a.type).color,solid:itemById.get(a.type).solid});}undo=[];storageSave();updateCount();toast('✅ Loaded '+world.length+' blocks');}catch(e){toast('⚠️ Cannot load file: '+e.message);}};reader.readAsText(file);}
+function starterWorld(){if(world.length&&!confirm('Replace your current world with a ready-made building island? Save a backup first if needed.'))return;world=[];lastId=0;undo=[];makeBaseWorld();player.x=0;player.y=0;player.z=7;player.yaw=0;player.pitch=-.15;storageSave();updateCount();toast('🏗️ Starter island ready!');}
 function resetWorld(){if(!confirm('Clear every placed block from this world? You can export a backup first.'))return;world=[];undo=[];storageSave();updateCount();toast('✨ World cleared');}
 function makeDecor(){const place=(type,x,z,y=0,r=0,size)=>{const it=itemById.get(type);if(!it)return;staticWorld.push({type,p:[x,y+it.size[1]/2,z],r,c:it.color,size:size||it.size});};
 const tree=[[-17,-17],[-21,-5],[-18,9],[-21,20],[17,-18],[20,-7],[18,9],[12,20],[-7,-23],[3,-22]];
@@ -241,7 +232,7 @@ function setupControls(){const joyEl=$('joystick'),stick=$('stick');let joyId=nu
  canvas.addEventListener('pointerup',e=>{if(movingLook.id!==e.pointerId)return;if(movingLook.travel<13&&performance.now()-movingLook.when<500&&!wasLooking)place();movingLook.id=null;});canvas.addEventListener('pointercancel',()=>movingLook.id=null);
  document.addEventListener('mousemove',e=>{if(document.pointerLockElement===canvas){player.yaw+=e.movementX*.0025;player.pitch=Math.max(-1.35,Math.min(1.32,player.pitch-e.movementY*.0025));}});
  window.addEventListener('keydown',e=>{if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.repeat)return;if(e.code==='Space')jump();if(e.code==='KeyE')place();if(e.code==='KeyX')erase();if(e.code==='KeyR')turn();if(e.code==='KeyQ')toggleInventory();if(e.code==='KeyZ')undoAction();if(e.code==='Escape')toggleInventory(false);if(e.code==='ArrowLeft')player.yaw-=.12;if(e.code==='ArrowRight')player.yaw+=.12;});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();joy.x=joy.y=0;stick.style.transform='translate(0,0)';});
- $('mainBubble').onclick=()=>toggleInventory();$('nextBubble').onclick=()=>changeSelected(selected+1);$('closeInventory').onclick=()=>toggleInventory(false);$('prevPage').onclick=()=>{page=Math.max(0,page-1);drawItems();};$('nextPage').onclick=()=>{page++;drawItems();};$('placeBtn').onclick=place;$('eraseBtn').onclick=erase;$('rotateBtn').onclick=turn;$('jumpBtn').onclick=jump;$('undoBtn').onclick=undoAction;$('saveBtn').onclick=exportWorld;$('loadBtn').onclick=()=>$('importFile').click();$('importFile').onchange=e=>{importWorld(e.target.files?.[0]);e.target.value='';};$('clearBtn').onclick=resetWorld;
+ $('mainBubble').onclick=()=>toggleInventory();$('nextBubble').onclick=()=>changeSelected(selected+1);$('closeInventory').onclick=()=>toggleInventory(false);$('prevPage').onclick=()=>{page=Math.max(0,page-1);drawItems();};$('nextPage').onclick=()=>{page++;drawItems();};$('placeBtn').onclick=place;$('eraseBtn').onclick=erase;$('rotateBtn').onclick=turn;$('jumpBtn').onclick=jump;$('undoBtn').onclick=undoAction;$('saveBtn').onclick=exportWorld;$('loadBtn').onclick=()=>$('importFile').click();$('importFile').onchange=e=>{importWorld(e.target.files?.[0]);e.target.value='';};$('clearBtn').onclick=resetWorld;$('starterBtn').onclick=starterWorld;
  $('helpButton').onclick=()=>{$('modal').classList.add('open');if(document.pointerLockElement)document.exitPointerLock();};$('closeHelp').onclick=()=>$('modal').classList.remove('open');$('modal').addEventListener('click',e=>{if(e.target===$('modal'))$('modal').classList.remove('open');});
  window.addEventListener('resize',()=>{if(invOpen)drawItems();});
 }
@@ -251,14 +242,5 @@ init().catch(e=>{$('loadingText').textContent='Could not start: '+e.message;cons
 })();
 
 </script>
-<script>
-(function(){
- const menu=document.getElementById('hudMenu'),actions=document.getElementById('hudActions');
- if(!menu||!actions)return;
- function toggle(open){actions.classList.toggle('open',open);menu.setAttribute('aria-expanded',String(open));menu.setAttribute('aria-label',open?'Close game menu':'Open game menu');}
- menu.addEventListener('click',()=>toggle(!actions.classList.contains('open')));
- actions.addEventListener('click',e=>{if(e.target.closest('button'))toggle(false);});
- document.addEventListener('pointerdown',e=>{if(!e.target.closest('#topbar'))toggle(false);});
-})();
-</script></body>
+<script>(function(){const menu=document.getElementById('hudMenu'),actions=document.getElementById('hudActions');if(!menu||!actions)return;function toggle(open){actions.classList.toggle('open',open);menu.setAttribute('aria-expanded',String(open));}menu.addEventListener('click',()=>toggle(!actions.classList.contains('open')));actions.addEventListener('click',e=>{if(e.target.closest('button'))toggle(false)});document.addEventListener('pointerdown',e=>{if(!e.target.closest('#topbar'))toggle(false)});})();</script></body>
 </html>
