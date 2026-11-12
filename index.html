@@ -1113,10 +1113,10 @@ document.addEventListener("click",function(event){
  const aiOverlay=document.getElementById("adminAiOverlay"),aiStatus=document.getElementById("adminAiStatus"),aiMessages=document.getElementById("adminAiMessages");
  let aiHistory=[],aiToken=null;
  const aiAppend=(who,message)=>{const div=document.createElement("div");div.style.marginBottom="12px";const name=document.createElement("strong");name.textContent=who+": ";div.append(name,document.createTextNode(String(message).slice(0,12000)));aiMessages.append(div);aiMessages.scrollTop=aiMessages.scrollHeight;};
- const openAdminAI=()=>{aiOverlay.style.removeProperty("display");aiOverlay.hidden=false;aiStatus.textContent="Checking admin access…";document.dispatchEvent(new CustomEvent("community-admin-ai-auth-request"));if(typeof window.__adminAiVerify==="function")window.__adminAiVerify();setTimeout(()=>{if(!aiOverlay.hidden&&aiStatus.textContent==="Checking admin access…"){aiStatus.textContent=window.__adminAiAuthLoaded?"Verification diagnostic: "+(window.__adminAiAuthStage||"Firebase imported but verification listener not initialized"):"Admin verification module did not load. Check whether gstatic.com is blocked, or open DevTools Console for the failed module import."; }},12000);};
+ const openAdminAI=async()=>{if(!await window.HubAdminPin?.request({scope:"admin-ai",uid:window.__adminAiFirebaseUid||"",label:"Admin AI"}))return;aiOverlay.style.removeProperty("display");aiOverlay.hidden=false;aiStatus.textContent="Checking admin access…";document.dispatchEvent(new CustomEvent("community-admin-ai-auth-request"));if(typeof window.__adminAiVerify==="function")window.__adminAiVerify();setTimeout(()=>{if(!aiOverlay.hidden&&aiStatus.textContent==="Checking admin access…"){aiStatus.textContent=window.__adminAiAuthLoaded?"Verification diagnostic: "+(window.__adminAiAuthStage||"Firebase imported but verification listener not initialized"):"Admin verification module did not load. Check whether gstatic.com is blocked, or open DevTools Console for the failed module import."; }},12000);};
  document.getElementById("gatewayOpenAI").addEventListener("click",openAdminAI);
  document.getElementById("adminAiHeaderOpen").addEventListener("click",openAdminAI);
- const closeAdminAI=()=>{aiOverlay.hidden=true;aiOverlay.style.display="none";};
+ const closeAdminAI=()=>{aiOverlay.hidden=true;aiOverlay.style.display="none";window.HubAdminPin?.lock("admin-ai");};
  document.getElementById("adminAiClose").addEventListener("click",closeAdminAI);
  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!aiOverlay.hidden)closeAdminAI();});
  document.addEventListener("community-admin-ai-auth-result",e=>{
@@ -1829,10 +1829,10 @@ try{
   fallbackInstalled=true;
   const el=id=>document.getElementById(id);
   const status=el("adminAiStatus"),overlay=el("adminAiOverlay");
-  const show=()=>{overlay.hidden=false;overlay.style.removeProperty("display");status.textContent="Checking Firebase admin access…";respond();};
+  const show=async()=>{if(!await window.HubAdminPin?.request({scope:"admin-ai",uid:window.__adminAiFirebaseUid||"",label:"Admin AI"}))return;overlay.hidden=false;overlay.style.removeProperty("display");status.textContent="Checking Firebase admin access…";respond();};
   el("gatewayOpenAI")?.addEventListener("click",show);
   el("adminAiHeaderOpen")?.addEventListener("click",show);
-  el("adminAiClose")?.addEventListener("click",()=>{overlay.hidden=true;overlay.style.display="none";});
+  el("adminAiClose")?.addEventListener("click",()=>{overlay.hidden=true;overlay.style.display="none";window.HubAdminPin?.lock("admin-ai");});
   const append=(who,msg)=>{const node=document.createElement("div");node.style.marginBottom="12px";node.textContent=who+": "+String(msg).slice(0,12000);el("adminAiMessages")?.append(node);};
   el("adminAiImport")?.addEventListener("change",async event=>{
    const file=event.target.files?.[0];if(!file)return;
@@ -1873,6 +1873,7 @@ try{
 
 
  let aiCurrentUser=aiAuth.currentUser,aiAuthReady=!!aiCurrentUser,aiRequestId=0;
+ window.__adminAiFirebaseUid=aiCurrentUser?.uid||"";
  const emit=(token,reason)=>{window.__adminAiAuthStage=reason;document.dispatchEvent(new CustomEvent("community-admin-ai-auth-result",{detail:{token,reason}}));};
  const withTimeout=(promise,ms)=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error("Firebase token verification timed out")),ms))]);
  const respond=async()=>{
@@ -1897,7 +1898,8 @@ try{
  window.__adminAiVerify=respond;
  if(!document.getElementById("adminAiOverlay")?.hidden)respond();
  onAuthStateChanged(aiAuth,user=>{
-  aiCurrentUser=user;aiAuthReady=true;
+  if(aiCurrentUser?.uid!==user?.uid){window.HubAdminPin?.lock("admin-ai");const a=document.getElementById("adminAiOverlay");if(a){a.hidden=true;a.style.display="none";}}
+  aiCurrentUser=user;aiAuthReady=true;window.__adminAiFirebaseUid=user?.uid||"";
   window.__adminAiAuthStage=user?"Firebase session restored":"Firebase session has no signed-in user";
   if(!document.getElementById("adminAiOverlay")?.hidden)respond();
  },error=>{
