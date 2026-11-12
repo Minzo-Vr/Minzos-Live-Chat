@@ -16,6 +16,7 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
   ["chats","Community Chat","Chat messages, rooms and friends","💬"],
   ["admin-ai","Admin AI","Admin-only AI workspace","🤖"],
   ["shapes-colours","Shapes & Colours","3D editor and building tools","🎨"],
+  ["bubblebuilder","BubbleBuilder 3D","3D bubble building sandbox","🫧"],
   ["minzify","Minzify","Music search and playlists","🎧"],
   ["minz-apps","Minz Apps","Apps and download catalogue","📱"],
   ["update-centre","Update Centre","Updates and releases","📦"],
@@ -37,14 +38,14 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
   ...GAME_ITEMS.map(([name,icon])=>({key:keyForGame(name),name,icon,description:"Game Hub game",category:"Individual games"}))];
  const ALL_KEYS=new Set(entries.map(item=>item.key));
  const KEY_FOR_BUTTON={
-  gatewayOpenChat:"chats",gatewayOpenAI:"admin-ai",gatewayOpenShapes:"shapes-colours",
+  gatewayOpenChat:"chats",gatewayOpenAI:"admin-ai",gatewayOpenShapes:"shapes-colours",gatewayOpenBubbleBuilder:"bubblebuilder",
   gatewayOpenMinzify:"minzify",gatewayOpenMinzSign:"minz-apps",gatewayOpenUpdates:"update-centre",
   gatewayOpenGames:"game-hub",gameHubToggle:"game-hub",browserSidebarToggle:"community-browser"
  };
  const pageFile=(location.pathname.split("/").pop()||"index.html").toLowerCase();
  const PAGE_KEYS={
   "minzify.html":"minzify","minzify-spotify.html":"minzify",
-  "minzify-youtube.html":"minzify","shapes-colours.html":"shapes-colours",
+  "minzify-youtube.html":"minzify","shapes-colours.html":"shapes-colours","bubblebuilder.html":"bubblebuilder",
   "minzsign.html":"minz-apps","update-centre.html":"update-centre"
  };
  const currentPage=PAGE_KEYS[pageFile]||null;
