@@ -1517,6 +1517,7 @@ document.addEventListener("click",function(event){
         <p id="profileCardBio" style="color:#475569"></p>
         <p id="profileIncognitoNotice" style="font-size:12px;color:#64748b" hidden>🕵️ Anonymous display profile · Identity retained for moderation</p>
         <p id="profileRoleLabel" class="profile-role-visibility" style="font-size:12px;color:#64748b">Member</p>
+        <button type="button" id="profileAdminUnlock" hidden>🔐 Enter Admin PIN for member controls</button>
         <div id="profileRoleActions" hidden style="text-align:left;border-top:1px solid #ddd;padding-top:12px;margin:12px 0">
           <strong>Manage member</strong>
           <div id="profileAssignRole" hidden>
@@ -2311,8 +2312,8 @@ try{
         if(action==="role"){
           if(!isAdmin)throw Error("Admin only");
           const actorUid=user.uid;
-          if(!window.HubAdminPin?.isUnlocked(actorUid,"roles")){
-            if(!await window.HubAdminPin?.request({scope:"roles",uid:actorUid,label:"Manage Admin Roles"}))return;
+          if(!window.HubAdminPin?.isUnlocked(actorUid,"profile")){
+            if(!await window.HubAdminPin?.request({scope:"profile",uid:actorUid,label:"Member Admin Controls"}))return;
             if(!isAdmin||user?.uid!==actorUid)return;
           }
           const selected=[...$("profileRoleChoices").querySelectorAll("input:checked")].map(x=>x.value);
@@ -2579,7 +2580,8 @@ try{
       $("profileRoleLabel").textContent=userRoles(uid).map(k=>customRoles[k]?.name||k.toUpperCase()).join(" · ")||"MEMBER";
       $("profileRoleLabel").hidden=true;
       $("profileIncognitoNotice").hidden=!anonymous;
-      $("profileRoleActions").hidden=!isModerator()||!uid;
+      $("profileRoleActions").hidden=!isModerator()||!uid||(isAdmin&&!window.HubAdminPin?.isUnlocked(user?.uid,"profile"));
+      $("profileAdminUnlock").hidden=!isAdmin||!uid||!!window.HubAdminPin?.isUnlocked(user?.uid,"profile");
       $("profileAddFriend").hidden=!user||!uid||uid===user.uid||!!friendMap[uid];
       $("profileOpenDm").hidden=!user||!uid||!friendMap[uid];
       $("profileAssignRole").hidden=!isAdmin;
@@ -2602,8 +2604,24 @@ try{
         $("profileCardBio").textContent=snap.val()||"This user hasn't written a bio yet.";
       }catch(err){$("profileCardBio").textContent="Bio unavailable: "+(err.code||err.message);}
     }
-    $("profileClose").addEventListener("click",()=>{$("profileOverlay").hidden=true;});
-    $("profileOverlay").addEventListener("click",e=>{if(e.target===$("profileOverlay"))$("profileOverlay").hidden=true;});
+    async function openAdminMemberControls(){
+      if(!isAdmin||!user||!profileTargetUid)return;
+      const actorUid=user.uid,targetUid=profileTargetUid;
+      if(!await window.HubAdminPin?.request({scope:"profile",uid:actorUid,label:"Member Admin Controls"}))return;
+      if(!isAdmin||user?.uid!==actorUid||profileTargetUid!==targetUid||$("profileOverlay").hidden){
+        window.HubAdminPin?.lock("profile");return;
+      }
+      $("profileRoleActions").hidden=false;
+      $("profileAdminUnlock").hidden=true;
+    }
+    $("profileAdminUnlock").addEventListener("click",()=>void openAdminMemberControls());
+    function closeMemberProfile(){
+      $("profileOverlay").hidden=true;
+      window.HubAdminPin?.lock("profile");
+      $("profileRoleActions").hidden=true;
+    }
+    $("profileClose").addEventListener("click",closeMemberProfile);
+    $("profileOverlay").addEventListener("click",e=>{if(e.target===$("profileOverlay"))closeMemberProfile();});
     $("saveRoleAppearance").addEventListener("click",async()=>{
       const feedback=$("roleAppearanceFeedback");
       if(!user){feedback.textContent="Sign in first.";return;}
@@ -3802,8 +3820,8 @@ try{
     $("friendsToggle").addEventListener("click",()=>$("dmSidebar").hidden?openDmSidebar():closeDmSidebar());
     $("friendsClose").addEventListener("click",()=>{$("friendsOverlay").hidden=true;});
     $("friendsOverlay").addEventListener("click",e=>{if(e.target===$("friendsOverlay"))$("friendsOverlay").hidden=true;});
-    $("profileAddFriend").addEventListener("click",()=>{const uid=profileTargetUid;$("profileOverlay").hidden=true;openFriends();sendFriendRequest(uid);});
-    $("profileOpenDm").addEventListener("click",()=>{const uid=profileTargetUid;$("profileOverlay").hidden=true;openDm(uid);});
+    $("profileAddFriend").addEventListener("click",()=>{const uid=profileTargetUid;closeMemberProfile();openFriends();sendFriendRequest(uid);});
+    $("profileOpenDm").addEventListener("click",()=>{const uid=profileTargetUid;closeMemberProfile();openDm(uid);});
     $("dmForm").addEventListener("submit",async e=>{
       e.preventDefault();const text=$("dmInput").value.trim();
       if(!text||!user||!activeDmUid||!friendMap[activeDmUid])return;
