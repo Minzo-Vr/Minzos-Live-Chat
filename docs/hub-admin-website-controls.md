@@ -9,9 +9,24 @@ Community Hub has an **Admin Website Controls** button inside **My Account** on 
 3. Under **Websites & apps**, switch **Disable** on for Chats, Admin AI, Shapes & Colours, Minzify, Minz Apps, Update Centre, Game Hub or Community Browser.
 4. Under **Individual games**, switch off a particular Game Hub title such as 2048 or Slope without disabling all games.
 5. To open a disabled app as an admin, press its **🔐 Unlock** action and enter your four-digit PIN. Unlock is per experience for 15 minutes in the current tab; the disabled status remains in effect for other users.
-6. Toggle **Disable** off in My Account to fully re-enable an app or game. You do not need the PIN to access My Account or the admin switch panel.
+6. Toggle **Disable** off in My Account to fully re-enable an app or game. My Account remains accessible; opening the admin switch panel now requires the Admin PIN.
 
 A switch set to **Disable** stores the boolean `true` under `hubSiteAvailability/<key>`. A switch set to **Enabled** stores `false`. Admin read/write permission is verified in Firebase Realtime Database rules, not solely by hidden UI elements. The setting records no passwords or credentials.
+
+## Shared admin-panel PIN gate
+
+Community Hub's admin-facing interfaces now ask for the **same four-digit PIN (7443)** before opening:
+
+- Chat Admin controls (including message timestamp visibility).
+- My Account → Admin Website Controls and the Game Hub Admin shortcut.
+- My Account → Block / Unblock Users and the Game Hub block-users shortcut.
+- Admin AI.
+- Admin announcement draft/editor.
+- Admin controls on member profiles, including role assignment.
+
+A verified admin role/claim is **still required**; entering the PIN does not grant administrator permissions. The prompt appears again when entering a panel after closing it, and unlocks are kept only in memory in that tab. Standard member sign-in and admin sign-in remain available without a PIN so nobody gets locked out of the login process.
+
+**Security limits:** GitHub Pages serves the JavaScript to everyone. A four-digit PIN checked in browser JavaScript (even as a digest) is a convenience/privacy lock that determined users can bypass. Firebase RTDB security rules and server-side verification remain the actual protection for privileged data and actions. Do not rely on this PIN to protect sensitive data on its own.
 
 ## Required Firebase Rules setup
 
