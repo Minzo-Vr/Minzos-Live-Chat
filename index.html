@@ -14,6 +14,7 @@
   <link rel="icon" type="image/svg+xml" href="./app-icon.svg">
   <link rel="stylesheet" href="./hub-store.css">
   <script src="./hub-store.js" defer></script>
+  <script src="./hub-admin-pin.js"></script>
   <link rel="stylesheet" href="./hub-site-controls.css">
   <script type="module" src="./hub-site-controls.js"></script>
   <link rel="stylesheet" href="./hub-user-access.css">
@@ -453,6 +454,19 @@
     /* Give the admin controls their own scroll area instead of clipping lower settings. */
     #adminPanel {max-height:min(72dvh,720px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable;}
     #adminPanel:focus-within {scroll-behavior:auto;}
+    #hubGlobalAdminPin[hidden]{display:none!important}
+    #hubGlobalAdminPin{position:fixed;inset:0;z-index:2147483646;display:grid;place-items:center;padding:16px;background:#070d1cdb;color:#f4f7ff;backdrop-filter:blur(8px);font:15px system-ui,sans-serif}
+    #hubGlobalAdminPin .hub-global-admin-pin-card{width:min(100%,390px);padding:24px;border-radius:18px;background:#182847;border:1px solid #91aded;box-shadow:0 20px 70px #000a}
+    #hubGlobalAdminPin h2{margin:0 0 8px;font-size:21px}
+    #hubGlobalAdminPin p{color:#d4e1fa;font-size:13px;line-height:1.5}
+    #hubGlobalAdminPin label{display:block;font-weight:700}
+    #hubGlobalAdminPin input{box-sizing:border-box;display:block;width:100%;margin:8px 0 12px;padding:12px;border-radius:9px;border:1px solid #9db4e1;background:#111c31;color:#fff;font-size:22px;letter-spacing:.2em;text-align:center}
+    #hubGlobalAdminPin .hub-global-admin-pin-actions{display:flex;gap:10px;justify-content:flex-end}
+    #hubGlobalAdminPin button{padding:10px 14px;border-radius:9px;border:1px solid #9db4e1;background:#334d81;color:#fff;cursor:pointer}
+    #hubGlobalAdminPin button[type=submit]{background:#b8cbfa;color:#152444;font-weight:800}
+    #hubGlobalAdminPin button:disabled{opacity:.55}
+    #hubGlobalAdminPinStatus{min-height:18px}
+    #chatAdminUnlock{margin:8px 0;padding:10px 15px;background:#344d83;color:white;border:1px solid #8098cc;border-radius:9px}
     html.chat-timestamps-disabled .chat-message-timestamp {display:none!important;}
     .admin-controls button {margin:3px;background:#6b7280}
     .lockdown-banner { margin:0; padding:10px 14px; background:#fff2d9; color:#713d00; font-size:13px; }
@@ -1702,6 +1716,7 @@ document.addEventListener("click",function(event){
         <button type="submit">Sign in</button>
       </form>
       <p id="adminFeedback" role="status">Visitor usernames remain unchanged.</p>
+      <button type="button" id="chatAdminUnlock" hidden>🔐 Enter Admin PIN to open controls</button>
       <section id="moderatorPanel" class="admin-controls" hidden>
         <strong>🛡️ Moderator Panel</strong>
         <p>Click a member's username or profile picture to timeout, ban or unban them.</p>
@@ -2197,6 +2212,33 @@ try{
       },err=>console.warn("Profile appearance unavailable",err));
     }
     let isAdmin=false; // Defined before experimental settings initialise.
+    function renderChatAdminGate(){
+      const allowed=!!user&&isAdmin;
+      const unlocked=allowed&&window.HubAdminPin?.isUnlocked(user.uid,"chat");
+      $("adminPanel").hidden=!unlocked;
+      $("adminLogin").hidden=allowed;
+      $("chatAdminUnlock").hidden=!allowed||unlocked;
+      if(!allowed)window.HubAdminPin?.lock("chat");
+    }
+    async function openChatAdminGate(){
+      if(!user||!isAdmin)return;
+      const uid=user.uid;
+      if(!await window.HubAdminPin?.request({scope:"chat",uid,label:"Chat Admin Panel"}))return;
+      if(user?.uid!==uid||!isAdmin){window.HubAdminPin?.lock("chat");return;}
+      $("adminArea").open=true;
+      renderChatAdminGate();
+    }
+    $("chatAdminUnlock").addEventListener("click",()=>void openChatAdminGate());
+    $("adminArea").querySelector("summary").addEventListener("click",event=>{
+      if(!user||!isAdmin)return;
+      event.preventDefault();
+      if($("adminArea").open){
+        $("adminArea").open=false;window.HubAdminPin?.lock("chat");renderChatAdminGate();
+      }else void openChatAdminGate();
+    });
+    $("adminArea").addEventListener("toggle",()=>{
+      if(!$("adminArea").open){window.HubAdminPin?.lock("chat");renderChatAdminGate();}
+    });
     let roleMap={},myRole="member",baseAdminClaim=false,moderationState={},profileTargetUid="",roleUnsub=null,moderationUnsub=null;
     const isModerator=()=>isAdmin||hasRole(user?.uid,"moderator");
     const hasExperimentalAccess=()=>isAdmin||hasRole(user?.uid,"plus");
@@ -2243,8 +2285,7 @@ try{
         handleRoleNotification(uid);
         isAdmin=baseAdminClaim||hasRole(uid,"admin");
         myRole=actualRole(uid);
-        $("adminPanel").hidden=!isAdmin;
-        $("adminLogin").hidden=isAdmin;
+        renderChatAdminGate();
         updateRoleUI();
         $("auditCollapsible").hidden=!isAdmin;
         if(isAdmin)void refreshActivityLog();
@@ -5261,7 +5302,7 @@ try{
       if(roleUnsub){roleUnsub();roleUnsub=null;}if(moderationUnsub){moderationUnsub();moderationUnsub=null;}
       if(!account) {
         stopFriends();isAdmin=false;startAnnouncementListeners();resetChatIdentity();setAuthDisplay(false);void refreshChatPlusBilling();
-        $("adminPanel").hidden=true;$("adminLogin").hidden=false;
+        window.HubAdminPin?.lockAll();$("adminArea").open=false;renderChatAdminGate();
         status.textContent="Sign in required";
         return;
       }
@@ -5287,7 +5328,7 @@ try{
       else if(discordCustomLogin&&!isAdmin)$("accountLabel").textContent="🎮 Signed in with Discord — choose a chat username";
       startAnnouncementListeners();
       startEconomy();startFriends();startRoleListeners();startBillingListener();void refreshChatPlusBilling();
-      $("adminPanel").hidden=!isAdmin;$("adminLogin").hidden=isAdmin;
+      renderChatAdminGate();
       status.textContent=isAdmin?"Admin online":account.isAnonymous?"Guest online":"Online";
       listenMessages();subscribeSettings();startPresence();startRoomIndex();
       updateLockdownUI();
