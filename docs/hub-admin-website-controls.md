@@ -13,6 +13,26 @@ Community Hub has an **Admin Website Controls** button inside **My Account** on 
 
 A switch set to **Disable** stores the boolean `true` under `hubSiteAvailability/<key>`. A switch set to **Enabled** stores `false`. Admin read/write permission is verified in Firebase Realtime Database rules, not solely by hidden UI elements. The setting records no passwords or credentials.
 
+## Lock for Roles (new)
+
+**Python Editor Live** is pinned as the **first** game in **Game Hub**. The same Admin Website Controls panel now includes a collapsible **🔐 Lock for Roles** section beneath every Hub app and every Game Hub game, including Python Editor.
+
+To set a role lock:
+
+1. Sign in to a verified Admin account and open **Game Hub → 🛠 Admin** (or **My Account → Admin Website Controls**); enter the existing Admin PIN.
+2. Scroll to the desired app or game and expand **Lock for Roles**.
+3. Tick any combination of **Signed-in members**, **Chat+**, **Moderator**, **Test Subject**, and **Admin**.
+4. Press **Save role lock**. The allowed roles are stored under `hubSiteRoleLocks/<appKey>` and update in real time for open browsers.
+5. Use **Allow everyone** to remove the role lock without changing the separate **Disable** switch. An empty selection means everyone is allowed.
+
+"Signed-in members" means **all non-guest signed-in accounts**, including those that have additional roles. Choose **Chat+ / Moderator / Test Subject** without Members for more selective access. A user who has multiple roles only needs one matching role. Admins can always bypass **role** restrictions to avoid permanently locking out management, but a globally **Disabled** app still requires its existing Admin PIN unlock.
+
+Role locks and **Disable** are independent: Disable overrides role permissions. Locking `game-hub` restricts opening the whole Game Hub; locking `game-python-editor` restricts only Python Editor. Users with insufficient roles see a lock label rather than being able to open the app through the Hub UI.
+
+**Firebase rules setup:** The repository's live rules source is [`database.rules.json`](../database.rules.json), which now contains `hubSiteRoleLocks`. The rules grant public read access to the policy and **only verified admins** may change it; unsupported app keys and role names are rejected. The new rules must actually be **deployed** to Firebase Realtime Database via the repository deployment workflow or Firebase Console before settings can be saved.
+
+**Security limitation:** This locks the **navigation/interface** of the GitHub Pages application. GitHub Pages static HTML and JavaScript are still publicly accessible. Do not use client-side role locks alone to protect sensitive files, API operations, or database data; secure those separately using Firebase rules or a server.
+
 ## Shared admin-panel PIN gate
 
 Community Hub's admin-facing interfaces now ask for the **same four-digit PIN (7443)** before opening:
@@ -28,26 +48,9 @@ A verified admin role/claim is **still required**; entering the PIN does not gra
 
 **Security limits:** GitHub Pages serves the JavaScript to everyone. A four-digit PIN checked in browser JavaScript (even as a digest) is a convenience/privacy lock that determined users can bypass. Firebase RTDB security rules and server-side verification remain the actual protection for privileged data and actions. Do not rely on this PIN to protect sensitive data on its own.
 
-## Required Firebase Rules setup
+## Required Firebase rules deployment
 
-A **complete JSON rules file**, `community_hub_firebase_rules_website_controls.json`, was prepared as a ChatGPT download. It contains **all 29 prior rules sections unchanged**, plus this one new section. It includes the previously added `chatPushSubscriptions` protections and free user search directory.
-
-1. Make a backup of the currently published database rules in Firebase Console → Realtime Database → Rules.
-2. Open the complete JSON rules file downloaded from ChatGPT, copy all of its contents and replace the Rules editor contents.
-3. Review differences if you've made other rules changes since the preceding full rules file.
-4. Press **Publish**. Until then, the website switches show a rules/permissions error.
-
-The added section is shown below *for inspection only*. The downloadable JSON already contains it, so **do not separately append it**:
-
-```json
-"hubSiteAvailability": {
-  ".read": true,
-  "$key": {
-    ".write": "auth != null && (auth.token.admin === true || root.child('chatRoles/'+auth.uid).val() === 'admin' || root.child('chatRoles/'+auth.uid+'/admin').val() === true) && $key.matches(/^(chats|admin-ai|shapes-colours|minzify|minz-apps|update-centre|game-hub|community-browser|game-2048|game-cookie-clicker|game-google-dino|game-google-snake|game-retro-bowl|game-slope|game-run-3|game-minesweeper|game-blackjack|game-moto-x3m|game-block-blast|game-gorilla-tag|game-twerk-race-3d)$/) && newData.isBoolean()",
-    ".validate": "newData.isBoolean()"
-  }
-}
-```
+Do not use historical downloadable rules files; the repository's full [`database.rules.json`](../database.rules.json) is the current source containing all app settings, Python room permissions, and role locks. Verify that the [Firebase rules publishing workflow](../.github/workflows/publish-firebase-rules.yml) succeeds with its configured service-account secret, or review and publish the complete file in Firebase Console → Realtime Database → Rules. Never replace a newer live rules version without comparing first.
 
 ## What members see
 
