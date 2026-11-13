@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import vm from "node:vm";
 
 const rules=JSON.parse(fs.readFileSync(new URL("../database.rules.json",import.meta.url),"utf8")).rules;
-assert.equal(Object.keys(rules).length,31,"Expected all 31 preserved rule sections");
+assert.equal(Object.keys(rules).length,32,"Expected all 31 prior rule sections plus private Python projects");
 assert.equal(rules.chatPublicConfig[".read"],true);
 assert.equal(rules.hubSiteAvailability[".read"],true);
 assert.equal(rules.chatPushSubscriptions[".read"],false);
@@ -27,6 +27,11 @@ assert.ok(rules.chatProfiles.$uid.name[".read"].includes("'custom'"),"Profile re
 assert.ok(rules.chatProfiles.$uid.name[".write"].includes("'custom'"),"Profile name saves must support Discord tokens");
 assert.ok(rules.chatMessages[".write"].includes("chatRoles"),"Only admins may purge all messages");
 assert.ok(rules.chatRoles.$uid[".write"].includes("auth.token.admin"),"Admin role changes must be verified");
+assert.ok(rules.hubSiteAvailability.$key[".write"].includes("game-python-editor"),"Admin availability switches cover Python Editor");
+assert.ok(!(".read" in rules.hubPythonProjects),"Python projects cannot be publicly readable");
+assert.ok(!(".write" in rules.hubPythonProjects),"Python projects cannot be publicly writable");
+assert.ok(rules.hubPythonProjects.$uid.$projectId[".write"].includes("auth.uid === $uid"),"Private code writes must be UID-owned");
+assert.ok(rules.hubPythonProjects.$uid.$projectId.code[".validate"].includes("20000"),"Code size is limited");
 
 function rootOf(data){
  return {
@@ -84,5 +89,12 @@ assert.equal(evaluate(readDir,{user:adminRole,roles}),true,"DB admin can use pri
 const blockSelf=rules.hubBlockedUsers.$uid[".read"];
 assert.equal(evaluate(blockSelf,{user:member,targetUid:"member1"}),true,"Member may read own block status");
 assert.equal(evaluate(blockSelf,{user:member,targetUid:"another"}),false,"Member cannot read another block record");
+const readOwnPython=rules.hubPythonProjects.$uid[".read"];
+assert.equal(evaluate(readOwnPython,{user:member,targetUid:"member1"}),true,"A signed-in member may read their own code");
+assert.equal(evaluate(readOwnPython,{user:member,targetUid:"another"}),false,"Another account cannot read this code");
+assert.equal(evaluate(readOwnPython,{user:null,targetUid:"member1"}),false,"Anonymous visitor cannot read this code");
+assert.equal(evaluate(readOwnPython,{user:adminClaim,targetUid:"member1"}),false,"Even admins cannot read another user's code");
+assert.equal(evaluate(readOwnPython,{user:discord,targetUid:"discord1"}),true,"Signed-in Discord user can read their own code");
+assert.equal(evaluate(readOwnPython,{user:adminRole,targetUid:"admin1",blocks}),false,"Blocked account cannot read private code");
 
-console.log("PASS: 31 sections retained, 19 security and login assertions passed.");
+console.log("PASS: 32 sections retained, existing login checks and private Python project isolation assertions passed.");
