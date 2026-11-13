@@ -140,7 +140,11 @@
   const key=meta.hubKey;
   const blocked=!!availability&&!!key&&(!availability.canUse(key)||(meta.category==="Browser game"&&!availability.canUse("game-hub")));
   launchButton.disabled=blocked&&!(availability?.isAdmin?.());
-  if(blocked)launchButton.textContent=availability?.isAdmin?.()?"🔐 Unlock to open":"Disabled by admin";
+  if(blocked){
+   const limited=(availability?.isRoleLocked?.(key)&&!availability?.roleAllowed?.(key))||
+    (meta.category==="Browser game"&&availability?.isRoleLocked?.("game-hub")&&!availability?.roleAllowed?.("game-hub"));
+   launchButton.textContent=availability?.isAdmin?.()?"🔐 Unlock to open":limited?"🔒 Locked for roles":"Disabled by admin";
+  }
   dialog.hidden=false;$("hubStorePreviewClose").focus();
  }
  function addAppCard(option,meta){
@@ -231,7 +235,12 @@
   const blocked=!!gate&&!!key&&(!gate.canUse(key)||
     (currentPreviewMeta.category==="Browser game"&&!gate.canUse("game-hub")));
   const action=$("hubStoreLaunch");
-  if(action){action.disabled=blocked&&!(gate?.isAdmin?.());action.textContent=blocked?(gate?.isAdmin?.()?"🔐 Unlock to open":"Disabled by admin"):(currentPreviewMeta.launchLabel||"Open app");}
+  if(action){
+   action.disabled=blocked&&!(gate?.isAdmin?.());
+   const limited=(gate?.isRoleLocked?.(key)&&!gate?.roleAllowed?.(key))||
+    (currentPreviewMeta.category==="Browser game"&&gate?.isRoleLocked?.("game-hub")&&!gate?.roleAllowed?.("game-hub"));
+   action.textContent=blocked?(gate?.isAdmin?.()?"🔐 Unlock to open":limited?"🔒 Locked for roles":"Disabled by admin"):(currentPreviewMeta.launchLabel||"Open app");
+  }
  });
  window.CommunityHubStore={openPreview,gameDetails};
  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",prepareGateway,{once:true});
