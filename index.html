@@ -927,6 +927,64 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
  .gateway-option:is(button,a){font-size:16px;padding:15px 12px}
  .gateway-icon{font-size:23px}
 }
+/* Mobile/iPad scrolling: keep the fixed viewport bounded and give the actual
+   app-list pane a scrollport. A min-height-only flex child can expand beyond
+   the screen on iOS, making the apps below the fold unreachable. */
+#interfaceGateway{overflow:hidden}
+#gatewaySelection:not([hidden]){
+ height:100%;height:100dvh;max-height:100dvh;min-height:0;
+ overflow:hidden;align-items:stretch;
+}
+#gatewaySelection .gateway-main{
+ height:100%;min-height:0;max-height:100%;
+ overflow-x:hidden;overflow-y:auto!important;
+ -webkit-overflow-scrolling:touch;
+ overscroll-behavior-y:contain;
+ touch-action:pan-y;
+ padding-bottom:calc(32px + env(safe-area-inset-bottom,0px))!important;
+}
+#gatewaySelection .gateway-sidebar{
+ height:100%;min-height:0;
+ overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;
+}
+#gatewaySelection .gateway-options{overflow:visible;min-height:0}
+#hubAccountCard{
+ -webkit-overflow-scrolling:touch;
+ overscroll-behavior-y:contain;touch-action:pan-y;
+ max-height:calc(100dvh - 36px);
+}
+#communityGameHub:not([hidden]){
+ height:100dvh;max-height:100dvh;min-height:0;overflow:hidden;
+ padding-bottom:env(safe-area-inset-bottom,0px);
+}
+#communityGameHub .game-top{flex:0 0 auto}
+#communityGameHub #gameHubMessages{
+ flex:0 1 auto;min-height:0;max-height:40dvh;
+ overflow-y:auto;-webkit-overflow-scrolling:touch;
+ overscroll-behavior-y:contain;touch-action:pan-y;
+}
+#communityGameHub #gameBrowse{
+ flex:1 1 0;min-height:0;max-height:100%;overflow-y:auto!important;
+ overflow-x:hidden;-webkit-overflow-scrolling:touch;
+ overscroll-behavior-y:contain;touch-action:pan-y;
+ padding-bottom:calc(28px + env(safe-area-inset-bottom,0px));
+}
+#communityGameHub #gameGrid{overflow:visible}
+#communityGameHub #gamePlayFrame{
+ display:block;flex:1 1 0;min-height:0;height:0;
+}
+#communityGameHub #gamePlayFrame[hidden]{display:none!important}
+#communityGameHub .game-note,#communityGameHub #gameHubVersion{flex:0 0 auto}
+@media(max-width:670px){
+ #communityGameHub .game-top{padding:8px 10px;gap:6px}
+ #communityGameHub .game-top strong{font-size:15px}
+ #communityGameHub .game-top button,#communityGameHub .game-top a{
+  font-size:12px;padding:7px 9px;
+ }
+ #communityGameHub #gameHubMessages{max-height:32dvh;padding:8px 12px!important}
+ #communityGameHub .game-note{font-size:10px;padding:5px 10px}
+ #communityGameHub #gameHubVersion{padding:5px 10px!important}
+}
 </style>
 </head>
 <body>
