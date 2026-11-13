@@ -42,15 +42,36 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Verify secret is configured
+      - name: Verify Firebase service account JSON without exposing the key
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
         shell: bash
         run: |
-          if [ -z "$FIREBASE_SERVICE_ACCOUNT_JSON" ]; then
-            echo "::error::Missing FIREBASE_SERVICE_ACCOUNT_JSON. Add your Firebase service account key to GitHub Settings > Secrets and variables > Actions before publishing."
-            exit 1
-          fi
+          node <<'NODE'
+          const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || "";
+          function fail(reason) {
+            console.error("::error::" + reason);
+            process.exit(1);
+          }
+          if (!raw.trim()) fail("Missing FIREBASE_SERVICE_ACCOUNT_JSON. Add the complete raw JSON service-account key under Settings > Secrets and variables > Actions.");
+          let credentials;
+          try {
+            credentials = JSON.parse(raw.trim());
+          } catch {
+            fail("FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON. Replace this GitHub Actions secret with the complete TEXT contents of the downloaded Google service-account key JSON file. Do not use base64, a file path, a URL, or Firebase Web SDK configuration.");
+          }
+          if (!credentials || credentials.type !== "service_account" ||
+              typeof credentials.private_key !== "string" ||
+              !credentials.private_key.includes("-----BEGIN PRIVATE KEY-----") ||
+              typeof credentials.client_email !== "string" ||
+              !credentials.client_email.endsWith(".gserviceaccount.com")) {
+            fail("FIREBASE_SERVICE_ACCOUNT_JSON is not a Google service-account private-key JSON. Download a service-account key from Firebase Project Settings > Service Accounts and paste its complete JSON contents into the secret.");
+          }
+          if (credentials.project_id !== "website-chat-80038") {
+            fail("The service-account key belongs to a different Firebase project. This workflow only deploys rules for website-chat-80038.");
+          }
+          console.log("Valid service-account JSON structure and expected Firebase project confirmed. Key contents were not printed.");
+          NODE
       - name: Authenticate securely with Firebase
         uses: google-github-actions/auth@v3
         with:
