@@ -298,14 +298,19 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
   const link=n("a",null,"← Back to Community Hub");link.href=RETURN_URL;
   const unlockButton=n("button",null,"🔐 Unlock with Admin PIN");
   unlockButton.id="hubSiteDownUnlock";unlockButton.type="button";unlockButton.hidden=true;
-  unlockButton.addEventListener("click",()=>{if(currentPage)void requestAccess(currentPage)});
+  unlockButton.addEventListener("click",async()=>{
+   if(!currentPage)return;
+   // Python Editor is a Game Hub app: both levels must be unlocked if disabled.
+   if(currentPage==="game-python-editor"&&!await requestAccess("game-hub"))return;
+   await requestAccess(currentPage);
+  });
   card.append(message,unlockButton,link);overlay.append(card);
   document.body.append(overlay);return overlay;
  }
  function enforcePage(){
   if(currentPage){
    const overlay=createPageBlock();
-   const locked=!canUse(currentPage);
+   const locked=!canUse(currentPage)||(currentPage==="game-python-editor"&&!canUse("game-hub"));
    overlay.hidden=!locked;
    const button=$("hubSiteDownUnlock");
    if(button)button.hidden=!locked||!isAdmin;
