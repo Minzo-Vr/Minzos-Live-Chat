@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import vm from "node:vm";
 
 const rules=JSON.parse(fs.readFileSync(new URL("../database.rules.json",import.meta.url),"utf8")).rules;
-assert.equal(Object.keys(rules).length,32,"Expected all 31 prior rule sections plus private Python projects");
+assert.equal(Object.keys(rules).length,35,"Expected all prior rules plus private projects and 3 collaborative room sections");
 assert.equal(rules.chatPublicConfig[".read"],true);
 assert.equal(rules.hubSiteAvailability[".read"],true);
 assert.equal(rules.chatPushSubscriptions[".read"],false);
@@ -46,14 +46,14 @@ function rootOf(data){
 function account(uid,provider,claim=false){
  return uid?{uid,token:{admin:claim,firebase:{sign_in_provider:provider}}}:null;
 }
-function evaluate(expr,{user,roles={},blocks={},anonymousEnabled=false,targetUid=""}={}){
+function evaluate(expr,{user,roles={},blocks={},rooms={},anonymousEnabled=false,targetUid="",roomId=""}={}){
  assert.equal(typeof expr,"string");
  const root=rootOf({
-  chatRoles:roles,hubBlockedUsers:blocks,
+  chatRoles:roles,hubBlockedUsers:blocks,hubPythonRooms:rooms,
   chatPublicConfig:{anonymousEnabled},
  });
  return Boolean(vm.runInNewContext("("+expr+")",{
-  auth:user??null,root,$uid:targetUid,now:Date.now()
+  auth:user??null,root,$uid:targetUid,$roomId:roomId,now:Date.now()
  },{timeout:1500}));
 }
 const member=account("member1","google.com");
@@ -96,5 +96,26 @@ assert.equal(evaluate(readOwnPython,{user:null,targetUid:"member1"}),false,"Anon
 assert.equal(evaluate(readOwnPython,{user:adminClaim,targetUid:"member1"}),false,"Even admins cannot read another user's code");
 assert.equal(evaluate(readOwnPython,{user:discord,targetUid:"discord1"}),true,"Signed-in Discord user can read their own code");
 assert.equal(evaluate(readOwnPython,{user:adminRole,targetUid:"admin1",blocks}),false,"Blocked account cannot read private code");
+const exampleRoomId="room1234567890";
+const rooms={ [exampleRoomId]:{ownerUid:"member1",members:{member1:true,discord1:true}} };
+const roomRead=rules.hubPythonRooms.$roomId[".read"];
+assert.equal(evaluate(roomRead,{user:member,rooms,roomId:exampleRoomId}),true,"Room owner can read code");
+assert.equal(evaluate(roomRead,{user:discord,rooms,roomId:exampleRoomId}),true,"Invited member can read room");
+assert.equal(evaluate(roomRead,{user:moderator,rooms,roomId:exampleRoomId}),false,"Uninvited member cannot read room");
+assert.equal(evaluate(roomRead,{user:adminClaim,rooms,roomId:exampleRoomId}),false,"Uninvited Firebase Admin cannot read room code");
+assert.equal(evaluate(roomRead,{user:discord,rooms,roomId:exampleRoomId,blocks:{discord1:{blocked:true}}}),false,"Blocked member cannot read shared code");
+const roomWrite=rules.hubPythonRooms.$roomId.document[".write"];
+assert.equal(evaluate(roomWrite,{user:discord,rooms,roomId:exampleRoomId}),true,"Invited member may collaboratively edit");
+assert.equal(evaluate(roomWrite,{user:moderator,rooms,roomId:exampleRoomId}),false,"Uninvited member cannot edit");
+const inviteWrite=rules.hubPythonRooms.$roomId.members.$memberUid[".write"];
+assert.ok(inviteWrite.includes("ownerUid"),"Only the owner may approve collaborators");
+const roomIndexRead=rules.hubPythonRoomIndex.$uid[".read"];
+assert.equal(evaluate(roomIndexRead,{user:member,targetUid:"member1"}),true,"Member can see their own room list");
+assert.equal(evaluate(roomIndexRead,{user:discord,targetUid:"member1"}),false,"Another member cannot read a room list");
+const requestWrite=rules.hubPythonRoomRequests.$roomId.$uid[".write"];
+assert.equal(evaluate(requestWrite,{user:moderator,rooms,roomId:exampleRoomId,targetUid:"mod1"}),true,"Visitor can request their own room access");
+assert.equal(evaluate(requestWrite,{user:moderator,rooms,roomId:exampleRoomId,targetUid:"member1"}),false,"Visitor cannot forge room owner's access request");
+assert.equal(evaluate(requestWrite,{user:discord,rooms,roomId:exampleRoomId,targetUid:"discord1"}),false,"Current member cannot request again");
 
-console.log("PASS: 32 sections retained, existing login checks and private Python project isolation assertions passed.");
+
+console.log("PASS: 35 rules sections; account privacy, invited collaboration, and access requests verified.");
