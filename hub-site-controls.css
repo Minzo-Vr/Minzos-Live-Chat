@@ -134,3 +134,28 @@
   color:#0d1931!important;border-color:#a6bfff!important
 }
 .store-card.hub-pin-available .hub-app-state{color:#c7ddff;background:#263958;border-color:#7796c9}
+
+/* Collapsible per-app role permissions; kept inside the existing scrollable
+   Admin Website & Game Controls list for phones and iPads. */
+#hubSiteAdminPanel .hub-site-admin-row{display:block;padding:11px 4px 13px}
+#hubSiteAdminPanel .hub-site-admin-main{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+#hubSiteAdminPanel .hub-site-admin-info{flex:1;min-width:0;overflow-wrap:anywhere}
+#hubSiteAdminPanel .hub-site-admin-toggles{display:flex;align-items:center;gap:10px;flex-shrink:0}
+#hubSiteAdminPanel .hub-site-role-lock{margin-top:9px;padding:9px 11px;border:1px solid #758fc078;border-radius:11px;background:#223556}
+#hubSiteAdminPanel .hub-site-role-lock summary{cursor:pointer;color:#dce9ff;font-size:12px;line-height:1.5;font-weight:750;list-style-position:inside;overflow-wrap:anywhere}
+#hubSiteAdminPanel .hub-site-role-lock[open]{border-color:#96b5f1}
+#hubSiteAdminPanel .hub-site-role-lock-body{padding-top:11px}
+#hubSiteAdminPanel .hub-site-role-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:12px 0}
+#hubSiteAdminPanel .hub-site-role-choice{display:flex;align-items:center;gap:8px;min-width:0;border:1px solid #7d98c370;border-radius:9px;padding:8px 10px;font-size:12px;color:#f8fbff;cursor:pointer;background:#192943}
+#hubSiteAdminPanel .hub-site-role-choice input{width:18px;height:18px;flex:0 0 auto;accent-color:#8faeff;margin:0}
+#hubSiteAdminPanel .hub-site-role-actions{display:flex;flex-wrap:wrap;gap:8px}
+#hubSiteAdminPanel .hub-site-role-actions button{min-height:39px;padding:9px 12px;background:#365990;color:#fff;border:1px solid #8bace8;border-radius:9px;font:700 12px system-ui;cursor:pointer}
+#hubSiteAdminPanel .hub-site-role-actions button:disabled{opacity:.5;cursor:not-allowed}
+#hubSiteAdminPanel .hub-site-role-actions button:focus-visible,
+#hubSiteAdminPanel .hub-site-role-lock summary:focus-visible{outline:2px solid #bed0ff;outline-offset:2px}
+@media(max-width:600px){
+ #hubSiteAdminPanel .hub-site-admin-main{align-items:flex-start;gap:8px}
+ #hubSiteAdminPanel .hub-site-admin-toggles{gap:6px}
+ #hubSiteAdminPanel .hub-site-role-options{grid-template-columns:minmax(0,1fr)}
+ #hubSiteAdminPanel .hub-site-admin-toggles small{max-width:50px;text-align:right}
+}
