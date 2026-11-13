@@ -1,4 +1,10 @@
-# Python Editor — private projects in Community Hub
+# Python Editor Live — private projects and shared rooms
+
+This app now includes **live multiplayer coding rooms** with owner-approved members, simultaneous editing through a Yjs CRDT, live participant presence, and Run output broadcast to everyone in the room. See the full [Python collaboration guide](./python-collaboration.md).
+
+Personal projects remain private to the Firebase account that owns them.
+
+## Private mode (single account)
 
 ## Open it
 1. Sign in to **Community Hub** with your existing Firebase-backed account (Google, Discord, or email).
