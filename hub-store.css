@@ -97,4 +97,85 @@
  #hubStorePreview .store-preview-visual-info{padding:12px}
  #hubStorePreview .store-preview-visual-info strong{font-size:17px}
 }
+/* Compact app cards on touch-size screens, so tiles do not fill the
+   entire viewport. The parent panes scroll; the card grids grow naturally. */
+@media(max-width:950px){
+ #gatewaySelection .gateway-main,
+ #communityGameHub #gameBrowse{
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
+ }
+ #gatewaySelection .gateway-options{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  align-content:start;
+  overflow:visible;
+  padding-bottom:calc(28px + env(safe-area-inset-bottom,0px));
+ }
+ #gatewaySelection .store-card{
+  display:grid;
+  grid-template-columns:76px minmax(0,1fr);
+  grid-template-rows:auto auto;
+  align-content:start;
+  align-items:start;
+  gap:7px 10px;
+  min-height:112px;
+  padding:10px;
+ }
+ #gatewaySelection .store-app-art{
+  grid-column:1;grid-row:1 / 3;
+  width:76px;height:76px;aspect-ratio:1;
+  border-radius:14px;align-self:center;
+ }
+ #gatewaySelection .store-app-art .store-preview-hint{
+  bottom:4px;left:4px;padding:3px 5px;font-size:9px;
+ }
+ #gatewaySelection .store-card .store-art-symbol{font-size:38px}
+ #gatewaySelection .store-card-copy{
+  grid-column:2;grid-row:1;min-height:0;
+ }
+ #gatewaySelection .store-card-actions{
+  grid-column:2;grid-row:2;min-width:0;
+  flex-wrap:nowrap;align-self:end;
+ }
+ #gatewaySelection .store-disabled-label{
+  grid-column:2;grid-row:2;
+ }
+ #gatewaySelection .store-card-copy strong{font-size:14px}
+ #gatewaySelection .store-card-copy small{font-size:11px;margin-top:2px}
+ #gatewaySelection .store-card-actions button,
+ #gatewaySelection .store-card-actions a{
+  min-width:0;min-height:34px;padding:7px 8px;font-size:11px;
+ }
+ #communityGameHub #gameGrid{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  align-content:start;overflow:visible;gap:10px;
+ }
+ #communityGameHub .store-game-card{
+  display:grid;grid-template-columns:70px minmax(0,1fr);
+  grid-template-rows:auto auto;
+  min-width:0;min-height:108px;gap:7px 10px;padding:10px;
+ }
+ #communityGameHub .store-game-art{
+  grid-column:1;grid-row:1/3;
+  width:70px;height:70px;aspect-ratio:1;align-self:center;
+ }
+ #communityGameHub .store-game-art .store-art-symbol{font-size:35px}
+ #communityGameHub .store-game-info{grid-column:2;grid-row:1;min-width:0}
+ #communityGameHub .store-game-info strong{font-size:14px}
+ #communityGameHub .store-game-info small{font-size:11px;margin-top:2px}
+ #communityGameHub .store-game-actions{
+  grid-column:2;grid-row:2;min-width:0;flex-wrap:wrap;
+ }
+ #communityGameHub .store-game-actions button{
+  min-height:33px;padding:6px 8px;font-size:11px;
+ }
+}
+@media(max-width:590px){
+ #gatewaySelection .gateway-options{grid-template-columns:minmax(0,1fr);gap:10px}
+ #gatewaySelection .store-card{grid-template-columns:70px minmax(0,1fr);min-height:104px}
+ #gatewaySelection .store-app-art{width:70px;height:70px}
+ #communityGameHub #gameGrid{grid-template-columns:minmax(0,1fr);gap:10px}
+ #communityGameHub .store-game-card{grid-template-columns:66px minmax(0,1fr);min-height:101px}
+ #communityGameHub .store-game-art{width:66px;height:66px}
+}
 @media(prefers-reduced-motion:reduce){.store-card{transition:none!important}.store-card:hover{transform:none!important}}
