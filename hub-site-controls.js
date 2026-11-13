@@ -24,6 +24,7 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
   ["community-browser","Community Browser","Built-in browser sidebar","🌐"]
  ];
  const GAME_ITEMS=[
+  ["Python Editor","🐍"],
   ["2048","🔢"],["Cookie Clicker","🍪"],["Google Dino","🦖"],
   ["Google Snake","🐍"],["Retro Bowl","🏈"],["Slope","⚡"],
   ["Run 3","🚀"],["Minesweeper","💣"],["Blackjack","🃏"],
@@ -46,7 +47,8 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
  const PAGE_KEYS={
   "minzify.html":"minzify","minzify-spotify.html":"minzify",
   "minzify-youtube.html":"minzify","shapes-colours.html":"shapes-colours","bubblebuilder.html":"bubblebuilder",
-  "minzsign.html":"minz-apps","update-centre.html":"update-centre"
+  "minzsign.html":"minz-apps","update-centre.html":"update-centre",
+  "python-editor.html":"game-python-editor"
  };
  const currentPage=PAGE_KEYS[pageFile]||null;
  let settings={},auth=null,db=null,account=null,isAdmin=false,roleOff=null,ready=false;
