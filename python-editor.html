@@ -24,6 +24,9 @@ header h1{margin:0;font-size:23px}header small{color:#b7c7e7}
 .sidebar .actions button{padding:9px}
 .sidebar p,.small{font-size:12px;color:#b3c4e1;margin:0;overflow-wrap:anywhere}
 .workspace{padding:16px;display:flex;flex-direction:column;gap:12px}
+.editor-panes{display:grid;grid-template-columns:1fr;gap:14px;min-height:0}
+.code-pane,.output-pane{display:flex;flex-direction:column;gap:8px;min-width:0}
+@media(min-width:1170px){.editor-panes{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}#pythonCode{min-height:420px}#console{min-height:420px;max-height:550px}}
 .bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between}
 .bar .buttons{display:flex;gap:8px;flex-wrap:wrap}
 label{font-size:13px;font-weight:700;color:#d4e3ff}
@@ -121,11 +124,13 @@ footer{font-size:12px;color:#b1c2de;padding:0 20px 16px;max-width:1540px;margin:
 <div><label for="projectName">Project name</label><input type="text" id="projectName" maxlength="60" value="My first Python script"><span id="sharedCodeTitle">👥 Live room: <strong id="sharedEditorTitle"></strong></span></div>
 <span id="dirtyState" class="badge">Not saved</span>
 </div>
-<label for="pythonCode">Python code</label>
+<div class="editor-panes"><div class="code-pane"><label for="pythonCode">Python code</label>
 <textarea id="pythonCode" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" aria-label="Python code editor"># Hello from Community Hub!
 name = "Python"
 for count in range(1, 4):
-    print(f"{count}. Hello, {name}!")</textarea>
+    print(f"{count}. Hello, {name}!")</textarea></div>
+<div class="output-pane"><label for="console">Program output · shared live in a room</label>
+<pre id="console" role="log" aria-live="polite">Press Run Python to execute your code. The Python engine loads on first use.</pre></div></div>
 <div class="bar">
 <div class="buttons">
 <button type="button" id="runCode" class="primary">▶ Run Python</button>
@@ -139,8 +144,6 @@ for count in range(1, 4):
 <label for="programInput">One line for each Python input() call</label>
 <textarea id="programInput" aria-label="Program input lines" placeholder="For example: Alice"></textarea>
 </details>
-<label for="console">Program output</label>
-<pre id="console" role="log" aria-live="polite">Press Run Python to execute your code. The Python engine loads on first use.</pre>
 <div class="bar">
 <div class="buttons">
 <button type="button" id="importCode">Import .py file</button>
