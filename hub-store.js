@@ -95,7 +95,7 @@
   launch.addEventListener("click",async()=>{
    const open=activeLaunch,meta=currentPreviewMeta,gate=window.HubSiteControls;
    if(typeof open!=="function")return;
-   if(gate&&meta?.category==="Browser game"&&!await gate.requestAccess("game-hub"))return;
+   if(gate&&(meta?.category==="Browser game"||meta?.category==="Game Hub app")&&!await gate.requestAccess("game-hub"))return;
    if(gate&&meta?.hubKey&&!await gate.requestAccess(meta.hubKey))return;
    closePreview(false);open();
   });
@@ -138,11 +138,11 @@
   launchButton.hidden=typeof launch!=="function";
   const availability=window.HubSiteControls;
   const key=meta.hubKey;
-  const blocked=!!availability&&!!key&&(!availability.canUse(key)||(meta.category==="Browser game"&&!availability.canUse("game-hub")));
+  const blocked=!!availability&&!!key&&(!availability.canUse(key)||((meta.category==="Browser game"||meta.category==="Game Hub app")&&!availability.canUse("game-hub")));
   launchButton.disabled=blocked&&!(availability?.isAdmin?.());
   if(blocked){
    const limited=(availability?.isRoleLocked?.(key)&&!availability?.roleAllowed?.(key))||
-    (meta.category==="Browser game"&&availability?.isRoleLocked?.("game-hub")&&!availability?.roleAllowed?.("game-hub"));
+    ((meta.category==="Browser game"||meta.category==="Game Hub app")&&availability?.isRoleLocked?.("game-hub")&&!availability?.roleAllowed?.("game-hub"));
    launchButton.textContent=availability?.isAdmin?.()?"🔐 Unlock to open":limited?"🔒 Locked for roles":"Disabled by admin";
   }
   dialog.hidden=false;$("hubStorePreviewClose").focus();
@@ -233,12 +233,12 @@
   const key=currentPreviewMeta.hubKey;
   const gate=window.HubSiteControls;
   const blocked=!!gate&&!!key&&(!gate.canUse(key)||
-    (currentPreviewMeta.category==="Browser game"&&!gate.canUse("game-hub")));
+    ((currentPreviewMeta.category==="Browser game"||currentPreviewMeta.category==="Game Hub app")&&!gate.canUse("game-hub")));
   const action=$("hubStoreLaunch");
   if(action){
    action.disabled=blocked&&!(gate?.isAdmin?.());
    const limited=(gate?.isRoleLocked?.(key)&&!gate?.roleAllowed?.(key))||
-    (currentPreviewMeta.category==="Browser game"&&gate?.isRoleLocked?.("game-hub")&&!gate?.roleAllowed?.("game-hub"));
+    ((currentPreviewMeta.category==="Browser game"||currentPreviewMeta.category==="Game Hub app")&&gate?.isRoleLocked?.("game-hub")&&!gate?.roleAllowed?.("game-hub"));
    action.textContent=blocked?(gate?.isAdmin?.()?"🔐 Unlock to open":limited?"🔒 Locked for roles":"Disabled by admin"):(currentPreviewMeta.launchLabel||"Open app");
   }
  });
