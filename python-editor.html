@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#111827">
-<title>Python Editor · Community Hub</title>
+<title>Python Editor Live · Community Hub</title>
 <link rel="stylesheet" href="./hub-site-controls.css">
 <script type="module" src="./hub-site-controls.js"></script>
 <style>
@@ -15,7 +15,7 @@ button:hover:not(:disabled){background:#3c5585}button:disabled{cursor:not-allowe
 button.primary{background:#4d71d8;border-color:#839cff}button.danger{background:#65344c}
 a{color:#bed4ff}header{display:flex;align-items:center;gap:14px;justify-content:space-between;flex-wrap:wrap;background:#17233d;border-bottom:1px solid #344565;padding:13px clamp(14px,3vw,28px)}
 header h1{margin:0;font-size:23px}header small{color:#b7c7e7}
-.layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:18px;max-width:1540px;margin:auto;padding:18px}
+.layout{display:grid;grid-template-columns:minmax(280px,310px) minmax(0,1fr);gap:18px;max-width:1540px;margin:auto;padding:18px}
 .sidebar,.workspace{background:#151f35;border:1px solid #344767;border-radius:16px;min-width:0}
 .sidebar{padding:16px;align-self:start;display:grid;gap:11px}
 .sidebar h2{margin:0;font-size:16px}
@@ -32,7 +32,30 @@ input[type=text],textarea{background:#090f1e;color:#f3f6ff;border:1px solid #536
 #pythonCode{font:14px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;min-height:310px;resize:vertical;tab-size:4;white-space:pre;overflow:auto;spellcheck:false}
 #programInput{min-height:55px;resize:vertical;font:13px/1.5 ui-monospace,monospace}
 #console{min-height:150px;max-height:330px;overflow:auto;border:1px solid #344c6c;border-radius:10px;background:#060b15;color:#c2f1ce;margin:0;padding:15px;font:13px/1.5 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
-#cloudStatus{font-size:13px;color:#c2d8ff;min-height:22px}#runStatus{font-size:13px;color:#b1d7c1}
+#cloudStatus{font-size:13px;color:#c2d8ff;min-height:22px}
+.shared-box{padding:14px;background:#202e4a;border:1px solid #526899;border-radius:13px;display:grid;gap:9px}
+.shared-box h2{margin:0;font-size:17px}
+.shared-box .shared-actions{display:flex;gap:6px;flex-wrap:wrap}
+.shared-box button{font-size:12px;padding:8px}
+.shared-box select{width:100%;min-height:65px;max-height:110px;color:white;background:#0b1427;border:1px solid #536887;border-radius:8px}
+.shared-box input{width:100%;min-width:0;background:#0b1427;border:1px solid #536887;border-radius:8px;color:#fff;padding:8px}
+.shared-box p{font-size:12px;color:#b7c9e8;margin:0}
+#roomActive[hidden],#roomAccessPrompt[hidden],#roomOwnerTools[hidden]{display:none!important}
+#sharedRequests button{font-size:12px}
+#sharedPeople{font-size:12px;line-height:1.6;color:#cce7d9}
+#sharedStatus{font-size:12px;color:#c8d8fb;min-height:18px;overflow-wrap:anywhere}
+#roomAccessPrompt{background:#101b30;border:1px solid #63799f;padding:10px;border-radius:10px}
+#sharedJoinCode{font-family:ui-monospace,monospace}
+#sharedCodeTitle{display:none}
+body.shared-active #sharedCodeTitle{display:block}
+body.shared-active #projectName{display:none}
+body.shared-active #dirtyState{display:none}
+#sharedRunNotice{font-size:12px;color:#b6efce}
+#sharedRoomList option{padding:6px}
+#sharedRequests{display:grid;gap:5px}
+#sharedRequests>div{display:flex;justify-content:space-between;gap:8px;align-items:center}
+#sharedRequests span{font-size:12px;overflow-wrap:anywhere}
+#sharedMemberUid{font:12px/1.4 ui-monospace,monospace;overflow-wrap:anywhere}#runStatus{font-size:13px;color:#b1d7c1}
 .badge{display:inline-block;border:1px solid #566c8b;border-radius:30px;color:#cbdaf5;padding:3px 10px;font-size:12px}
 #accountState{font-size:13px;color:#bdd4fb}
 footer{font-size:12px;color:#b1c2de;padding:0 20px 16px;max-width:1540px;margin:auto}
@@ -41,12 +64,47 @@ footer{font-size:12px;color:#b1c2de;padding:0 20px 16px;max-width:1540px;margin:
 </head>
 <body>
 <header>
-<div><h1>🐍 Python Editor</h1><small>Write, run and privately save Python projects</small></div>
+<div><h1>🐍 Python Editor Live</h1><small>Code together in real time, then run for everyone · Or keep your own projects private</small></div>
 <div><span id="accountState">Checking sign-in…</span> <a href="./?interface=selection" target="_top">Back to Community Hub</a></div>
 </header>
 <main class="layout">
 <aside class="sidebar">
-<h2>📁 My saved projects</h2>
+<section class="shared-box" aria-label="Live Python collaboration">
+<h2>👥 Shared coding rooms</h2>
+<p>Collaborate like a shared document. Only approved members can see a room's code.</p>
+<div id="sharedMemberUid">Your account ID: <span id="sharedOwnUid">Sign in first</span></div>
+<div class="shared-actions">
+<button type="button" id="sharedCopyUid">Copy my ID</button>
+<button type="button" id="sharedCreateRoom" class="primary">＋ New room</button>
+</div>
+<label for="sharedRoomList">My shared rooms</label>
+<select id="sharedRoomList" size="3" aria-label="My collaboration rooms" disabled></select>
+<button type="button" id="sharedOpenRoom">Open selected room</button>
+<label for="sharedJoinCode">Join using an invite link or room code</label>
+<input type="text" id="sharedJoinCode" placeholder="Paste shared room link or code" autocomplete="off">
+<button type="button" id="sharedJoinRoom">Open room / request access</button>
+<div id="roomAccessPrompt" hidden>
+<p>This room is private. Ask the owner for access to collaborate.</p>
+<button type="button" id="sharedRequestAccess" class="primary">Request access</button>
+</div>
+<div id="roomActive" hidden>
+<strong id="sharedRoomTitle">Shared room</strong>
+<div class="shared-actions">
+<button type="button" id="sharedCopyLink">🔗 Copy invite link</button>
+<button type="button" id="sharedLeaveRoom">Leave room</button>
+</div>
+<p id="sharedPeople">Waiting for collaborators…</p>
+<div id="roomOwnerTools" hidden>
+<label for="sharedInviteUid">Invite by Firebase account ID</label>
+<input id="sharedInviteUid" type="text" maxlength="128" placeholder="Paste friend's account ID">
+<button id="sharedInviteMember" type="button">Invite editor</button>
+<div id="sharedRequests" aria-label="Pending room requests"></div>
+</div>
+</div>
+<p id="sharedStatus" role="status" aria-live="polite">Sign in to create a shared room.</p>
+</section>
+<hr style="width:100%;border:0;border-top:1px solid #3c5075">
+<h2>📁 My private projects</h2>
 <label for="projectList">Projects saved to your account</label>
 <select id="projectList" size="7" aria-label="Private Python projects" disabled></select>
 <div class="actions">
@@ -60,7 +118,7 @@ footer{font-size:12px;color:#b1c2de;padding:0 20px 16px;max-width:1540px;margin:
 </aside>
 <section class="workspace">
 <div class="bar">
-<div><label for="projectName">Project name</label><input type="text" id="projectName" maxlength="60" value="My first Python script"></div>
+<div><label for="projectName">Project name</label><input type="text" id="projectName" maxlength="60" value="My first Python script"><span id="sharedCodeTitle">👥 Live room: <strong id="sharedEditorTitle"></strong></span></div>
 <span id="dirtyState" class="badge">Not saved</span>
 </div>
 <label for="pythonCode">Python code</label>
@@ -74,7 +132,7 @@ for count in range(1, 4):
 <button type="button" id="stopCode" disabled>■ Stop</button>
 <button type="button" id="clearOutput">Clear output</button>
 </div>
-<span id="runStatus">Ready to run</span>
+<span id="runStatus">Ready to run</span><span id="sharedRunNotice" hidden>Output syncs to everyone in the room</span>
 </div>
 <details>
 <summary>Program input (optional)</summary>
@@ -93,7 +151,8 @@ for count in range(1, 4):
 </div>
 </section>
 </main>
-<footer>Python runs locally in a browser worker using Pyodide; it is not uploaded for execution. Save to your account to open your code on another device. Only run code you trust. Large libraries may not be supported.</footer>
+<footer>Private projects stay under your account. Shared rooms require owner approval; live edits merge using Yjs. In a shared room one browser runs Python and its output is streamed to all participants. Run only trusted code. Python runs locally using Pyodide, with browser and package limitations.</footer>
 <script type="module" src="./python-editor.js"></script>
+<script type="module" src="./python-collab.js"></script>
 </body>
 </html>
