@@ -315,7 +315,18 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
     play.title=locked&&roleRestricted(key)?"Restricted to: "+roleNames(key):locked&&roleRestricted("game-hub")?"Game Hub restricted to: "+roleNames("game-hub"):"";
    }
    const preview=card.querySelector(".store-game-preview");
-   if(preview)preview.setAttribute("aria-label","Preview "+(card.dataset.hubGameName||"game")+(locked?" (disabled)":""));
+   if(preview)preview.setAttribute("aria-label","Preview "+(card.dataset.hubGameName||"game")+(locked?" (restricted)":""));
+   const info=card.querySelector(".store-game-info");
+   if(info){
+    let note=info.querySelector(".hub-game-access-label");
+    if(!note){note=n("small","hub-game-access-label");info.append(note)}
+    note.hidden=!locked;
+    if(locked){
+     note.textContent=roleRestricted("game-hub")?"🔒 Game Hub: "+roleNames("game-hub")
+      :roleRestricted(key)?"🔒 Allowed: "+roleNames(key)
+      :isAdmin?"🔐 Admin PIN required":"⛔ Disabled by admin";
+    }
+   }
   }
  }
  function unavailableToast(key){
