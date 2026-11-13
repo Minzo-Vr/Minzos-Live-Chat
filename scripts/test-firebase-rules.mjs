@@ -5,9 +5,15 @@ import assert from "node:assert/strict";
 import vm from "node:vm";
 
 const rules=JSON.parse(fs.readFileSync(new URL("../database.rules.json",import.meta.url),"utf8")).rules;
-assert.equal(Object.keys(rules).length,35,"Expected all prior rules plus private projects and 3 collaborative room sections");
+assert.equal(Object.keys(rules).length,36,"Expected prior rules, Python collaboration, and role-based Hub access controls");
 assert.equal(rules.chatPublicConfig[".read"],true);
 assert.equal(rules.hubSiteAvailability[".read"],true);
+assert.equal(rules.hubSiteRoleLocks[".read"],true,"Everyone must be able to read the role policy");
+assert.ok(!(".write" in rules.hubSiteRoleLocks),"No public root-level role-policy writes allowed");
+for(const key of ["member","plus","moderator","testsubject","admin"]){
+ assert.equal(rules.hubSiteRoleLocks.$key[key][".validate"],"newData.val() === true",key+" role lock must be boolean true");
+}
+assert.equal(rules.hubSiteRoleLocks.$key.$other[".validate"],false,"Unknown roles are not allowed");
 assert.equal(rules.chatPushSubscriptions[".read"],false);
 assert.equal(rules.chatPushSubscriptions[".write"],false);
 assert.ok(!(".read" in rules),"Root database must not be globally readable");
@@ -46,14 +52,14 @@ function rootOf(data){
 function account(uid,provider,claim=false){
  return uid?{uid,token:{admin:claim,firebase:{sign_in_provider:provider}}}:null;
 }
-function evaluate(expr,{user,roles={},blocks={},rooms={},anonymousEnabled=false,targetUid="",roomId=""}={}){
+function evaluate(expr,{user,roles={},blocks={},rooms={},anonymousEnabled=false,targetUid="",roomId="",key="chats"}={}){
  assert.equal(typeof expr,"string");
  const root=rootOf({
   chatRoles:roles,hubBlockedUsers:blocks,hubPythonRooms:rooms,
   chatPublicConfig:{anonymousEnabled},
  });
  return Boolean(vm.runInNewContext("("+expr+")",{
-  auth:user??null,root,$uid:targetUid,$roomId:roomId,now:Date.now()
+  auth:user??null,root,$uid:targetUid,$roomId:roomId,$key:{matches:regex=>regex.test(key)},now:Date.now()
  },{timeout:1500}));
 }
 const member=account("member1","google.com");
@@ -84,6 +90,13 @@ assert.equal(evaluate(clearAll,{user:adminClaim,roles}),true,"Admin claim can cl
 assert.equal(evaluate(clearAll,{user:adminRole,roles,blocks}),false,"Blocked admin role cannot clear chat");
 assert.equal(evaluate(changeSettings,{user:adminRole,roles}),true,"DB admin can edit site settings");
 assert.equal(evaluate(changeSettings,{user:moderator,roles}),false,"Moderator cannot edit admin settings");
+const editRoleLocks=rules.hubSiteRoleLocks.$key[".write"];
+assert.equal(evaluate(editRoleLocks,{user:adminRole,roles,key:"game-python-editor"}),true,"Verified admin can set Python Editor role lock");
+assert.equal(evaluate(editRoleLocks,{user:adminClaim,roles,key:"game-hub"}),true,"Admin custom claim can set Game Hub role lock");
+assert.equal(evaluate(editRoleLocks,{user:member,roles,key:"game-python-editor"}),false,"Members cannot change role locks");
+assert.equal(evaluate(editRoleLocks,{user:moderator,roles,key:"game-python-editor"}),false,"Moderators cannot change role locks");
+assert.equal(evaluate(editRoleLocks,{user:adminRole,roles,blocks,key:"game-python-editor"}),false,"Blocked admins cannot edit role locks");
+assert.equal(evaluate(editRoleLocks,{user:adminRole,roles,key:"unknown-app"}),false,"Unknown apps cannot be added to role lock policy");
 assert.equal(evaluate(readDir,{user:member,roles}),false,"Member cannot see private admin directory");
 assert.equal(evaluate(readDir,{user:adminRole,roles}),true,"DB admin can use private admin directory");
 const blockSelf=rules.hubBlockedUsers.$uid[".read"];
@@ -118,4 +131,4 @@ assert.equal(evaluate(requestWrite,{user:moderator,rooms,roomId:exampleRoomId,ta
 assert.equal(evaluate(requestWrite,{user:discord,rooms,roomId:exampleRoomId,targetUid:"discord1"}),false,"Current member cannot request again");
 
 
-console.log("PASS: 35 rules sections; account privacy, invited collaboration, and access requests verified.");
+console.log("PASS: 36 rules sections; login, collaboration privacy, and role-lock admin permissions verified.");
