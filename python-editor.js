@@ -10,6 +10,7 @@ import {getDatabase,ref,onValue,push,set,remove,serverTimestamp} from "https://w
  const $=id=>document.getElementById(id);
  const ROOT="hubPythonProjects";
  const MAX_CODE=20000;
+ const shared=()=>window.PythonCollab?.active?.()===true;
  const MAX_PROJECTS=40;
  const DEFAULT_CODE='# Hello from Community Hub!\nname = "Python"\nfor count in range(1, 4):\n    print(f"{count}. Hello, {name}!")';
  const config={
@@ -44,10 +45,13 @@ import {getDatabase,ref,onValue,push,set,remove,serverTimestamp} from "https://w
  }
  function refreshButtons(){
   const signed=!!account;
-  projectList.disabled=!signed;
-  $("saveProject").disabled=!signed||saving||nameInput.value.trim().length===0||codeInput.value.length>MAX_CODE;
-  $("deleteProject").disabled=!signed||saving||!projectList.value||!projects[projectList.value];
-  $("loadProject").disabled=!signed||saving||!projectList.value||!projects[projectList.value];
+  projectList.disabled=!signed||shared();
+  $("newProject").disabled=shared();
+  $("importCode").disabled=shared();
+  nameInput.disabled=shared();
+  $("saveProject").disabled=shared()||!signed||saving||nameInput.value.trim().length===0||codeInput.value.length>MAX_CODE;
+  $("deleteProject").disabled=shared()||!signed||saving||!projectList.value||!projects[projectList.value];
+  $("loadProject").disabled=shared()||!signed||saving||!projectList.value||!projects[projectList.value];
   $("accountState").textContent=signed?"☁ Signed in as "+(account.displayName||account.email||"your account"):"🔒 Sign in to Community Hub to save";
  }
  function renderList(){
@@ -65,12 +69,14 @@ import {getDatabase,ref,onValue,push,set,remove,serverTimestamp} from "https://w
  }
  function checkUnsaved(){return !dirty||confirm("Discard the unsaved code currently in your editor?");}
  function newProject(){
+  if(shared())return say("Leave the shared room to manage private projects.");
   if(!checkUnsaved())return;
   currentId=null;nameInput.value="Untitled script";codeInput.value="# Start writing your Python here\nprint('Hello!')\n";
   projectList.selectedIndex=-1;markDirty();codeInput.focus();
   say(account?"New unsaved script. Press Save to store it privately.":"Sign in to Community Hub before saving.");
  }
  function loadSelected(){
+  if(shared())return say("Leave the shared room to load a private project.");
   const id=projectList.value,project=projects[id];
   if(!account||!project)return;
   if(!checkUnsaved())return;
@@ -81,6 +87,7 @@ import {getDatabase,ref,onValue,push,set,remove,serverTimestamp} from "https://w
   say("Loaded privately saved project: "+nameInput.value);
  }
  async function saveProject(){
+  if(shared())return say("Shared room changes save automatically. Leave the room to save privately.");
   if(!account||saving)return say("Sign in first to save this script.");
   const name=nameInput.value.trim(),code=codeInput.value;
   if(!name||name.length>60)return say("Project name must be 1–60 characters.");
@@ -99,6 +106,7 @@ import {getDatabase,ref,onValue,push,set,remove,serverTimestamp} from "https://w
   finally{saving=false;refreshButtons();}
  }
  async function deleteSelected(){
+  if(shared())return say("Leave the shared room to delete private projects.");
   if(!account||saving)return;
   const id=projectList.value,project=projects[id];if(!project)return;
   if(!confirm("Permanently delete '"+String(project.name||"Untitled").slice(0,60)+"' from your account?"))return;
@@ -115,6 +123,7 @@ import {getDatabase,ref,onValue,push,set,remove,serverTimestamp} from "https://w
   }catch(err){say("Delete failed: "+errorMessage(err));}
   finally{saving=false;refreshButtons();}
  }
+ document.addEventListener("python-collab-room-change",refreshButtons);
  nameInput.addEventListener("input",markDirty);
  codeInput.addEventListener("input",markDirty);
  codeInput.addEventListener("keydown",event=>{
@@ -122,6 +131,7 @@ import {getDatabase,ref,onValue,push,set,remove,serverTimestamp} from "https://w
   event.preventDefault();
   const a=codeInput.selectionStart,b=codeInput.selectionEnd;
   codeInput.setRangeText("    ",a,b,"end");markDirty();
+  if(shared())codeInput.dispatchEvent(new Event("input",{bubbles:true}));
  });
  projectList.addEventListener("change",refreshButtons);
  $("newProject").addEventListener("click",newProject);
@@ -129,10 +139,10 @@ import {getDatabase,ref,onValue,push,set,remove,serverTimestamp} from "https://w
  projectList.addEventListener("dblclick",loadSelected);
  $("saveProject").addEventListener("click",()=>void saveProject());
  $("deleteProject").addEventListener("click",()=>void deleteSelected());
- $("importCode").addEventListener("click",()=>$("importFile").click());
+ $("importCode").addEventListener("click",()=>{if(shared())return say("Leave the shared room before importing into private projects.");$("importFile").click();});
  $("importFile").addEventListener("change",async()=>{
   const file=$("importFile").files?.[0];$("importFile").value="";
-  if(!file)return;
+  if(!file||shared())return;
   if(file.size>MAX_CODE*4)return say("File too large. Maximum "+MAX_CODE+" characters of code.");
   if(!checkUnsaved())return;
   try{
