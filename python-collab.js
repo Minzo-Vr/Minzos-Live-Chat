@@ -161,12 +161,37 @@ function memberLabel(uid){
 }
 function showPeople(members={},presence={}){
  const current=Object.keys(members).filter(id=>members[id]===true);
+ if(ownerUid===account?.uid)renderMembers(current,presence);
  const online=current.filter(uid=>presence[uid]&&Date.now()-Number(presence[uid].at||0)<90000);
  const label=current.map(uid=>{
   const person=presence[uid],display=person?.name?person.name:memberLabel(uid);
   return (online.includes(uid)?"🟢 ":"⚪ ")+display+(uid===ownerUid?" (owner)":"");
  });
  $("sharedPeople").textContent="Collaborators ("+online.length+" online / "+current.length+" invited): "+(label.join(", ")||"Only you");
+}
+function renderMembers(ids,presence){
+ const box=$("sharedMemberControls");box.replaceChildren();
+ for(const uid of ids){
+  if(uid===ownerUid)continue;
+  const row=document.createElement("div"),label=document.createElement("span");
+  const kick=document.createElement("button");kick.type="button";kick.textContent="Remove";
+  label.textContent=(presence[uid]?.name||uid.slice(0,16)+"…")+" · "+uid.slice(0,9)+"…";
+  kick.addEventListener("click",()=>void removeMember(uid,kick));
+  row.append(label,kick);box.append(row);
+ }
+ if(!box.childNodes.length){const p=document.createElement("p");p.textContent="No other approved collaborators yet.";box.append(p)}
+}
+async function removeMember(uid,button){
+ if(!room||ownerUid!==account?.uid||uid===ownerUid)return;
+ if(!confirm("Remove this account's access to the shared room?"))return;
+ const id=room.id;button.disabled=true;
+ try{
+  // Remove their discovery entry while membership still grants index write.
+  await remove(ref(db,INDEX_ROOT+"/"+uid+"/"+id));
+  await remove(ref(db,path(id,"members/"+uid)));
+  notify("Collaborator removed. They can no longer load or save room code.");
+ }catch(err){notify("Could not remove collaborator: "+niceError(err))}
+ finally{button.disabled=false}
 }
 function showRequests(requests){
  const box=$("sharedRequests");box.replaceChildren();
@@ -237,7 +262,15 @@ async function joinRoom(id){
   subscriptions.push(onValue(docRef,snap=>{
    if(room?.id!==id||!snap.exists())return;
    try{Y.applyUpdate(ydoc,from64(snap.val().state),"firebase")}catch(err){notify("Cannot decode room changes: "+niceError(err))}
-  },err=>notify("Document sync unavailable: "+niceError(err))));
+  },err=>{
+   if(/permission.denied|permission_denied/i.test(String(err?.code||err?.message||err))){
+    void leaveRoom().then(()=>{
+      CODE.value="# This account no longer has permission to access that shared room.\n";
+      CODE.dispatchEvent(new Event("input",{bubbles:true}));
+      notify("Your access to that shared room was removed.");
+    });
+   }else notify("Document sync unavailable: "+niceError(err));
+  }));
   let latestMembers={},latestPresence={};
   subscriptions.push(onValue(ref(db,path(id,"members")),snap=>{
    if(room?.id!==id)return;
