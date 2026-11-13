@@ -1,5 +1,120 @@
 {
   "rules": {
+    "hubPythonRooms": {
+      "$roomId": {
+        ".read": "auth != null && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true && (root.child('hubPythonRooms/'+$roomId+'/ownerUid').val() === auth.uid || root.child('hubPythonRooms/'+$roomId+'/members/'+auth.uid).val() === true)",
+        ".write": "auth != null && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true && !data.exists() && newData.child('ownerUid').val() === auth.uid && newData.child('members/'+auth.uid).val() === true && newData.hasChildren(['ownerUid','title','members','document','createdAt'])",
+        ".validate": "newData.hasChildren(['ownerUid','title','members','document','createdAt'])",
+        "ownerUid": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 128"
+        },
+        "title": {
+          ".write": "auth != null && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true && root.child('hubPythonRooms/'+$roomId+'/ownerUid').val() === auth.uid",
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+        },
+        "members": {
+          "$memberUid": {
+            ".write": "auth != null && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true && root.child('hubPythonRooms/'+$roomId+'/ownerUid').val() === auth.uid && $memberUid !== root.child('hubPythonRooms/'+$roomId+'/ownerUid').val()",
+            ".validate": "newData.val() === true"
+          }
+        },
+        "document": {
+          ".write": "auth != null && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true && (root.child('hubPythonRooms/'+$roomId+'/ownerUid').val() === auth.uid || root.child('hubPythonRooms/'+$roomId+'/members/'+auth.uid).val() === true)",
+          ".validate": "newData.hasChildren(['state','updatedAt'])",
+          "state": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200000"
+          },
+          "updatedAt": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
+        "runs": {
+          "$runId": {
+            ".write": "auth != null && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true && (root.child('hubPythonRooms/'+$roomId+'/ownerUid').val() === auth.uid || root.child('hubPythonRooms/'+$roomId+'/members/'+auth.uid).val() === true) && $runId.matches(/^[A-Za-z0-9_-]{12,32}$/) && ((!data.exists() && newData.child('byUid').val() === auth.uid) || (data.child('byUid').val() === auth.uid && newData.child('byUid').val() === auth.uid))",
+            ".validate": "newData.hasChildren(['byUid','byName','code','input','output','status','startedAt'])",
+            "byUid": {
+              ".validate": "newData.isString() && newData.val() === auth.uid"
+            },
+            "byName": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 70"
+            },
+            "code": {
+              ".validate": "newData.isString() && newData.val().length <= 20000"
+            },
+            "input": {
+              ".validate": "newData.isString() && newData.val().length <= 6000"
+            },
+            "output": {
+              ".validate": "newData.isString() && newData.val().length <= 60000"
+            },
+            "status": {
+              ".validate": "newData.isString() && (newData.val() === 'running' || newData.val() === 'done' || newData.val() === 'error' || newData.val() === 'stopped')"
+            },
+            "startedAt": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "endedAt": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "presence": {
+          "$uid": {
+            ".write": "auth != null && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true && auth.uid === $uid && (root.child('hubPythonRooms/'+$roomId+'/ownerUid').val() === auth.uid || root.child('hubPythonRooms/'+$roomId+'/members/'+auth.uid).val() === true)",
+            ".validate": "newData.hasChildren(['name','at'])",
+            "name": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 70"
+            },
+            "at": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "hubPythonRoomIndex": {
+      "$uid": {
+        ".read": "auth != null && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true && auth.uid === $uid",
+        "$roomId": {
+          ".write": "auth != null && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true && (auth.uid === $uid || root.child('hubPythonRooms/'+$roomId+'/ownerUid').val() === auth.uid) && root.child('hubPythonRooms/'+$roomId+'/members/'+$uid).val() === true",
+          ".validate": "newData.val() === true"
+        }
+      }
+    },
+    "hubPythonRoomRequests": {
+      "$roomId": {
+        ".read": "auth != null && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true && root.child('hubPythonRooms/'+$roomId+'/ownerUid').val() === auth.uid",
+        "$uid": {
+          ".read": "auth != null && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true && auth.uid === $uid",
+          ".write": "auth != null && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true && ((root.child('hubPythonRooms/'+$roomId+'/ownerUid').exists() && auth.uid === $uid && !root.child('hubPythonRooms/'+$roomId+'/members/'+$uid).exists()) || (root.child('hubPythonRooms/'+$roomId+'/ownerUid').val() === auth.uid && !newData.exists()))",
+          ".validate": "newData.hasChildren(['name','at'])",
+          "name": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 70"
+          },
+          "at": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
     "hubPythonProjects": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true",
