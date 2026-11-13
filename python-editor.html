@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#111827">
+<title>Python Editor · Community Hub</title>
+<style>
+:root{color-scheme:dark;font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;background:#0b1220;color:#eef4ff}
+*{box-sizing:border-box}body{margin:0;min-height:100dvh}button,input,textarea,select{font:inherit}
+button{cursor:pointer;border:1px solid #60759d;border-radius:10px;padding:10px 13px;background:#293c61;color:#f5f8ff;font-weight:650}
+button:hover:not(:disabled){background:#3c5585}button:disabled{cursor:not-allowed;opacity:.45}
+button.primary{background:#4d71d8;border-color:#839cff}button.danger{background:#65344c}
+a{color:#bed4ff}header{display:flex;align-items:center;gap:14px;justify-content:space-between;flex-wrap:wrap;background:#17233d;border-bottom:1px solid #344565;padding:13px clamp(14px,3vw,28px)}
+header h1{margin:0;font-size:23px}header small{color:#b7c7e7}
+.layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:18px;max-width:1540px;margin:auto;padding:18px}
+.sidebar,.workspace{background:#151f35;border:1px solid #344767;border-radius:16px;min-width:0}
+.sidebar{padding:16px;align-self:start;display:grid;gap:11px}
+.sidebar h2{margin:0;font-size:16px}
+.sidebar select{width:100%;min-height:190px;background:#0b1427;border:1px solid #52698b;border-radius:9px;color:white;padding:8px;overflow:auto}
+.sidebar option{padding:7px 5px}.sidebar .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sidebar .actions button{padding:9px}
+.sidebar p,.small{font-size:12px;color:#b3c4e1;margin:0;overflow-wrap:anywhere}
+.workspace{padding:16px;display:flex;flex-direction:column;gap:12px}
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between}
+.bar .buttons{display:flex;gap:8px;flex-wrap:wrap}
+label{font-size:13px;font-weight:700;color:#d4e3ff}
+input[type=text],textarea{background:#090f1e;color:#f3f6ff;border:1px solid #536887;border-radius:10px;padding:10px;width:100%}
+#projectName{max-width:320px}
+#pythonCode{font:14px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;min-height:310px;resize:vertical;tab-size:4;white-space:pre;overflow:auto;spellcheck:false}
+#programInput{min-height:55px;resize:vertical;font:13px/1.5 ui-monospace,monospace}
+#console{min-height:150px;max-height:330px;overflow:auto;border:1px solid #344c6c;border-radius:10px;background:#060b15;color:#c2f1ce;margin:0;padding:15px;font:13px/1.5 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+#cloudStatus{font-size:13px;color:#c2d8ff;min-height:22px}#runStatus{font-size:13px;color:#b1d7c1}
+.badge{display:inline-block;border:1px solid #566c8b;border-radius:30px;color:#cbdaf5;padding:3px 10px;font-size:12px}
+#accountState{font-size:13px;color:#bdd4fb}
+footer{font-size:12px;color:#b1c2de;padding:0 20px 16px;max-width:1540px;margin:auto}
+@media(max-width:700px){.layout{grid-template-columns:1fr;padding:10px;gap:10px}.sidebar{display:block}.sidebar h2{margin-bottom:8px}.sidebar select{min-height:85px;max-height:128px}.sidebar .actions{margin-top:10px}.sidebar p{margin-top:8px}.workspace{padding:12px}#pythonCode{min-height:260px}header h1{font-size:19px}}
+</style>
+</head>
+<body>
+<header>
+<div><h1>🐍 Python Editor</h1><small>Write, run and privately save Python projects</small></div>
+<div><span id="accountState">Checking sign-in…</span> <a href="./?interface=selection" target="_top">Back to Community Hub</a></div>
+</header>
+<main class="layout">
+<aside class="sidebar">
+<h2>📁 My saved projects</h2>
+<label for="projectList">Projects saved to your account</label>
+<select id="projectList" size="7" aria-label="Private Python projects" disabled></select>
+<div class="actions">
+<button type="button" id="newProject">＋ New</button>
+<button type="button" id="loadProject" disabled>↪ Load</button>
+<button type="button" id="saveProject" class="primary" disabled>☁ Save</button>
+<button type="button" id="deleteProject" class="danger" disabled>Delete</button>
+</div>
+<p>Only your signed-in Firebase account can read or change its saved Python code. This is enforced by Realtime Database rules.</p>
+<p id="cloudStatus" role="status" aria-live="polite">Sign in to Community Hub to save projects.</p>
+</aside>
+<section class="workspace">
+<div class="bar">
+<div><label for="projectName">Project name</label><input type="text" id="projectName" maxlength="60" value="My first Python script"></div>
+<span id="dirtyState" class="badge">Not saved</span>
+</div>
+<label for="pythonCode">Python code</label>
+<textarea id="pythonCode" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" aria-label="Python code editor"># Hello from Community Hub!
+name = "Python"
+for count in range(1, 4):
+    print(f"{count}. Hello, {name}!")</textarea>
+<div class="bar">
+<div class="buttons">
+<button type="button" id="runCode" class="primary">▶ Run Python</button>
+<button type="button" id="stopCode" disabled>■ Stop</button>
+<button type="button" id="clearOutput">Clear output</button>
+</div>
+<span id="runStatus">Ready to run</span>
+</div>
+<details>
+<summary>Program input (optional)</summary>
+<label for="programInput">One line for each Python input() call</label>
+<textarea id="programInput" aria-label="Program input lines" placeholder="For example: Alice"></textarea>
+</details>
+<label for="console">Program output</label>
+<pre id="console" role="log" aria-live="polite">Press Run Python to execute your code. The Python engine loads on first use.</pre>
+<div class="bar">
+<div class="buttons">
+<button type="button" id="importCode">Import .py file</button>
+<button type="button" id="exportCode">Download .py</button>
+<input type="file" id="importFile" accept=".py,.txt,text/x-python,text/plain" hidden>
+</div>
+<span class="small" id="sizeState">0 characters</span>
+</div>
+</section>
+</main>
+<footer>Python runs locally in a browser worker using Pyodide; it is not uploaded for execution. Save to your account to open your code on another device. Only run code you trust. Large libraries may not be supported.</footer>
+<script type="module" src="./python-editor.js"></script>
+</body>
+</html>
