@@ -18,6 +18,7 @@ const CODE=$("pythonCode"),OUT=$("console"),RUN=$("runCode"),STOP=$("stopCode");
 const SELECT=$("sharedRoomList"),STATUS=$("sharedStatus");
 let wanted=new URLSearchParams(location.search).get("room")||"";
 let openingRoom="";
+const roomTitles=new Map();
 let account=null,room=null,ownerUid="",ydoc=null,ytext=null,docRef=null;
 let pending=[],writing=false,writeTimer=null,writeRetry=null,editRendering=false,roomVersion=0;
 let subscriptions=[],accountIndexOff=null,roomIndex={},presenceTimer=null;
@@ -309,10 +310,23 @@ async function createRoom(){
 function refreshRoomList(){
  const selected=SELECT.value;SELECT.replaceChildren();
  for(const id of Object.keys(roomIndex||{}).filter(safeRoomId)){
-  const option=document.createElement("option");option.value=id;option.textContent=id.slice(0,9)+"…";SELECT.append(option);
+  const option=document.createElement("option");option.value=id;
+  option.textContent=roomTitles.get(id)||id.slice(0,9)+"…";
+  SELECT.append(option);
  }
  if(selected&&roomIndex[selected])SELECT.value=selected;
  else SELECT.selectedIndex=-1;
+}
+async function loadRoomTitles(uid){
+ const ids=Object.keys(roomIndex).filter(safeRoomId).slice(0,70);
+ await Promise.all(ids.map(async id=>{
+  try{
+   const title=(await get(ref(db,path(id,"title")))).val();
+   if(account?.uid!==uid||!roomIndex[id])return;
+   if(typeof title==="string")roomTitles.set(id,title.slice(0,80));
+  }catch{roomTitles.set(id,"Room "+id.slice(0,8)+" (check access)")}
+ }));
+ if(account?.uid===uid)refreshRoomList();
 }
 function syncRoomIndex(user){
  if(accountIndexOff){accountIndexOff();accountIndexOff=null}
@@ -321,7 +335,7 @@ function syncRoomIndex(user){
  const uid=user.uid;
  accountIndexOff=onValue(ref(db,INDEX_ROOT+"/"+uid),snap=>{
   if(account?.uid!==uid)return;
-  roomIndex=snap.val()||{};refreshRoomList();
+  roomIndex=snap.val()||{};refreshRoomList();void loadRoomTitles(uid);
   if(wanted&&safeRoomId(wanted)&&roomIndex[wanted]&&!room)void joinRoom(wanted);
  },err=>notify("Cannot list shared rooms: "+niceError(err)));
 }
@@ -350,7 +364,10 @@ $("sharedRequestAccess").addEventListener("click",()=>void requestRoomAccess());
 $("sharedOpenRoom").addEventListener("click",()=>void joinRoom(SELECT.value));
 SELECT.addEventListener("dblclick",()=>void joinRoom(SELECT.value));
 $("sharedCopyLink").addEventListener("click",async()=>{if(room){await copy(roomLink(room.id));notify("Invite link copied. Others must be approved before joining.")}});
-$("sharedLeaveRoom").addEventListener("click",()=>void leaveRoom());
+$("sharedLeaveRoom").addEventListener("click",()=>{
+ if(room&&(pending.length||writing)&&!confirm("Some code edits are still syncing. Leave anyway?"))return;
+ void leaveRoom();
+});
 $("sharedInviteMember").addEventListener("click",()=>void invite($("sharedInviteUid").value));
 window.addEventListener("beforeunload",e=>{if(room&&(pending.length||writing)){e.preventDefault();e.returnValue=""}});
 
