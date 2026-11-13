@@ -31,7 +31,7 @@
    features:["Searchable game library","Full-screen player","Game previews"]}
  };
  const GAMES={
-  "Python Editor":{icon:"🐍",detail:"Write and run Python in your browser. Save projects privately to your signed-in Community Hub account.",features:["Run Python code","Private cloud projects","Import and export .py files"]},
+  "Python Editor":{icon:"🐍",detail:"Code Python with friends in live rooms. Share editing and Run output, or save your own private scripts.",features:["Live multiplayer rooms","Run code for everyone","Private account projects","Invite and approve collaborators"]},
   "2048":{icon:"🔢",detail:"Slide number tiles together to combine matching values and try to reach 2048.",features:["Number puzzle","Strategy","Tile merging"]},
   "Cookie Clicker":{icon:"🍪",detail:"Click cookies to collect more and build up your cookie production.",features:["Idle game","Click to collect","Upgrades"]},
   "Google Dino":{icon:"🦖",detail:"An endless runner where you jump over obstacles with a pixel-style dinosaur.",features:["Runner","Timing","High scores"]},
