@@ -14,8 +14,17 @@ self.addEventListener("message",async event=>{
   try{
     const py=await getRuntime();
     self.postMessage({id,type:"status",value:"Running Python…"});
-    py.setStdout({batched:value=>self.postMessage({id,type:"output",value:String(value)+"\n"})});
-    py.setStderr({batched:value=>self.postMessage({id,type:"output",value:String(value)+"\n"})});
+    // Bound output inside the worker too, avoiding unbounded message queues.
+    let budget=60000;
+    const write=value=>{
+      if(budget<=0)return;
+      const text=String(value)+"\n";
+      const chunk=text.slice(0,budget);
+      budget-=chunk.length;
+      self.postMessage({id,type:"output",value:chunk});
+    };
+    py.setStdout({batched:write});
+    py.setStderr({batched:write});
     const inputLines=String(stdin||"").split(/\r?\n/);
     py.setStdin({stdin:()=>inputLines.length?inputLines.shift():null});
     await py.loadPackagesFromImports(code);
