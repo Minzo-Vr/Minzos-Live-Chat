@@ -16,7 +16,8 @@ const auth=getAuth(app),db=getDatabase(app);
 const ROOM_ROOT="hubPythonRooms",INDEX_ROOT="hubPythonRoomIndex",REQUEST_ROOT="hubPythonRoomRequests";
 const CODE=$("pythonCode"),OUT=$("console"),RUN=$("runCode"),STOP=$("stopCode");
 const SELECT=$("sharedRoomList"),STATUS=$("sharedStatus");
-const wanted=new URLSearchParams(location.search).get("room")||"";
+let wanted=new URLSearchParams(location.search).get("room")||"";
+let openingRoom="";
 let account=null,room=null,ownerUid="",ydoc=null,ytext=null,docRef=null;
 let pending=[],writing=false,writeTimer=null,writeRetry=null,editRendering=false,roomVersion=0;
 let subscriptions=[],accountIndexOff=null,roomIndex={},presenceTimer=null;
@@ -105,7 +106,7 @@ function cleanupSubscriptions(){
 async function leaveRoom(){
  const prior=room;
  if(!prior)return;
- roomVersion++;
+ roomVersion++;wanted="";
  if(pending.length||writing)notify("Leaving: any unsynced edits may be lost. Reopen this room to check.");
  clearTimeout(writeTimer);clearTimeout(writeRetry);
  stopSharedRun(false);
@@ -197,11 +198,12 @@ async function joinRoom(id){
  id=String(id||"").trim();
  if(!safeRoomId(id))return notify("Enter a valid room link or room code.");
  if(!account)return notify("Sign in to Community Hub first.");
- if(room?.id===id)return;
+ if(openingRoom===id||room?.id===id)return;
  if(room){
   if(pending.length||writing){if(!confirm("Some edits are still syncing. Leave this room anyway?"))return;}
   await leaveRoom();
  }
+ openingRoom=id;wanted=id;
  const uid=account.uid,revision=++roomVersion;
  notify("Checking access to shared room…");
  try{
@@ -272,7 +274,7 @@ async function joinRoom(id){
   $("roomAccessPrompt").hidden=false;
   $("sharedJoinCode").value=id;
   notify("Could not enter room: "+niceError(err)+". You can request access from the owner.");
- }
+ }finally{if(openingRoom===id)openingRoom=""}
 }
 function getRoomInput(){
  const val=$("sharedJoinCode").value.trim();
@@ -282,6 +284,7 @@ function getRoomInput(){
 async function requestRoomAccess(){
  const id=getRoomInput();
  if(!safeRoomId(id)||!account)return notify("Sign in and paste a valid room link or code.");
+ wanted=id;
  try{
   await set(ref(db,REQUEST_ROOT+"/"+id+"/"+account.uid),{name:identity(),at:Date.now()});
   notify("Access requested. The room owner must approve you. Keep or reopen this invite link.");
