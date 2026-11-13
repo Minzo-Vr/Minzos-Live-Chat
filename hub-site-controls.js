@@ -11,6 +11,16 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
  "use strict";
  const $=id=>document.getElementById(id);
  const PATH="hubSiteAvailability";
+ const ROLES_PATH="hubSiteRoleLocks";
+ const ROLE_OPTIONS=[
+  ["member","Signed-in members (any role)"],
+  ["plus","Chat+"],
+  ["moderator","Moderator"],
+  ["testsubject","Test Subject"],
+  ["admin","Admin"]
+ ];
+ const ROLE_NAMES=Object.fromEntries(ROLE_OPTIONS);
+ const ROLE_KEYS=new Set(ROLE_OPTIONS.map(([key])=>key));
  const RETURN_URL="./?interface=selection";
  const SITE_ITEMS=[
   ["chats","Community Chat","Chat messages, rooms and friends","💬"],
@@ -51,7 +61,9 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
   "python-editor.html":"game-python-editor"
  };
  const currentPage=PAGE_KEYS[pageFile]||null;
- let settings={},auth=null,db=null,account=null,isAdmin=false,roleOff=null,ready=false;
+ let settings={},roleLocks={},auth=null,db=null,account=null,isAdmin=false,roleOff=null,ready=false;
+ let roleLocksReady=false,userRoles=new Set();
+ const rolePending=new Set();
  let adminSection=null,adminButton=null,adminRows=new Map(),adminStatus=null;
  let disableAllButton=null,enableAllButton=null,bulkPending=false;
  let pending=new Set(),latestAuth=0;
@@ -172,6 +184,7 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
   });
  }
  function requestAccess(key){
+  if(!roleAllowed(key)){unavailableToast(key);return Promise.resolve(false)}
   if(!disabled(key)||isUnlocked(key))return Promise.resolve(true);
   if(!isAdmin||!account){unavailableToast(key);return Promise.resolve(false)}
   ensurePinModal();
@@ -193,9 +206,30 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
   return el;
  };
  function disabled(key){return ALL_KEYS.has(key)&&settings[key]===true;}
- function canUse(key){return !disabled(key)||isUnlocked(key);}
+ function lockedRoles(key){
+  if(!ALL_KEYS.has(key))return [];
+  const value=roleLocks[key];
+  return value&&typeof value==="object"
+   ?ROLE_OPTIONS.map(([name])=>name).filter(name=>value[name]===true):[];
+ }
+ function roleAllowed(key){
+  const allowed=lockedRoles(key);
+  if(!allowed.length)return true;
+  if(isAdmin)return true; // Admin recovery remains possible.
+  if(!account)return false;
+  return allowed.some(role=>userRoles.has(role));
+ }
+ function roleRestricted(key){return !roleAllowed(key);}
+ function canUse(key){return roleAllowed(key)&&(!disabled(key)||isUnlocked(key));}
+ function roleNames(key){
+  const roles=lockedRoles(key);
+  return roles.length?roles.map(role=>ROLE_NAMES[role]||role).join(", "):"Everyone";
+ }
  const api={
   isDisabled:disabled,
+  isRoleLocked:key=>lockedRoles(key).length>0,
+  allowedRoles:lockedRoles,
+  roleAllowed,
   canUse,
   requestAccess,
   isAdmin:()=>isAdmin,
@@ -207,7 +241,7 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
  window.HubSiteControls=api;
  function notifyChanged(){
   window.dispatchEvent(new CustomEvent("community-hub-availability-change",{
-   detail:{disabledKeys:Object.keys(settings).filter(key=>settings[key]===true),admin:isAdmin,ready}
+   detail:{disabledKeys:Object.keys(settings).filter(key=>settings[key]===true),roleLockedKeys:Object.keys(roleLocks).filter(key=>lockedRoles(key).length>0),admin:isAdmin,ready}
   }));
  }
  function renderAdmin(){
@@ -227,6 +261,16 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
    refs.input.checked=disabled(key);
    refs.input.disabled=bulkPending||pending.has(key)||!ready;
    refs.status.textContent=disabled(key)?"Disabled":"Enabled";
+   if(refs.roleSummary)refs.roleSummary.textContent="🔐 Lock for Roles — "+roleNames(key);
+   if(refs.roleInputs){
+    if(!refs.roleDirty){
+     const selected=lockedRoles(key);
+     for(const [role,input] of refs.roleInputs)input.checked=selected.includes(role);
+    }
+    for(const input of refs.roleInputs.values())input.disabled=!roleLocksReady||rolePending.has(key);
+    refs.roleSave.disabled=!roleLocksReady||rolePending.has(key)||!refs.roleDirty;
+    refs.roleReset.disabled=!roleLocksReady||rolePending.has(key)||!lockedRoles(key).length;
+   }
   }
   if(disableAllButton)disableAllButton.disabled=!ready||bulkPending||pending.size>0||entries.every(item=>disabled(item.key));
   if(enableAllButton)enableAllButton.disabled=!ready||bulkPending||pending.size>0||entries.every(item=>!disabled(item.key));
@@ -236,22 +280,23 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
   for(const [buttonId,key] of Object.entries(KEY_FOR_BUTTON)){
    const button=$(buttonId);
    if(!button)continue;
-   const locked=disabled(key)&&!canUse(key);
+   const locked=!canUse(key);
    if(button.tagName==="BUTTON")button.disabled=locked&&!isAdmin;
    else button.setAttribute("aria-disabled",String(locked&&!isAdmin));
    const card=button.closest(".store-card");
    if(!card)continue;
    card.classList.toggle("hub-app-disabled",locked);
-   card.classList.toggle("hub-pin-available",locked&&isAdmin);
+   card.classList.toggle("hub-pin-available",locked&&isAdmin&&(disabled(key)||!!card.dataset.hubGame&&disabled("game-hub")));
    if(button.classList.contains("store-launch")){
-    button.textContent=locked&&isAdmin?"🔐 Unlock":"Open";
-    if(locked&&isAdmin)button.setAttribute("aria-label","Unlock "+(entries.find(item=>item.key===key)?.name||"app")+" with Admin PIN");
+    button.textContent=locked&&isAdmin&&disabled(key)?"🔐 Unlock":"Open";
+    if(locked&&isAdmin&&disabled(key))button.setAttribute("aria-label","Unlock "+(entries.find(item=>item.key===key)?.name||"app")+" with Admin PIN");
     else button.removeAttribute("aria-label");
    }
    let state=card.querySelector(".hub-app-state");
    if(!state){state=n("div","hub-app-state","Disabled by admin");state.hidden=true;card.querySelector(".store-card-copy")?.append(state)}
    state.hidden=!locked;
-   if(locked&&isAdmin)state.textContent="🔐 PIN required";
+   if(locked&&disabled(key)&&isAdmin)state.textContent="🔐 PIN required";
+   else if(roleRestricted(key))state.textContent="🔒 Role restricted: "+roleNames(key);
    else state.textContent="Disabled by admin";
    if(locked&&!isAdmin&&button.tagName!=="BUTTON")button.setAttribute("tabindex","-1");
    else button.removeAttribute("tabindex");
@@ -261,11 +306,13 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
    if(!key)continue;
    const locked=!canUse("game-hub")||!canUse(key);
    card.classList.toggle("hub-app-disabled",locked);
-   card.classList.toggle("hub-pin-available",locked&&isAdmin);
+   card.classList.toggle("hub-pin-available",locked&&isAdmin&&(disabled(key)||!!card.dataset.hubGame&&disabled("game-hub")));
    const play=card.querySelector(".store-game-play");
    if(play){
     play.disabled=locked&&!isAdmin;
-    play.textContent=locked&&isAdmin?"🔐 Unlock":"Play";
+    const gameName=card.dataset.hubGameName||"";
+    play.textContent=locked&&isAdmin&&(disabled("game-hub")||disabled(key))?"🔐 Unlock":gameName==="Python Editor"?"Open editor":"Play";
+    play.title=locked&&roleRestricted(key)?"Restricted to: "+roleNames(key):locked&&roleRestricted("game-hub")?"Game Hub restricted to: "+roleNames("game-hub"):"";
    }
    const preview=card.querySelector(".store-game-preview");
    if(preview)preview.setAttribute("aria-label","Preview "+(card.dataset.hubGameName||"game")+(locked?" (disabled)":""));
@@ -273,6 +320,10 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
  }
  function unavailableToast(key){
   const name=entries.find(entry=>entry.key===key)?.name||"This experience";
+  if(roleRestricted(key)){
+   window.alert(name+" is locked for these roles: "+roleNames(key)+". Sign in with an eligible account.");
+   return;
+  }
   window.alert(name+" has been disabled by a Community Hub administrator.");
  }
  function enforceActiveGame(){
@@ -315,7 +366,9 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
    const button=$("hubSiteDownUnlock");
    if(button)button.hidden=!locked||!isAdmin;
    if(locked) document.getElementById("hubSiteDownText").textContent=
-    (entries.find(x=>x.key===currentPage)?.name||"This site")+" is temporarily disabled by a Community Hub administrator.";
+    (entries.find(x=>x.key===currentPage)?.name||"This site")+
+    (roleRestricted(currentPage)||(currentPage==="game-python-editor"&&roleRestricted("game-hub"))
+     ?" is locked to permitted roles. Sign in with an eligible account.":" is temporarily disabled by a Community Hub administrator.");
    return;
   }
   // index.html doubles as Community Chat and the always-available Hub launcher.
