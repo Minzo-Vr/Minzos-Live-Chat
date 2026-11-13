@@ -31,6 +31,7 @@
    features:["Searchable game library","Full-screen player","Game previews"]}
  };
  const GAMES={
+  "Python Editor":{icon:"🐍",detail:"Write and run Python in your browser. Save projects privately to your signed-in Community Hub account.",features:["Run Python code","Private cloud projects","Import and export .py files"]},
   "2048":{icon:"🔢",detail:"Slide number tiles together to combine matching values and try to reach 2048.",features:["Number puzzle","Strategy","Tile merging"]},
   "Cookie Clicker":{icon:"🍪",detail:"Click cookies to collect more and build up your cookie production.",features:["Idle game","Click to collect","Upgrades"]},
   "Google Dino":{icon:"🦖",detail:"An endless runner where you jump over obstacles with a pixel-style dinosaur.",features:["Runner","Timing","High scores"]},
@@ -219,9 +220,9 @@
  }
  function gameDetails(name){
   const details=GAMES[name]||{icon:"🎮",detail:"Preview this browser game before launching it.",features:["Browser game"]};
-  return {name,short:details.detail,category:"Browser game",icon:details.icon,theme:"games",detail:details.detail,
+  return {name,short:details.detail,category:name==="Python Editor"?"Game Hub app":"Browser game",icon:details.icon,theme:"games",detail:details.detail,
    hubKey:window.HubSiteControls?.keyForGame(name)||"game-"+name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""),
-   features:details.features,launchLabel:"Play game"};
+   features:details.features,launchLabel:name==="Python Editor"?"Open editor":"Play game"};
  }
  window.addEventListener("community-hub-availability-change",()=>{
   if(!dialog||dialog.hidden||!currentPreviewMeta)return;
