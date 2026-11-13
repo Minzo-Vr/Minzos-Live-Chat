@@ -1,5 +1,27 @@
 {
   "rules": {
+    "hubPythonProjects": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true",
+        "$projectId": {
+          ".write": "auth != null && auth.uid === $uid && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true && $projectId.matches(/^[A-Za-z0-9_-]{12,32}$/)",
+          ".validate": "newData.hasChildren(['name','code','updatedAt'])",
+          "name": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60"
+          },
+          "code": {
+            ".validate": "newData.isString() && newData.val().length <= 20000"
+          },
+          "updatedAt": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+
     "chatSettings": {
       ".read": "auth != null && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true && (auth != null && ((auth.token.firebase.sign_in_provider === 'google.com' || auth.token.firebase.sign_in_provider === 'password' || auth.token.firebase.sign_in_provider === 'custom' || (auth.token.firebase.sign_in_provider === 'anonymous' && root.child('chatPublicConfig/anonymousEnabled').val() === true)) || (auth.token.admin === true || (root.child('chatRoles/'+auth.uid).val() === 'admin' || root.child('chatRoles/'+auth.uid+'/admin').val() === true))))",
       "lockdown": {
@@ -556,7 +578,7 @@
     "hubSiteAvailability": {
       ".read": true,
       "$key": {
-        ".write": "auth != null && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true && (auth != null && (auth.token.admin === true || root.child('chatRoles/'+auth.uid).val() === 'admin' || root.child('chatRoles/'+auth.uid+'/admin').val() === true) && $key.matches(/^(chats|admin-ai|shapes-colours|minzify|minz-apps|update-centre|game-hub|community-browser|game-2048|game-cookie-clicker|game-google-dino|game-google-snake|game-retro-bowl|game-slope|game-run-3|game-minesweeper|game-blackjack|game-moto-x3m|game-block-blast|game-gorilla-tag|game-twerk-race-3d)$/) && newData.isBoolean())",
+        ".write": "auth != null && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true && (auth != null && (auth.token.admin === true || root.child('chatRoles/'+auth.uid).val() === 'admin' || root.child('chatRoles/'+auth.uid+'/admin').val() === true) && $key.matches(/^(chats|admin-ai|shapes-colours|minzify|minz-apps|update-centre|game-hub|community-browser|game-2048|game-cookie-clicker|game-google-dino|game-google-snake|game-retro-bowl|game-slope|game-run-3|game-minesweeper|game-blackjack|game-moto-x3m|game-block-blast|game-gorilla-tag|game-twerk-race-3d|game-python-editor)$/) && newData.isBoolean())",
         ".validate": "newData.isBoolean()"
       }
     },
