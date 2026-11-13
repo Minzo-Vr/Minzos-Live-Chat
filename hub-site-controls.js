@@ -564,22 +564,33 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
  }
  function roleListenerFor(user){
   if(roleOff){roleOff();roleOff=null}
-  isAdmin=false;window.HubAdminPin?.lock("site");renderAdmin();
+  isAdmin=false;userRoles=new Set();window.HubAdminPin?.lock("site");
   if(!user){refresh();return}
+  // Members means a signed-in non-guest account. Extra role flags may coexist.
+  if(!user.isAnonymous)userRoles.add("member");
+  refresh();
   const request=++latestAuth;
   user.getIdTokenResult().then(result=>{
    if(request!==latestAuth||account?.uid!==user.uid)return;
    const claim=result.claims?.admin===true;
-   isAdmin=claim;
-   refresh();
-   roleOff=onValue(ref(db,"chatRoles/"+user.uid),snapshot=>{
+   const applyRoles=value=>{
     if(request!==latestAuth||account?.uid!==user.uid)return;
-    const value=snapshot.val();
-    isAdmin=claim||value==="admin"||value?.admin===true;
+    const roles=new Set();
+    if(!user.isAnonymous)roles.add("member");
+    if(typeof value==="string"&&ROLE_KEYS.has(value))roles.add(value);
+    if(value&&typeof value==="object"){
+     for(const role of ROLE_KEYS)if(value[role]===true)roles.add(role);
+    }
+    if(claim)roles.add("admin");
+    userRoles=roles;isAdmin=roles.has("admin");
     refresh();
+   };
+   applyRoles(null);
+   roleOff=onValue(ref(db,"chatRoles/"+user.uid),snapshot=>{
+    applyRoles(snapshot.val());
    },error=>{
-    console.warn("Admin role status not available:",error.code||error.message);
-    isAdmin=claim;refresh();
+    console.warn("Community Hub role check unavailable:",error.code||error.message);
+    applyRoles(null);
    });
   }).catch(error=>{console.warn("Admin token verification unavailable:",error.code||error.message);refresh()});
  }
@@ -619,6 +630,17 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
    roleListenerFor(user);
    const gameAdmin=$("gameHubAdminOpen");
    if(gameAdmin)gameAdmin.hidden=true;
+  });
+  // Everyone can read role-lock policy; only verified admins may edit it.
+  onValue(ref(db,ROLES_PATH),snapshot=>{
+   const value=snapshot.val();
+   roleLocks=value&&typeof value==="object"?value:{};
+   roleLocksReady=true;
+   refresh();
+  },error=>{
+   console.warn("Role-lock settings unavailable:",error.code||error.message);
+   roleLocksReady=false;refresh();
+   if(adminStatus)adminStatus.textContent="Role locks unavailable. Publish the updated Firebase rules.";
   });
   onValue(ref(db,PATH),snapshot=>{
    const previous=settings;
