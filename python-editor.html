@@ -65,7 +65,36 @@ body.shared-active #dirtyState{display:none}
 .badge{display:inline-block;border:1px solid #566c8b;border-radius:30px;color:#cbdaf5;padding:3px 10px;font-size:12px}
 #accountState{font-size:13px;color:#bdd4fb}
 footer{font-size:12px;color:#b1c2de;padding:0 20px 16px;max-width:1540px;margin:auto}
-@media(max-width:700px){.layout{grid-template-columns:1fr;padding:10px;gap:10px}.sidebar{display:block}.sidebar h2{margin-bottom:8px}.sidebar select{min-height:85px;max-height:128px}.sidebar .actions{margin-top:10px}.sidebar p{margin-top:8px}.workspace{padding:12px}#pythonCode{min-height:260px}header h1{font-size:19px}}
+/* A normal document scrollport is essential on mobile browsers, especially
+   when this page was launched from the Game Hub. */
+html{min-height:100%;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch}
+body{height:auto;min-height:100dvh;overflow-x:hidden;overflow-y:visible;
+ padding-bottom:env(safe-area-inset-bottom,0px)}
+.sidebar select,#pythonCode,#console,#programInput{
+ overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;
+}
+@media(max-width:900px){
+ .layout{grid-template-columns:minmax(0,1fr);padding:12px;gap:12px}
+ .sidebar,.workspace{width:100%;min-width:0}
+ .sidebar{display:block}
+ .sidebar .shared-box{margin-bottom:12px}
+ .sidebar .actions{margin-top:9px}
+ .sidebar p{margin-top:8px}
+ .workspace{padding:12px}
+ #pythonCode{min-height:210px;height:34dvh;max-height:55dvh}
+ #console{min-height:110px;max-height:35dvh}
+ header{padding:12px}
+ header h1{font-size:19px}
+}
+@media(max-width:520px){
+ .layout{padding:8px}
+ .sidebar,.workspace{padding:10px}
+ .bar .buttons{display:flex;flex-wrap:wrap}
+ .bar .buttons button{flex:1 1 auto}
+ .sidebar .actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #pythonCode{height:32dvh;min-height:190px}
+ #console{max-height:30dvh}
+}
 </style>
 </head>
 <body>
