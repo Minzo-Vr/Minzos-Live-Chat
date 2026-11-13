@@ -438,14 +438,65 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
   for(const item of entries){
    if(item.category!==lastCategory){lastCategory=item.category;body.append(n("h3",null,lastCategory))}
    const row=n("div","hub-site-admin-row");
-   const info=n("div");info.append(n("strong",null,item.icon+" "+item.name),n("small",null,item.description));
+   const main=n("div","hub-site-admin-main");
+   const info=n("div","hub-site-admin-info");
+   info.append(n("strong",null,item.icon+" "+item.name),n("small",null,item.description));
+   const toggles=n("div","hub-site-admin-toggles");
    const label=n("label","hub-site-admin-switch");
    const input=n("input");input.type="checkbox";input.disabled=true;
    input.setAttribute("aria-label","Disable "+item.name);
    const caption=n("span",null,"Disable");
    const state=n("small",null,"Enabled");
-   label.append(input,caption);row.append(info,label,state);body.append(row);
-   adminRows.set(item.key,{input,status:state});
+   label.append(input,caption);toggles.append(label,state);
+   main.append(info,toggles);row.append(main);
+   const rolePanel=n("details","hub-site-role-lock");
+   const roleSummary=n("summary",null,"🔐 Lock for Roles — Everyone");
+   rolePanel.append(roleSummary);
+   const roleArea=n("div","hub-site-role-lock-body");
+   roleArea.append(n("p",null,"Select one or more allowed roles. No selection means everyone can open the app. Members means any signed-in account. Admins can always recover access. Disable overrides all role locks."));
+   const roleChoices=n("div","hub-site-role-options");
+   const roleInputs=new Map();
+   const refs={input,status:state,roleSummary,roleInputs,roleSave:null,roleReset:null,roleDirty:false};
+   for(const [role,title] of ROLE_OPTIONS){
+    const option=n("label","hub-site-role-choice");
+    const checkbox=n("input");checkbox.type="checkbox";checkbox.value=role;
+    checkbox.setAttribute("aria-label",title+" can open "+item.name);
+    checkbox.addEventListener("change",()=>{refs.roleDirty=true;renderAdmin()});
+    roleInputs.set(role,checkbox);
+    option.append(checkbox,n("span",null,title));roleChoices.append(option);
+   }
+   roleArea.append(roleChoices);
+   const roleActions=n("div","hub-site-role-actions");
+   const roleSave=n("button",null,"Save role lock");roleSave.type="button";roleSave.disabled=true;
+   const roleReset=n("button",null,"Allow everyone");roleReset.type="button";roleReset.disabled=true;
+   roleActions.append(roleSave,roleReset);roleArea.append(roleActions);
+   rolePanel.append(roleArea);row.append(rolePanel);body.append(row);
+   refs.roleSave=roleSave;refs.roleReset=roleReset;
+   adminRows.set(item.key,refs);
+   async function saveRoleLock(roles){
+    if(!account||!isAdmin||!db||!roleLocksReady||rolePending.has(item.key))return;
+    const selected=roles.filter(role=>ROLE_KEYS.has(role));
+    rolePending.add(item.key);
+    refs.roleDirty=false;renderAdmin();
+    adminStatus.textContent="Saving role access for "+item.name+"…";
+    try{
+     await set(ref(db,ROLES_PATH+"/"+item.key),
+      selected.length?Object.fromEntries(selected.map(role=>[role,true])):null);
+     // Firebase rules verify the caller is a real admin, not merely PIN-unlocked.
+     void push(ref(db,"chatActivityLog"),{
+      uid:account.uid,actorName:String(account.displayName||"Admin").slice(0,60),
+      action:"website_role_lock",detail:item.key+"="+(selected.join(",")||"everyone"),
+      at:serverTimestamp()
+     }).catch(()=>{});
+     adminStatus.textContent=item.name+" now allows "+(selected.length?selected.map(role=>ROLE_NAMES[role]).join(", "):"everyone")+".";
+    }catch(error){
+     adminStatus.textContent="Role lock failed: "+String(error?.code||error?.message||"Publish the updated Firebase rules.").slice(0,135);
+    }finally{
+     rolePending.delete(item.key);renderAdmin();
+    }
+   }
+   roleSave.addEventListener("click",()=>void saveRoleLock([...roleInputs].filter(([,check])=>check.checked).map(([role])=>role)));
+   roleReset.addEventListener("click",()=>void saveRoleLock([]));
    input.addEventListener("change",async()=>{
     if(!account||!isAdmin||!db||bulkPending){input.checked=disabled(item.key);return}
     const disable=input.checked;
