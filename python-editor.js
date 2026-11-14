@@ -12,7 +12,7 @@ import {getDatabase,ref,onValue,push,set,remove,serverTimestamp} from "https://w
  const MAX_CODE=20000;
  const shared=()=>window.PythonCollab?.active?.()===true;
  const MAX_PROJECTS=40;
- const DEFAULT_CODE='# Hello from Community Hub!\nname = "Python"\nfor count in range(1, 4):\n    print(f"{count}. Hello, {name}!")';
+ const DEFAULT_CODE='# Welcome to Simple Python!\nprint("Hello, world!")\n\nfor number in range(1, 4):\n    print("Number:", number)';
  const config={
   apiKey:"AIzaSyB4wOgGUTR-fgweHtsJiK9XyykU_PND0GE",
   authDomain:"website-chat-80038.firebaseapp.com",
