@@ -53,9 +53,10 @@
  function createArt(meta,button=true){
   const art=node(button?"button":"div","store-app-art store-theme-"+(meta.theme||"games"));
   if(button){art.type="button";art.setAttribute("aria-label","Preview "+meta.name);}
-  const icon=node("span","store-art-symbol",meta.icon||"🎮");
-  if(meta.iconImage){const img=document.createElement("img");img.src=meta.iconImage;img.alt="";art.append(img)}
-  else art.append(icon);
+  const graphic=window.CommunityHubIcons?.create(meta.name);
+  if(graphic)art.append(graphic);
+  else if(meta.iconImage){const img=document.createElement("img");img.src=meta.iconImage;img.alt="";art.append(img)}
+  else art.append(node("span","store-art-symbol",meta.icon||"🎮"));
   if(button)art.append(node("span","store-preview-hint","Preview"));
   return art;
  }
