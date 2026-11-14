@@ -1,6 +1,6 @@
 # Python Editor Live — collaborative coding rooms
 
-The Python Editor in **Community Hub → Game Hub** supports two distinct modes:
+Python Editor is a first-class app on the **main Community Hub launcher**, not inside the separate browser-games Game Hub. It supports Simple Python for everyone and MIP Advanced Python for MIP/Admin accounts. Both modes use the same underlying program and collaboration engine.
 
 - **Private projects:** Each Firebase user owns their code under `hubPythonProjects/<uid>/<projectId>`; other users, including other admins, cannot read it through the app's Realtime Database security rules.
 - **Live collaboration rooms:** A room owner authorizes named Firebase accounts. Only approved members can view and edit shared code and see shared runs.
@@ -9,7 +9,7 @@ The UI is inspired by the code-and-output workflow of CS in Schools' Python Edit
 
 ## Create and share a live room
 
-1. Sign in to Community Hub. Open Game Hub → **🐍 Python Editor**.
+1. Sign in to Community Hub. From the main app launcher, open **Python Editor**; in Simple mode select **Collaborate**.
 2. Under **👥 Shared coding rooms**, press **New room**, give it a name, and wait for the **Connected** indicator.
 3. Press **Copy invite link** and send it to a collaborator. They must sign in with their own Community Hub account. They will see **Request access**, which sends their request to your room.
 4. As owner, open **Pending access requests** in your room and press **Approve**. The requester is then added to the room and its private room list; if they have the invite page open, it will try to open automatically after approval.
