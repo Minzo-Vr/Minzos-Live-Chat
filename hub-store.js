@@ -208,7 +208,7 @@
   if(!main)return;
   const brand=main.querySelector(".gateway-brand");
   const kicker=node("div","gateway-store-kicker","Community Hub · Discover");
-  brand.before(kicker);brand.textContent="Minzo’s Game Hub";
+  brand.before(kicker);brand.textContent="Game Hub";
   const sub=main.querySelector(".gateway-subtitle");if(sub)sub.textContent="Choose Community Chat, Python Editor, Minzify, creative tools, and more. Preview before you open.";
   const filter=$("gatewayRoleFilter");
   const toolbar=node("div","gateway-store-toolbar");
