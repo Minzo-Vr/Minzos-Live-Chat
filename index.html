@@ -13,6 +13,7 @@
   <script type="module" src="./community-push-client.js"></script>
   <link rel="icon" type="image/svg+xml" href="./app-icon.svg">
   <link rel="stylesheet" href="./hub-store.css">
+  <script src="./hub-icons.js" defer></script>
   <script src="./hub-store.js" defer></script>
   <script src="./hub-admin-pin.js"></script>
   <link rel="stylesheet" href="./hub-site-controls.css">
@@ -6851,6 +6852,25 @@ $('gameHubChatForm').addEventListener('submit',async e=>{
     </div>
     <div id="gameBrowse">
       <div class="game-search"><input id="gameSearch" type="search" placeholder="Search games… (or type /game name in chat)" aria-label="Search games"></div>
+      <article id="gamePythonFeatured" class="store-game-card store-python-featured" data-hub-game="game-python-editor" data-hub-game-name="Python Editor">
+        <div class="store-python-featured-heading">FEATURED COMMUNITY HUB APP</div>
+        <button type="button" class="store-game-art" id="gamePythonFeaturedArt" aria-label="Preview Python Editor Live">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" class="store-vector-icon" aria-hidden="true" fill="none" stroke="white" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+            <rect x="9" y="12" width="46" height="40" rx="7" fill="#0d244b" stroke="#c4e7ff"/>
+            <path d="M9 23h46" stroke="#88a1d8"/><circle cx="16" cy="18" r="1.5" fill="#80e8ac" stroke="none"/>
+            <path d="m20 32-6 6 6 6m11-12 6 6-6 6m10-12-4 12" stroke="#a4f7c2"/>
+          </svg>
+        </button>
+        <div class="store-game-info">
+          <strong>Python Editor Live</strong>
+          <small>Multiplayer Python coding, shared Run output and private projects.</small>
+          <span class="store-python-available">Live rooms · Invite collaborators</span>
+        </div>
+        <div class="store-game-actions">
+          <button type="button" class="store-game-preview" id="gamePythonFeaturedPreview">Preview</button>
+          <a class="store-game-play" id="gamePythonFeaturedOpen" href="./python-editor.html">Open editor</a>
+        </div>
+      </article>
       <div id="gameGrid" class="game-grid"></div>
     </div>
     <iframe id="gamePlayFrame" title="Game player" hidden allow="fullscreen; gamepad" referrerpolicy="no-referrer"></iframe>
@@ -6891,14 +6911,21 @@ $('gameHubChatForm').addEventListener('submit',async e=>{
       function showList(query=""){
         frame.hidden=true;frame.removeAttribute("src");browse.hidden=false;back.hidden=true;external.hidden=true;
         search.value=query;grid.replaceChildren();
-        const found=games.filter(g=>g[0].toLowerCase().includes(query.toLowerCase().trim()));
+        const normalized=query.toLowerCase().trim();
+        const featured=document.getElementById("gamePythonFeatured");
+        if(featured)featured.hidden=!["python","editor","coding","multiplayer","code","run","live","private"].some(term=>term.includes(normalized))&&
+          !("python editor live multiplayer coding shared output private projects".includes(normalized));
+        const found=games.filter(g=>g[0].toLowerCase().includes(normalized));
         for(const [name,path] of found){
+          if(name==="Python Editor")continue; // Its always-visible featured app card is above this list.
           const details=window.CommunityHubStore?.gameDetails(name)||{name,icon:"🎮",short:"Browser game",detail:"Preview this browser game.",features:["Browser game"],launchLabel:"Play game"};
           const tile=document.createElement("article");tile.className="store-game-card";
           tile.dataset.hubGame=window.HubSiteControls?.keyForGame(name)||"game-"+name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
           tile.dataset.hubGameName=name;
           const art=document.createElement("button");art.type="button";art.className="store-game-art";art.setAttribute("aria-label","Preview "+name);
-          const icon=document.createElement("span");icon.className="store-art-symbol";icon.textContent=details.icon||"🎮";
+          const graphic=window.CommunityHubIcons?.create(name);
+          const icon=graphic||document.createElement("span");
+          if(!graphic){icon.className="store-art-symbol";icon.textContent=details.icon||"🎮";}
           const hint=document.createElement("span");hint.className="store-preview-hint";hint.textContent="Preview";
           art.append(icon,hint);
           const info=document.createElement("div");info.className="store-game-info";
@@ -6913,7 +6940,7 @@ $('gameHubChatForm').addEventListener('submit',async e=>{
           playButton.addEventListener("click",()=>play(name,path));
           actions.append(preview,playButton);tile.append(art,info,actions);grid.append(tile);
         }
-        if(!found.length){const msg=document.createElement("p");msg.textContent="No matching games found.";grid.appendChild(msg);}
+        if(!found.length&&document.getElementById("gamePythonFeatured")?.hidden){const msg=document.createElement("p");msg.textContent="No matching games found.";grid.appendChild(msg);}
         window.HubSiteControls?.refreshUI?.();
       }
       async function play(name,path){
@@ -6931,6 +6958,22 @@ $('gameHubChatForm').addEventListener('submit',async e=>{
         frame.dataset.hubGame=key;
         browse.hidden=true;frame.hidden=false;back.hidden=false;external.hidden=false;
         const url=/^(?:https?:\/\/|\.\/)/i.test(path)?path:base+path;frame.src=url;frame.title=name==="Python Editor"?"Python Editor":name+" game";external.href=url;
+      }
+      // Dedicated Python Editor entry: it exists in HTML even if the normal
+      // game list cannot load. Its link still works without JavaScript, while
+      // this click handler checks the same Hub and per-app permissions.
+      const pythonFeatured=document.getElementById("gamePythonFeatured");
+      if(pythonFeatured){
+        const preview=()=>window.CommunityHubStore?.openPreview
+          ?window.CommunityHubStore.openPreview(
+            window.CommunityHubStore.gameDetails("Python Editor"),
+            ()=>play("Python Editor","./python-editor.html"))
+          :play("Python Editor","./python-editor.html");
+        document.getElementById("gamePythonFeaturedArt")?.addEventListener("click",preview);
+        document.getElementById("gamePythonFeaturedPreview")?.addEventListener("click",preview);
+        document.getElementById("gamePythonFeaturedOpen")?.addEventListener("click",event=>{
+          event.preventDefault();void play("Python Editor","./python-editor.html");
+        });
       }
       async function open(query=""){
         if(window.HubSiteControls&&!await window.HubSiteControls.requestAccess("game-hub"))return;
