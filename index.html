@@ -5865,6 +5865,7 @@ try{
       const button=$("anonymousSaveAdmin");button.disabled=true;
       try{
         await set(ref(db,"chatPublicConfig/anonymousEnabled"),$("anonymousEnabledAdmin").checked);
+        void writeActivityLog("anonymous_signin_changed","enabled="+$("anonymousEnabledAdmin").checked);
         $("anonymousAdminFeedback").textContent="Anonymous sign-in setting saved.";
       }catch(err){
         $("anonymousAdminFeedback").textContent="Could not save: "+(err.code||err.message);
@@ -6438,7 +6439,9 @@ try{
       lockdownPending = true;
       updateLockdownUI();
       try {
-        await set(ref(db, "chatSettings/lockdown"), !lockdown);
+        const enabled=!lockdown;
+        await set(ref(db, "chatSettings/lockdown"), enabled);
+        void writeActivityLog("lockdown_changed","enabled="+enabled);
         $("adminFeedback").textContent = "Lockdown setting updated.";
       } catch (err) {
         $("adminFeedback").textContent = "Could not change lockdown. Check your admin permissions and database rules.";
@@ -6458,6 +6461,7 @@ try{
       $("timestampsAdminStatus").textContent=value?"Hiding timestamps for everyone…":"Showing timestamps for everyone…";
       try{
         await set(ref(db,"chatSettings/timestampsDisabled"),value);
+        void writeActivityLog("timestamps_changed","disabled="+value);
         $("adminFeedback").textContent=value?"Message timestamps disabled globally.":"Message timestamps enabled globally.";
       }catch(err){
         console.error("Timestamp setting update failed:",err);
@@ -6477,6 +6481,7 @@ try{
         // Broadcast first so active clients stop registering presence.
         await set(ref(db,"chatSettings/kickEpoch"),Date.now());
         await remove(ref(db,"chatPresence"));
+        void writeActivityLog("members_kicked","all active sessions");
         feedback.textContent="Online sessions cleared. Members can rejoin.";
       } catch(err) {
         feedback.textContent="Kick failed: "+(err.code||err.message);
@@ -6499,6 +6504,7 @@ try{
         const token = await auth.currentUser.getIdTokenResult(true);
         if (token.claims.admin !== true && !hasRole(auth.currentUser.uid,"admin")) throw new Error("Admin permission missing");
         await remove(ref(db, "chatMessages"));
+        void writeActivityLog("messages_cleared","General Chat: all messages");
         $("adminFeedback").textContent = "All chat messages deleted from Realtime Database. No backup was created.";
       } catch (err) {
         $("adminFeedback").textContent = "Deletion failed. Check Firebase rules and your admin session.";
@@ -6533,6 +6539,7 @@ try{
         }
         const changes = Object.fromEntries(keys.map(key => [key, null]));
         await update(ref(db, "chatMessages"), changes);
+        void writeActivityLog("oldest_messages_deleted","count="+keys.length);
         $("adminFeedback").textContent = `Deleted ${keys.length} oldest message(s) from the live database.`;
       } catch (err) {
         $("adminFeedback").textContent = "Could not delete oldest messages. Check Firebase rules and your admin session.";
@@ -6543,7 +6550,7 @@ try{
       if (!isAdmin) return;
       const seconds = Number($("slowSeconds").value);
       if (![0,5,10,30,60].includes(seconds)) return;
-      try { await set(ref(db,"chatSettings/slowSeconds"), seconds); $("adminFeedback").textContent = "Slowmode updated. Note: client-side cooldown is not tamper-proof."; }
+      try { await set(ref(db,"chatSettings/slowSeconds"), seconds); void writeActivityLog("slowmode_changed","seconds="+seconds); $("adminFeedback").textContent = "Slowmode updated. Note: client-side cooldown is not tamper-proof."; }
       catch (err) { console.error(err); $("adminFeedback").textContent = "Could not update slowmode."; }
     });
     $("voteStart").addEventListener("click", async () => {
@@ -6577,6 +6584,7 @@ try{
         await remove(ref(db,"chatMessages"));
         await remove(ref(db,"chatSettings/voteRound"));
         await remove(ref(db,`chatVotes/${voteRound}`));
+        void writeActivityLog("vote_clear_approved","General Chat cleared by approved vote");
         $("adminFeedback").textContent = "Chat cleared by admin approval. No backup created.";
       } catch (err) { console.error(err); $("adminFeedback").textContent = "Could not complete clear vote."; }
     });
