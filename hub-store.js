@@ -178,9 +178,13 @@
   const original=[...list.children];
   const gameButton=node("button","gateway-option","Open");gameButton.id="gatewayOpenGames";gameButton.type="button";
   gameButton.addEventListener("click",()=>{
-   const chat=$("gatewayOpenChat"),games=$("gameHubToggle");
-   if(!chat||!games)return;
-   chat.click();games.click();
+   // Launch the Game Hub directly. Opening Chats first previously depended on
+   // the Chat navigation completing synchronously and could strand mobile users.
+   if(typeof window.communityOpenGameHub==="function"){
+    void window.communityOpenGameHub();return;
+   }
+   const games=$("gameHubToggle");
+   games?.click();
   });
   const cards=[];
   for(const option of original){
