@@ -159,3 +159,16 @@
  #hubSiteAdminPanel .hub-site-role-options{grid-template-columns:minmax(0,1fr)}
  #hubSiteAdminPanel .hub-site-admin-toggles small{max-width:50px;text-align:right}
 }
+
+/* Original app and game icons in Admin → Lock for Roles list */
+#hubSiteAdminPanel .hub-site-admin-app-heading{
+ display:flex;gap:9px;align-items:center;min-width:0;
+}
+#hubSiteAdminPanel .hub-site-admin-app-heading > .store-vector-icon,
+#hubSiteAdminPanel .hub-site-admin-app-heading > img{
+ width:28px;height:28px;object-fit:contain;flex:0 0 28px;
+ border-radius:7px;filter:drop-shadow(0 2px 4px #0004);
+}
+#hubSiteAdminPanel .hub-site-admin-app-heading strong{
+ min-width:0;overflow-wrap:anywhere;
+}
