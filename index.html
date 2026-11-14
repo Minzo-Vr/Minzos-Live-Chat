@@ -2708,6 +2708,62 @@ try{
         $("profileCardBio").textContent=snap.val()||"This user hasn't written a bio yet.";
       }catch(err){$("profileCardBio").textContent="Bio unavailable: "+(err.code||err.message);}
     }
+    // A regular member search opens the exact same profile popup as tapping
+    // an avatar or username. Admin-only lookup remains in Game Hub.
+    window.CommunityChatOpenMemberProfile=(uid,name)=>{
+      if(!user||!db||!uid)return false;
+      const gateway=$("interfaceGateway");
+      if(gateway&&!gateway.hidden)$("gatewayOpenChat")?.click();
+      void openUserProfile(uid,name||"Community member");
+      return true;
+    };
+    const memberFinderForm=$("chatMemberFinderForm");
+    let memberFinderRevision=0;
+    memberFinderForm.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const query=$("chatMemberFinderQuery").value.trim().toLocaleLowerCase();
+      const output=$("chatMemberFinderResults"),feedback=$("chatMemberFinderStatus");
+      const revision=++memberFinderRevision;
+      output.replaceChildren();
+      if(!user||!joined){feedback.textContent="Join Community Chat to search member profiles.";return;}
+      if(query.length<2){feedback.textContent="Type at least two letters.";return;}
+      feedback.textContent="Searching members…";
+      try{
+        // Public, voluntarily registered usernames only. No emails or
+        // private bios are loaded by this search.
+        const snapshot=await get(ref(db,"chatMemberDirectory"));
+        if(revision!==memberFinderRevision)return;
+        const found=Object.entries(snapshot.val()||{})
+          .filter(([uid,value])=>value&&typeof value.name==="string"&&
+            value.name.toLocaleLowerCase().includes(query)&&uid.length<129)
+          .map(([uid,value])=>({uid,name:value.name.trim().slice(0,24)}))
+          .filter(item=>item.name)
+          .sort((a,b)=>a.name.localeCompare(b.name)).slice(0,40);
+        for(const item of found){
+          const button=document.createElement("button");button.type="button";
+          button.setAttribute("aria-label","View "+item.name+"'s profile");
+          const avatar=document.createElement("span");avatar.textContent="👤";
+          const name=document.createElement("strong");name.textContent=item.name;
+          const hint=document.createElement("small");hint.textContent="View profile";
+          button.append(avatar,name,hint);
+          button.addEventListener("click",()=>void openUserProfile(item.uid,item.name));
+          output.append(button);
+        }
+        feedback.textContent=found.length
+          ?found.length+" member"+(found.length===1?"":"s")+" found. Tap a name to view their profile."
+          :"No members found. Accounts appear after members sign in again.";
+      }catch(error){
+        if(revision!==memberFinderRevision)return;
+        feedback.textContent=/permission.denied|permission-denied/i.test(String(error?.code||error?.message))
+          ?"Member search is waiting for the updated Firebase database rules."
+          :"Search failed: "+String(error?.message||error).slice(0,130);
+      }
+    });
+    $("chatMemberFinderQuery").addEventListener("input",()=>{
+      memberFinderRevision++;
+      $("chatMemberFinderResults").replaceChildren();
+      $("chatMemberFinderStatus").textContent="Press Find to view matching member profiles.";
+    });
     async function openAdminMemberControls(){
       if(!isAdmin||!user||!profileTargetUid)return;
       const actorUid=user.uid,targetUid=profileTargetUid;
