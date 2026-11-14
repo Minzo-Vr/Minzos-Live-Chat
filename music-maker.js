@@ -179,7 +179,7 @@ function synth(context,out,preset,midi,at,duration,velocity=1){
  const decay=pluck?.5:bass?.2:.2;
  const sustain=pluck?.12:pad?.86:wind?.73:.69;
  const release=pad?1.1:pluck?.35:wind?.28:.22;
- const end=t+Math.max(.12,duration),stop=end+release+.03;
+ const end=t+Math.max(.12,duration,attack+decay+.02),stop=end+release+.03;
  const amp=context.createGain(),filter=context.createBiquadFilter();
  filter.type="lowpass";
  const cutoff=bass?1450:wind?3300:pad?2100:pluck?5400:6500;
@@ -263,7 +263,7 @@ async function preview(preset,note=60,volume=.75){
  if(!(await ensureAudio()))return;
  synth(ctx,master,preset,note,ctx.currentTime+.008,.28,volume);
 }
-let playing=false,stepIndex=0,nextAt=0,interval=0,playBus=null,visualTimers=[];
+let playing=false,stepIndex=0,nextAt=0,interval=0,playBus=null,visualTimers=new Set();
 function audible(t,solo){return !t.muted&&(!solo||t.solo);}
 function stepLength(i){const base=60/state.tempo/4,swing=state.swing/100;return base*(i%2===0?1+swing:1-swing);}
 function playhead(step){
@@ -273,7 +273,8 @@ function playhead(step){
 function queueBeat(n,at){
  const solo=state.tracks.some(t=>t.solo),length=stepLength(n);
  for(const t of state.tracks)if(t.steps[n]!==null&&audible(t,solo))synth(ctx,playBus,presets.get(t.instrument),t.steps[n],at,length*.88,t.volume/100);
- visualTimers.push(setTimeout(()=>{if(playing)playhead(n);},Math.max(0,(at-ctx.currentTime)*1000)));
+ const timeout=setTimeout(()=>{visualTimers.delete(timeout);if(playing)playhead(n);},Math.max(0,(at-ctx.currentTime)*1000));
+ visualTimers.add(timeout);
 }
 function scheduler(){
  if(!playing||!ctx)return;
@@ -292,7 +293,7 @@ async function start(){
 }
 function stop(){
  playing=false;clearInterval(interval);interval=0;
- visualTimers.forEach(clearTimeout);visualTimers=[];
+ visualTimers.forEach(clearTimeout);visualTimers.clear();
  if(ctx&&playBus){playBus.gain.setTargetAtTime(.00001,ctx.currentTime,.012);playBus=null;}
  $("playBtn").textContent="▶ Play";$("playBtn").setAttribute("aria-pressed","false");playhead(-1);
 }
