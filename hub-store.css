@@ -190,6 +190,12 @@
  width:64%;height:64%;object-fit:contain;border-radius:23%;
  position:relative;z-index:1;filter:drop-shadow(0 8px 10px #10184d77);
 }
+.store-app-art > img.store-brand-python-icon,
+#communityGameHub .store-game-art > img.store-brand-python-icon{
+ width:70%;height:70%;object-fit:contain;border-radius:18%;
+ position:relative;z-index:1;flex-shrink:0;
+ filter:drop-shadow(0 7px 10px #06192d9a);
+}
 #hubStorePreview .store-dialog-icon > .store-vector-icon,
 #hubStorePreview .store-dialog-icon > img{
  width:70%;height:70%;display:block;object-fit:contain;
