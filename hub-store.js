@@ -23,6 +23,9 @@
   gatewayOpenMinzify:{name:"Minzify",short:"Discover music",category:"Music",icon:"🎧",theme:"music",
    detail:"Explore music, search tracks, build playlists and discover supported music services inside Minzify.",
    features:["Search and discover","Music playlists","Multiple music sources"]},
+  gatewayOpenMusicMaker:{name:"Music Maker",short:"Create your own songs",category:"Music",icon:"🎹",theme:"music",
+   detail:"Minz Studio is a browser-based music maker with 92 synthesised instrument presets, a piano keyboard, multi-track beat sequencer, local projects and WAV export.",
+   features:["92 playable instruments","Up to 12 tracks and 32 steps","Save projects and export WAV"]},
   gatewayOpenMinzSign:{name:"Minz Apps",short:"Explore app downloads",category:"Apps",icon:"📱",theme:"apps",
    detail:"Browse Community Hub tools and downloadable app builds. Available formats and signing depend on each release.",
    features:["Browse apps","Available downloads","Build information"]},
@@ -157,7 +160,7 @@
   const card=node("article","store-card");
   meta.hubKey={
    gatewayOpenChat:"chats",gatewayOpenPython:"game-python-editor",gatewayOpenAI:"admin-ai",gatewayOpenShapes:"shapes-colours",gatewayOpenBubbleBuilder:"bubblebuilder",
-   gatewayOpenMinzify:"minzify",gatewayOpenMinzSign:"minz-apps",gatewayOpenInstaller:"app-installer",gatewayOpenUpdates:"update-centre",
+   gatewayOpenMinzify:"minzify",gatewayOpenMusicMaker:"music-maker",gatewayOpenMinzSign:"minz-apps",gatewayOpenInstaller:"app-installer",gatewayOpenUpdates:"update-centre",
    gatewayOpenGames:"game-hub"
   }[option.id]||"";
   card.dataset.search=[meta.name,meta.short,meta.category,meta.detail].join(" ").toLowerCase();
