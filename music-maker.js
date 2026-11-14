@@ -134,7 +134,7 @@ function sequence(){
  $("addTrackBtn").disabled=state.tracks.length>=12;
  $("removeTrackBtn").disabled=state.tracks.length<=1;
 }
-const sharps=new Set([1,3,6,8,10]),prior=[0,1,2,2,3,4,5,5,6,7,7,8];
+const sharps=new Set([1,3,6,8,10]),prior=[0,1,1,2,2,3,4,4,5,5,6,6];
 function keyboard(){
  const board=$("keyboard");board.replaceChildren();
  const w=100/14,bw=w*.63;
