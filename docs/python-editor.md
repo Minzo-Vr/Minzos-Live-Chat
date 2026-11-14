@@ -1,4 +1,4 @@
-# Python Editor Live — private projects and shared rooms
+# Python Editor — Simple Python and MIP Advanced Python
 
 This app now includes **live multiplayer coding rooms** with owner-approved members, simultaneous editing through a Yjs CRDT, live participant presence, and Run output broadcast to everyone in the room. See the full [Python collaboration guide](./python-collaboration.md).
 
@@ -8,12 +8,12 @@ Personal projects remain private to the Firebase account that owns them.
 
 ## Open it
 1. Sign in to **Community Hub** with your existing Firebase-backed account (Google, Discord, or email).
-2. Open **Game Hub** and select **🐍 Python Editor**.
+2. In the **main app launcher** (where you choose Chat, Minzify, and Shapes & Colours), select **Python Editor**.
 3. Type Python code and press **Run Python**. The first run downloads the Pyodide runtime from jsDelivr, so it needs internet access.
 4. Give the project a name and press **Save**. Select a saved project and press **Load** to restore it on another device after signing into **the same account**. Double-clicking a project also loads it.
 5. Use **New**, **Delete**, **Import .py**, and **Download .py** as needed.
 
-The editor appears in the Game Hub's admin availability list. If disabled, administrators can unlock that app using the existing admin PIN procedure.
+The editor appears under **Websites & apps** in the Community Hub admin availability list. If disabled, administrators can unlock that app using the existing admin PIN procedure.
 
 ## Private Firebase storage
 
