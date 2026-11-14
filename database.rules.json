@@ -693,7 +693,7 @@
     "hubSiteRoleLocks": {
       ".read": true,
       "$key": {
-        ".write": "auth != null && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true && (auth.token.admin === true || root.child('chatRoles/'+auth.uid).val() === 'admin' || root.child('chatRoles/'+auth.uid+'/admin').val() === true) && $key.matches(/^(chats|admin-ai|shapes-colours|bubblebuilder|minzify|minz-apps|update-centre|game-hub|community-browser|game-2048|game-cookie-clicker|game-google-dino|game-google-snake|game-retro-bowl|game-slope|game-run-3|game-minesweeper|game-blackjack|game-moto-x3m|game-block-blast|game-gorilla-tag|game-twerk-race-3d|game-python-editor)$/)",
+        ".write": "auth != null && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true && (auth.token.admin === true || root.child('chatRoles/'+auth.uid).val() === 'admin' || root.child('chatRoles/'+auth.uid+'/admin').val() === true) && $key.matches(/^(chats|admin-ai|shapes-colours|bubblebuilder|minzify|minz-apps|app-installer|update-centre|game-hub|community-browser|game-2048|game-cookie-clicker|game-google-dino|game-google-snake|game-retro-bowl|game-slope|game-run-3|game-minesweeper|game-blackjack|game-moto-x3m|game-block-blast|game-gorilla-tag|game-twerk-race-3d|game-python-editor)$/)",
         ".validate": "newData.hasChildren()",
         "member": {
           ".validate": "newData.val() === true"
@@ -718,7 +718,7 @@
     "hubSiteAvailability": {
       ".read": true,
       "$key": {
-        ".write": "auth != null && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true && (auth != null && (auth.token.admin === true || root.child('chatRoles/'+auth.uid).val() === 'admin' || root.child('chatRoles/'+auth.uid+'/admin').val() === true) && $key.matches(/^(chats|admin-ai|shapes-colours|bubblebuilder|minzify|minz-apps|update-centre|game-hub|community-browser|game-2048|game-cookie-clicker|game-google-dino|game-google-snake|game-retro-bowl|game-slope|game-run-3|game-minesweeper|game-blackjack|game-moto-x3m|game-block-blast|game-gorilla-tag|game-twerk-race-3d|game-python-editor)$/) && newData.isBoolean())",
+        ".write": "auth != null && root.child('hubBlockedUsers/'+auth.uid+'/blocked').val() !== true && (auth != null && (auth.token.admin === true || root.child('chatRoles/'+auth.uid).val() === 'admin' || root.child('chatRoles/'+auth.uid+'/admin').val() === true) && $key.matches(/^(chats|admin-ai|shapes-colours|bubblebuilder|minzify|minz-apps|app-installer|update-centre|game-hub|community-browser|game-2048|game-cookie-clicker|game-google-dino|game-google-snake|game-retro-bowl|game-slope|game-run-3|game-minesweeper|game-blackjack|game-moto-x3m|game-block-blast|game-gorilla-tag|game-twerk-race-3d|game-python-editor)$/) && newData.isBoolean())",
         ".validate": "newData.isBoolean()"
       }
     },
