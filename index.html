@@ -993,7 +993,7 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
 <body>
 <div id="interfaceGateway" role="dialog" aria-modal="true" aria-label="Community Chat startup">
  <div class="gateway-panel" id="gatewayLoading" aria-live="polite">
-  <h1 class="gateway-brand">Community Chat</h1><p class="gateway-subtitle">Getting everything ready...</p>
+  <h1 class="gateway-brand">Game Hub</h1><p class="gateway-subtitle">Loading Game Hub…</p>
   <div class="gateway-spinner" aria-hidden="true"></div><div class="gateway-loading-bar" aria-hidden="true"></div>
  </div>
  <div class="gateway-panel" id="gatewaySelection" hidden>
@@ -1297,7 +1297,7 @@ document.addEventListener("click",function(event){
     </aside>
 
     <header>
-      <div><div style="display:flex;align-items:center;gap:8px"><h1>Community Chat</h1><button type="button" id="backToLoader" class="fullscreen-toggle" title="Back to interface selection">↩ Back to loader</button><button type="button" class="settings-btn" id="settingsBtn" aria-label="Chat settings" title="Chat settings" hidden>⚙️</button></div><p>General Chat · Messages and group calls</p></div>
+      <div><div style="display:flex;align-items:center;gap:8px"><h1>Community Chat</h1><button type="button" id="backToLoader" class="fullscreen-toggle" title="Back to Game Hub">↩ Game Hub</button><button type="button" class="settings-btn" id="settingsBtn" aria-label="Chat settings" title="Chat settings" hidden>⚙️</button></div><p>General Chat · Messages and group calls</p></div>
       <div class="header-right">
         <button type="button" id="adminAiHeaderOpen" class="fullscreen-toggle" title="Open Admin AI" aria-label="Open Admin AI">🤖 AI</button>
         <button type="button" id="gameHubToggle" class="fullscreen-toggle" title="Open Game Hub" aria-label="Open Game Hub" style="font-weight:800;text-decoration:none">🎮 Games</button>
@@ -2702,6 +2702,15 @@ try{
         const allowed=uid===user?.uid||privacy==="everyone"||(privacy==="friends"&&!!friendMap[uid]);
         if(!allowed){$("profileTitle").textContent="🔒 Private Profile";$("profileCardAvatar").src=avatarFallback;$("profileRoleLabel").hidden=true;$("profileIncognitoNotice").hidden=true;$("profileCardBio").textContent=privacy==="friends"?"Only friends can view this profile.":"This profile is private.";return;}
         $("profileCardAvatar").src=anonymous?INCOGNITO_AVATAR:(avatarUrls.get(uid)||avatarFallback);
+        if(!anonymous&&!avatarUrls.has(uid)){
+          try{
+            const photo=(await get(ref(db,avatarPath(uid)))).val();
+            if(profileTargetUid!==uid)return;
+            if(typeof photo==="string"&&/^https:\/\/res\.cloudinary\.com\/[A-Za-z0-9_-]+\/image\/upload\//.test(photo)){
+              avatarUrls.set(uid,photo);$("profileCardAvatar").src=photo;
+            }
+          }catch{} // Privacy rules can restrict profile pictures.
+        }
         $("profileRoleLabel").hidden=anonymous||appearanceByUid[uid]?.showRole===false;
         if(anonymous){$("profileCardBio").textContent="Private while Incognito Mode is active.";return;}
         const snap=await get(ref(db,bioPath(uid)));
@@ -2711,7 +2720,7 @@ try{
     // A regular member search opens the exact same profile popup as tapping
     // an avatar or username. Admin-only lookup remains in Game Hub.
     window.CommunityChatOpenMemberProfile=(uid,name)=>{
-      if(!user||!db||!uid)return false;
+      if(!user||!db||!uid||window.HubSiteControls?.canUse?.("chats")===false)return false;
       const gateway=$("interfaceGateway");
       if(gateway&&!gateway.hidden)$("gatewayOpenChat")?.click();
       void openUserProfile(uid,name||"Community member");
