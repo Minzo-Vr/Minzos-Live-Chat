@@ -6979,6 +6979,8 @@ $('gameHubChatForm').addEventListener('submit',async e=>{
         if(window.HubSiteControls&&!await window.HubSiteControls.requestAccess("game-hub"))return;
         hub.hidden=false;showList(query);search.focus();
       }
+      // The App Store gateway can open Game Hub directly, without entering Chat.
+      window.communityOpenGameHub=open;
       function shut(){hub.hidden=true;frame.removeAttribute("src");}
       launch.addEventListener("click",()=>open());
       close.addEventListener("click",shut);
