@@ -8,6 +8,7 @@
   "gatewayOpenShapes":'<path d="m32 8 22 12v25L32 57 10 45V20Z" fill="#ffffff18"/><path d="m10 20 22 13 22-13M32 33v24" stroke="#fff"/><path d="m32 8 22 12-22 13-22-13Z" fill="#ffb88e" stroke="none"/><path d="m10 21 22 12v24L10 45Z" fill="#ff75c8" stroke="none"/><path d="m54 21-22 12v24l22-12Z" fill="#79d9ff" stroke="none"/>',
   "gatewayOpenMinzify":'<path d="M27 43V15l24-6v29"/><path d="M27 15 51 9v9l-24 6Z" fill="#8bffe1" stroke="none"/><ellipse cx="20" cy="45" rx="10" ry="7" fill="#70e9d1" stroke="none"/><ellipse cx="44" cy="40" rx="10" ry="7" fill="#70e9d1" stroke="none"/><path d="M27 18v27M51 13v27"/>',
   "gatewayOpenMinzSign":'<rect x="10" y="10" width="44" height="44" rx="10"/><rect x="17" y="17" width="13" height="13" rx="3" fill="#bde7ff" stroke="none"/><rect x="35" y="17" width="13" height="13" rx="3" fill="#bde7ff" stroke="none"/><rect x="17" y="35" width="13" height="13" rx="3" fill="#bde7ff" stroke="none"/><path d="M42 34v13m-6-6 6 6 6-6" stroke="#fff"/>',
+  "gatewayOpenInstaller":'<rect x="15" y="11" width="34" height="43" rx="7" fill="#b1e5ff22"/><path d="M25 19h14M32 17v22m-8-8 8 8 8-8" stroke="#c1f6e6" stroke-width="3.5"/><path d="M21 46h22" stroke="#fff" stroke-width="3"/>',
   "gatewayOpenUpdates":'<path d="M19 17h25v35H19z" fill="#fff2" /><path d="M26 26h12M26 33h12M26 40h6"/><path d="M46 15a21 21 0 0 1 10 17M56 23v9h-9M15 49A21 21 0 0 1 8 33M8 42v-9h9" stroke="#ffe4a1"/>',
   "gatewayOpenGames":'<path d="M20 24h24c6 0 10 5 12 11l3 11c1 6-5 10-10 7L40 46H24l-9 7c-5 3-11-1-10-7l3-11c2-6 6-11 12-11Z" fill="#d5c8ff" stroke="none"/><path d="M20 32v12m-6-6h12" stroke="#46318e" stroke-width="4"/><circle cx="43" cy="35" r="3.5" fill="#46318e" stroke="none"/><circle cx="50" cy="42" r="3.5" fill="#46318e" stroke="none"/>',
   "gatewayOpenBrowser":'<rect x="9" y="11" width="46" height="42" rx="7" fill="#183759"/><path d="M9 22h46"/><circle cx="16" cy="17" r="1.5" fill="#aad2ff" stroke="none"/><circle cx="22" cy="17" r="1.5" fill="#a0f3dc" stroke="none"/><circle cx="32" cy="38" r="13" stroke="#d7f4ff"/><path d="M19 38h26M32 25c-7 7-7 19 0 26m0-26c7 7 7 19 0 26" stroke="#b7e3ff" stroke-width="2"/>',
@@ -32,7 +33,7 @@
  const alias={
   "Community Chat":"gatewayOpenChat","Admin AI":"gatewayOpenAI",
   "BubbleBuilder 3D":"gatewayOpenBubbleBuilder","Shapes & Colours":"gatewayOpenShapes",
-  "Minzify":"gatewayOpenMinzify","Minz Apps":"gatewayOpenMinzSign",
+  "Minzify":"gatewayOpenMinzify","Minz Apps":"gatewayOpenMinzSign","App Installer":"gatewayOpenInstaller",
   "Update Centre":"gatewayOpenUpdates","Game Hub":"gatewayOpenGames",
   "Community Browser":"gatewayOpenBrowser"
  };
