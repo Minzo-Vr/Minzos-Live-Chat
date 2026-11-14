@@ -7,6 +7,7 @@
   "gatewayOpenBubbleBuilder":'<circle cx="23" cy="38" r="15"/><circle cx="41" cy="19" r="11"/><circle cx="46" cy="44" r="7"/><path d="M16 33c2-5 6-7 10-7m11-10c1-3 3-5 6-5" stroke="#bce9ff"/><path d="M30 11 32 5l2 6 6 2-6 2-2 6-2-6-6-2Z" fill="#ccf4ff" stroke-width="1.8"/>',
   "gatewayOpenShapes":'<path d="m32 8 22 12v25L32 57 10 45V20Z" fill="#ffffff18"/><path d="m10 20 22 13 22-13M32 33v24" stroke="#fff"/><path d="m32 8 22 12-22 13-22-13Z" fill="#ffb88e" stroke="none"/><path d="m10 21 22 12v24L10 45Z" fill="#ff75c8" stroke="none"/><path d="m54 21-22 12v24l22-12Z" fill="#79d9ff" stroke="none"/>',
   "gatewayOpenMinzify":'<path d="M27 43V15l24-6v29"/><path d="M27 15 51 9v9l-24 6Z" fill="#8bffe1" stroke="none"/><ellipse cx="20" cy="45" rx="10" ry="7" fill="#70e9d1" stroke="none"/><ellipse cx="44" cy="40" rx="10" ry="7" fill="#70e9d1" stroke="none"/><path d="M27 18v27M51 13v27"/>',
+  "gatewayOpenMusicMaker":'<rect x="11" y="11" width="42" height="42" rx="12" fill="#734fa8" stroke="#ccb6ff"/><path d="M21 38v-15l22-6v19" stroke="#c8fff2" stroke-width="3.2"/><circle cx="18" cy="41" r="6" fill="#8ce3e3" stroke="none"/><circle cx="40" cy="39" r="6" fill="#8ce3e3" stroke="none"/><path d="M13 16h16m15-4h7" stroke="#fff" stroke-width="2"/>',
   "gatewayOpenMinzSign":'<rect x="10" y="10" width="44" height="44" rx="10"/><rect x="17" y="17" width="13" height="13" rx="3" fill="#bde7ff" stroke="none"/><rect x="35" y="17" width="13" height="13" rx="3" fill="#bde7ff" stroke="none"/><rect x="17" y="35" width="13" height="13" rx="3" fill="#bde7ff" stroke="none"/><path d="M42 34v13m-6-6 6 6 6-6" stroke="#fff"/>',
   "gatewayOpenInstaller":'<rect x="15" y="11" width="34" height="43" rx="7" fill="#b1e5ff22"/><path d="M25 19h14M32 17v22m-8-8 8 8 8-8" stroke="#c1f6e6" stroke-width="3.5"/><path d="M21 46h22" stroke="#fff" stroke-width="3"/>',
   "gatewayOpenUpdates":'<path d="M19 17h25v35H19z" fill="#fff2" /><path d="M26 26h12M26 33h12M26 40h6"/><path d="M46 15a21 21 0 0 1 10 17M56 23v9h-9M15 49A21 21 0 0 1 8 33M8 42v-9h9" stroke="#ffe4a1"/>',
@@ -33,7 +34,7 @@
  const alias={
   "Community Chat":"gatewayOpenChat","Admin AI":"gatewayOpenAI",
   "BubbleBuilder 3D":"gatewayOpenBubbleBuilder","Shapes & Colours":"gatewayOpenShapes",
-  "Minzify":"gatewayOpenMinzify","Minz Apps":"gatewayOpenMinzSign","App Installer":"gatewayOpenInstaller",
+  "Minzify":"gatewayOpenMinzify","Music Maker":"gatewayOpenMusicMaker","Minz Apps":"gatewayOpenMinzSign","App Installer":"gatewayOpenInstaller",
   "Update Centre":"gatewayOpenUpdates","Game Hub":"gatewayOpenGames",
   "Community Browser":"gatewayOpenBrowser"
  };
