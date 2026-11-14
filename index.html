@@ -1001,7 +1001,7 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
     <p class="gateway-role-note">Select a role to preview its interface access.</p>
     <button type="button" class="gateway-role" data-role="all" aria-pressed="true">🌐 All interfaces</button>
     <button type="button" class="gateway-role" data-role="member" aria-pressed="false">👤 Member</button>
-    <button type="button" class="gateway-role" data-role="plus" aria-pressed="false">⭐ MIP</button>
+    <button type="button" class="gateway-role" data-role="plus" aria-pressed="false" title="MIP — Minzo’s Important People">⭐ MIP</button>
     <button type="button" class="gateway-role" data-role="moderator" aria-pressed="false">🛡️ Moderator</button>
     <button type="button" class="gateway-role" data-role="testsubject" aria-pressed="false">🧪 Test Subject</button>
     <button type="button" class="gateway-role" data-role="admin" aria-pressed="false">👑 Admin</button>
@@ -4823,7 +4823,7 @@ try{
       async function toggleReaction(id){
         if(!reactionById.has(id)||pending)return;
         if(!canUseChatReactions()||user?.uid!==myUid){
-          chooser.hidden=true;showError("🔒 Emoji reactions require a MIP (Plus) or Admin role.");return;
+          chooser.hidden=true;showError("🔒 Emoji reactions require MIP or Admin.");return;
         }
         pending=true;
         const selfPath="chatMessageReactions/"+roomListenerKey+"/"+id+"/"+myUid;
