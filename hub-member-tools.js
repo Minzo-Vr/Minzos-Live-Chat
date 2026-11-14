@@ -192,9 +192,15 @@ async function inspect(item){
 }
 async function verifyUser(next){
  const id=++version;
+ const previousUid=user?.uid||null;
  if(rolesOff){rolesOff();rolesOff=null}
  user=next;admin=false;claimAdmin=false;
  seq++;updateButtons();
+ // After choosing a saved account or completing a new sign-in, return to
+ // the launcher so the switched account's apps and permissions can refresh.
+ if(previousUid!==next?.uid&&!$("hubAccountSwitchPanel")?.hidden){
+  $("hubAccountClose")?.click();
+ }
  if(!next)return;
  try{claimAdmin=(await next.getIdTokenResult()).claims?.admin===true}catch{}
  if(id!==version)return;
