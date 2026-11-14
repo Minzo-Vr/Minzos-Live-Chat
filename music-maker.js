@@ -33,7 +33,7 @@ function validate(value){
  state.tempo=clamp(Math.round(Number(value.tempo)||110),50,220);
  state.stepCount=Number(value.stepCount)===32?32:16;
  state.swing=clamp(Math.round(Number(value.swing)||0),0,45);
- state.volume=clamp(Math.round(Number(value.volume)||72),0,100);
+ state.volume=clamp(Number.isFinite(Number(value.volume))?Math.round(Number(value.volume)):72,0,100);
  state.octave=clamp(Math.round(Number(value.octave)||4),2,5);
  state.note=clamp(Math.round(Number(value.note)||60),24,95);
  state.selected=clamp(Math.round(Number(value.selected)||0),0,value.tracks.length-1);
