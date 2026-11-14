@@ -855,6 +855,13 @@
     #communityGameHub .game-card small{display:block;font-size:11px;color:#cbd5e1;margin-top:8px}
     #communityGameHub #gamePlayFrame{width:100%;flex:1;border:0;background:#fff;min-height:0}
     #communityGameHub .game-note{padding:8px 16px;background:#111827;color:#cbd5e1;font-size:12px}
+
+/* Account actions belong inside My Account, not beside its top-right button. */
+#gatewayAccountActions{display:flex;align-items:center;justify-content:flex-end}
+#hubAccountQuickActions{display:grid;gap:10px;margin:16px 0 8px;padding-top:16px;border-top:1px solid #8293b650}
+#hubAccountQuickActions button:not([hidden]){display:block;width:100%;padding:12px 14px;text-align:left;border-radius:11px;background:#304569;color:#fff;border:1px solid #8195c8;cursor:pointer;font-size:14px;font-weight:700}
+#hubAccountQuickActions button[hidden]{display:none!important}
+#hubAccountQuickActions #gatewaySignOut:not([hidden]){background:#563044;border-color:#a66b7d}
 </style>
 <style id="interface-gateway-style">
 #interfaceGateway{position:fixed;inset:0;width:100vw;height:100dvh;z-index:2147483000;background:radial-gradient(circle at 50% 10%,#253b7c 0%,#12172d 48%,#090d19 100%);color:#fff;display:grid;place-items:center;padding:20px;font-family:"Lilita One",system-ui,sans-serif;transition:opacity .35s ease,visibility .35s}
@@ -7280,6 +7287,17 @@ $('gameHubChatForm').addEventListener('submit',async e=>{
  document.body.append(modal);
  const mount=modal.querySelector("#hubAccountMount"),signed=modal.querySelector("#hubSignedIn");
  const card=modal.querySelector("#hubAccountCard");
+ // Reuse the existing account controls, preserving their Firebase sign-out,
+ // account switching and administrator permission handlers.
+ const accountTools=document.createElement("div");
+ accountTools.id="hubAccountQuickActions";
+ accountTools.setAttribute("aria-label","Account actions");
+ signed.append(accountTools);
+ ["gatewaySwitchAccount","gatewayHubAdmin","gatewaySignOut"].forEach(id=>{
+   const action=document.getElementById(id);
+   if(action)accountTools.append(action);
+ });
+
  const switchSection=document.createElement("section");
  switchSection.id="hubAccountSwitchPanel";switchSection.hidden=true;
  switchSection.innerHTML='<h3>🔄 Switch Account</h3><p>Choose a saved account, or add a new Google or email account. Saved sessions stay on this device.</p>';
