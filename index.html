@@ -21,6 +21,8 @@
   <link rel="stylesheet" href="./hub-user-access.css">
   <script type="module" src="./hub-user-access.js"></script>
   <link rel="stylesheet" href="./community-admin-user-search.css">
+  <link rel="stylesheet" href="./hub-member-tools.css">
+  <script type="module" src="./hub-member-tools.js"></script>
   <script type="module" src="./community-admin-user-search.js"></script>
   <!-- Lilita One: bold, rounded display font for the Community Chat interface. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1009,9 +1011,14 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
    </div>
    <div class="gateway-sidebar-version" id="gatewayCommitVersion" title="Version based on total GitHub commits">Version loading…</div>
   </aside>
-  <button id="gatewayAccountButton" type="button" aria-label="Sign in or manage account">👤 <span id="gatewayAccountText">Sign in</span></button>
+  <div id="gatewayAccountActions" aria-label="Game Hub account actions">
+    <button id="gatewayAccountButton" type="button" aria-label="Sign in or manage account">👤 <span id="gatewayAccountText">Sign in</span></button>
+    <button id="gatewaySwitchAccount" type="button" hidden>🔄 Switch Account</button>
+    <button id="gatewaySignOut" type="button" hidden>Sign Out</button>
+    <button id="gatewayHubAdmin" type="button" hidden>🛠 Admin Panel</button>
+  </div>
   <main class="gateway-main">
-   <h1 class="gateway-brand">Select User Interface</h1>
+   <h1 class="gateway-brand">Game Hub</h1>
    <p class="gateway-subtitle">Choose where you want to go</p>
    <p class="gateway-role-filter" id="gatewayRoleFilter">Showing: All interfaces</p>
    <div class="gateway-options" tabindex="0" aria-label="Scroll through interfaces">
@@ -1027,6 +1034,23 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
    </div>
   </main>
  </div>
+</div>
+<div id="hubAdminMemberModal" hidden role="dialog" aria-modal="true" aria-label="Game Hub Admin Panel">
+ <section id="hubAdminMemberCard">
+  <div class="hub-admin-member-top"><strong>🛠 Game Hub Admin Panel</strong><button id="hubAdminMemberClose" type="button" aria-label="Close admin panel">✕ Close</button></div>
+  <p>Manage accounts and site access. Verified Admin role and the Admin PIN are required.</p>
+  <div class="hub-admin-member-shortcuts">
+   <button type="button" id="hubAdminWebsiteControls">🌐 Website &amp; Game Controls</button>
+   <button type="button" id="hubAdminBlockUsers">🚫 Block / Unblock Users</button>
+  </div>
+  <form id="hubAdminMemberSearchForm" role="search">
+   <label for="hubAdminMemberQuery">Search registered users</label>
+   <div class="hub-admin-member-search-row"><input id="hubAdminMemberQuery" type="search" minlength="2" maxlength="100" required placeholder="Username, User ID, or exact verified email…" autocomplete="off"><button type="submit">Search</button></div>
+  </form>
+  <p id="hubAdminMemberStatus" role="status">Find community accounts by username or UID. Exact verified email search is admin-only.</p>
+  <div id="hubAdminMemberResults" aria-label="Admin user search results"></div>
+  <div id="hubAdminMemberProfile" hidden aria-label="Member profile inspection"></div>
+ </section>
 </div>
 <script id="hub-startup-recovery">
 // Runs immediately after Hub markup, independently of the chat and AI modules.
@@ -1655,6 +1679,15 @@ document.addEventListener("click",function(event){
       <button id="joinBtn" type="submit">Join chat</button>
     </form>
     <p class="error" id="error" role="alert"></p>
+    <details id="chatMemberFinder" class="chat-member-finder">
+      <summary>🔎 Find a member</summary>
+      <form id="chatMemberFinderForm" role="search">
+        <input id="chatMemberFinderQuery" type="search" minlength="2" maxlength="60" required autocomplete="off" placeholder="Search username…" aria-label="Search community usernames">
+        <button type="submit">Find</button>
+      </form>
+      <p id="chatMemberFinderStatus" role="status">Find a member and tap their name to view their profile.</p>
+      <div id="chatMemberFinderResults" aria-label="Matching community profiles"></div>
+    </details>
     <div id="chatSearchBar" class="chat-search-bar" hidden><label for="chatSearchInput">🔎 Search messages in this room</label><div class="chat-search-row"><input id="chatSearchInput" type="search" placeholder="Search usernames or messages…" autocomplete="off"><button type="button" id="chatSearchClear">Clear</button></div><small id="chatSearchCount">Searches recent loaded messages only.</small></div>
         <section id="dmSection" hidden>
           <div class="dm-main-header dm-profile-header"><button type="button" id="dmBackToGeneral">← General Chat</button><div class="dm-profile-summary"><img class="message-avatar profile-click" id="dmHeaderAvatar" alt="Friend profile picture" referrerpolicy="no-referrer"><div class="dm-profile-summary-text"><button type="button" id="dmTitle" class="dm-profile-name">Direct Messages</button><p id="dmHeaderBio" class="dm-profile-bio">Select a friend to see their bio.</p></div></div><button type="button" id="dmViewProfile">View profile</button></div>
