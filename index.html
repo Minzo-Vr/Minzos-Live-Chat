@@ -4187,6 +4187,11 @@ try{
         if(isAdmin&&($("auditCollapsible").open||!$("auditOverlay").hidden))void refreshActivityLog();}
       catch(err){console.warn("Activity logging unavailable; Firebase rules may need updating.",err.code||err.message);}
     }
+    // MIP (formerly Chat+) and Admin actions are recorded without copying private message content.
+    function logPremiumAction(action,details={}){
+      if(!user?.uid||(!isAdmin&&!hasRole(user.uid,"plus")))return;
+      void writeActivityLog(action,JSON.stringify({...details,role:isAdmin?"Admin":"MIP"}));
+    }
     async function refreshActivityLog(){
       if(!isAdmin){$("auditCollapsible").hidden=true;return;}
       $("auditCollapsible").hidden=false;
@@ -4199,13 +4204,14 @@ try{
         for(const event of entries){
           let info={};try{info=JSON.parse(event.detail||"{}");}catch{}
           const action=event.action||"activity";
-          const labels={message_deleted:"Message deleted",message_edited:"Message edited",bulk_messages_deleted:"Messages deleted in bulk",sign_in:"Account signed in",console_command:"Console command",moderation_ban:"Member banned",moderation_unban:"Member unbanned",moderation_timeout:"Member timed out",moderation_role:"Member roles changed"};
+          const labels={message_deleted:"Message deleted",message_edited:"Message edited",bulk_messages_deleted:"Messages deleted in bulk",sign_in:"Account signed in",console_command:"Console command",moderation_ban:"Member banned",moderation_unban:"Member unbanned",moderation_timeout:"Member timed out",moderation_role:"Member roles changed",message_sent:"MIP/Admin message sent",media_shared:"MIP/Admin media shared",file_shared:"MIP/Admin file shared",reaction_added:"MIP/Admin reaction added",reaction_removed:"MIP/Admin reaction removed",lockdown_changed:"Lockdown changed",slowmode_changed:"Slowmode changed",timestamps_changed:"Timestamps changed",messages_cleared:"Chat cleared",oldest_messages_deleted:"Old messages removed",members_kicked:"Members kicked",vote_clear_approved:"Vote-based clear approved"};
           const title=labels[action]||action.replace(/_/g," ");
           const actor=event.actorName||"User "+String(event.uid||"unknown").slice(0,8);
           const room=info.path==="chatMessages"?"General Chat":String(info.path||"").replace("roomMessages/","Room ");
           let description=actor;
           if(action==="message_deleted"||action==="message_edited")description+=" "+(action==="message_deleted"?"deleted":"edited")+" "+(info.byModerator?"another member's":"their own")+" message"+(room?" in "+room:"")+(info.authorName?" (author: "+info.authorName+")":"")+(info.preview?" — Message: “"+info.preview+"”":"")+(action==="message_edited"&&info.newText?" → Changed to: “"+info.newText+"”":"");
           else if(action.startsWith("moderation_"))description+=" performed "+title.toLowerCase()+" on "+(info.targetName||String(event.detail||"").replace("targetUid=","user "));
+          else if(["message_sent","media_shared","file_shared","reaction_added","reaction_removed"].includes(action))description+=" ("+String(info.role||"MIP")+")"+(room?" in "+room:"")+(info.kind?" · "+info.kind:"")+(info.emoji?" · :"+info.emoji+":":"")+(info.key?" · message "+String(info.key).slice(0,12):"");
           else if(action==="bulk_messages_deleted")description+=" deleted "+String(event.detail||"").replace("count=","")+" messages";
           else if(action==="console_command")description+=" ran a console command: "+(event.detail||"unknown");
           else if(event.detail)description+=" — "+event.detail;
@@ -4964,6 +4970,7 @@ try{
         try{
           if(mine)await remove(ref(db,selfPath));
           else await set(ref(db,selfPath),true);
+          logPremiumAction(mine?"reaction_removed":"reaction_added",{path,key,emoji:id});
           chooser.hidden=true;trigger.setAttribute("aria-expanded","false");
         }catch(err){
           const reason=String(err.code||err.message||"");
@@ -5940,7 +5947,8 @@ try{
     async function sendMediaText(text) {
       if (!canSendGif()) throw new Error("Join chat first, or wait until lockdown/slowmode ends.");
       if (text.length > 500) throw new Error("Media link exceeds the 500-character message limit.");
-      await push(ref(db,roomMessagePath()),{uid:user.uid,name:incognitoDisplayName(),text,createdAt:serverTimestamp()});
+      const sent=await push(ref(db,roomMessagePath()),{uid:user.uid,name:incognitoDisplayName(),text,createdAt:serverTimestamp()});
+      logPremiumAction("media_shared",{path:roomMessagePath(),key:sent.key,kind:text.startsWith("IMAGE:")?"image":text.startsWith("STICKER:")?"sticker":text.startsWith("EMOJI:")?"emoji":text.startsWith("GIF:")?"GIF":"media"});
       lastSentAt = Date.now(); updateSlowUI();
     }
     function openAttachmentPanel(panelId, focusId) {
@@ -6162,7 +6170,8 @@ try{
       if (!canSendGif()) throw new Error("Join chat first, or wait for lockdown/slowmode to end.");
       const text = "FILE: " + JSON.stringify({n:cleaned,u:url});
       if (text.length > 500) throw new Error("File link is too long (Firebase limit: 500 characters).");
-      await push(ref(db,roomMessagePath()), {uid:user.uid,name:incognitoDisplayName(),text,createdAt:serverTimestamp()});
+      const sent=await push(ref(db,roomMessagePath()), {uid:user.uid,name:incognitoDisplayName(),text,createdAt:serverTimestamp()});
+      logPremiumAction("file_shared",{path:roomMessagePath(),key:sent.key,kind:"file"});
       lastSentAt = Date.now(); updateSlowUI();
       $("fileStatus").textContent = "File shared!";
       $("filePanel").hidden = true;
@@ -6225,9 +6234,10 @@ try{
       if (!canSendGif()) { $("gifStatus").textContent = "Join chat first, or wait until lockdown/slowmode ends."; return; }
       const btn = $("gifSendUrl"); btn.disabled = true;
       try {
-        await push(ref(db, roomMessagePath()), {
+        const sent=await push(ref(db, roomMessagePath()), {
           uid: user.uid, name: incognitoDisplayName(), text: "GIF: " + url, createdAt: serverTimestamp()
         });
+        logPremiumAction("media_shared",{path:roomMessagePath(),key:sent.key,kind:"GIF"});
         lastSentAt = Date.now(); updateSlowUI();
         $("gifPanel").hidden = true;
         $("gifUrl").value = "";
@@ -6380,6 +6390,7 @@ try{
           createdAt: serverTimestamp()
         });
         if (sad) setTimeout(() => remove(sent).catch(console.warn), ttl);
+        logPremiumAction("message_sent",{path:roomMessagePath(),key:sent.key,kind:sad?"temporary message":"text"});
         messageInput.value = "";
         clearMyTyping().catch(console.warn);
         await rewardMessageXp();
