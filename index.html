@@ -2327,6 +2327,7 @@ try{
       const allowed=!!user&&isAdmin;
       const unlocked=allowed&&window.HubAdminPin?.isUnlocked(user.uid,"chat");
       $("adminPanel").hidden=!unlocked;
+      $("auditCollapsible").hidden=!allowed;
       $("adminLogin").hidden=allowed;
       $("chatAdminUnlock").hidden=!allowed||unlocked;
       if(!allowed)window.HubAdminPin?.lock("chat");
@@ -2417,6 +2418,7 @@ try{
       if(!isAdmin&&(hasRole(uid,"admin")||hasRole(uid,"moderator"))){feedback.textContent="Moderators can only moderate members.";return;}
       feedback.textContent="Saving…";
       try{
+        let auditDetail="targetUid="+uid;
         if(action==="role"){
           if(!isAdmin)throw Error("Admin only");
           const actorUid=user.uid;
@@ -2428,13 +2430,14 @@ try{
           if(uid===user?.uid && baseAdminClaim && !selected.includes("admin"))selected.push("admin");
           const roleData=Object.fromEntries(selected.map(k=>[k,true]));
           await set(ref(db,`chatRoles/${uid}`),selected.length?roleData:null);
+          auditDetail=JSON.stringify({targetUid:uid,roles:selected});
         }else if(action==="timeout"){
           await set(ref(db,`chatModeration/${uid}`),{banned:false,until:Date.now()+Number($("profileTimeout").value)*1000,by:user.uid});
         }else if(action==="ban"){
           if(!confirm("Ban this user from sending messages?"))return;
           await set(ref(db,`chatModeration/${uid}`),{banned:true,until:0,by:user.uid});
         }else if(action==="unban")await remove(ref(db,`chatModeration/${uid}`));
-        void writeActivityLog("moderation_"+action,"targetUid="+uid);
+        void writeActivityLog("moderation_"+action,auditDetail);
         feedback.textContent="Saved successfully.";
       }catch(err){feedback.textContent="Failed: "+(err.code||err.message)+(action==="role"?" — Firebase Realtime Database rules must allow admins to assign the testsubject role under chatRoles.":"");}
     }
@@ -4185,7 +4188,8 @@ try{
       if(!user?.uid)return;
       try{await push(ref(db,"chatActivityLog"),{uid:user.uid,actorName:String(username||user.displayName||"Member").slice(0,60),action:String(action).slice(0,50),detail:String(detail).slice(0,1500),at:serverTimestamp()});
         if(isAdmin&&($("auditCollapsible").open||!$("auditOverlay").hidden))void refreshActivityLog();}
-      catch(err){console.warn("Activity logging unavailable; Firebase rules may need updating.",err.code||err.message);}
+      catch(err){console.warn("Activity logging unavailable; Firebase rules may need updating.",err.code||err.message);
+        if(isAdmin&&$("auditCollapsible").open)$("auditPreviewStatus").textContent="Could not save activity ("+String(err.code||err.message).slice(0,80)+"). Check published chatActivityLog rules.";}
     }
     // MIP (formerly Chat+) and Admin actions are recorded without copying private message content.
     function logPremiumAction(action,details={}){
@@ -4210,7 +4214,7 @@ try{
           const room=info.path==="chatMessages"?"General Chat":String(info.path||"").replace("roomMessages/","Room ");
           let description=actor;
           if(action==="message_deleted"||action==="message_edited")description+=" "+(action==="message_deleted"?"deleted":"edited")+" "+(info.byModerator?"another member's":"their own")+" message"+(room?" in "+room:"")+(info.authorName?" (author: "+info.authorName+")":"")+(info.preview?" — Message: “"+info.preview+"”":"")+(action==="message_edited"&&info.newText?" → Changed to: “"+info.newText+"”":"");
-          else if(action.startsWith("moderation_"))description+=" performed "+title.toLowerCase()+" on "+(info.targetName||String(event.detail||"").replace("targetUid=","user "));
+          else if(action.startsWith("moderation_"))description+=" performed "+title.toLowerCase()+" on "+(info.targetName||info.targetUid||String(event.detail||"").replace("targetUid=","user "))+(Array.isArray(info.roles)?" · roles: "+info.roles.map(role=>role==="plus"?"MIP":role).join(", "):"");
           else if(["message_sent","media_shared","file_shared","reaction_added","reaction_removed"].includes(action))description+=" ("+String(info.role||"MIP")+")"+(room?" in "+room:"")+(info.kind?" · "+info.kind:"")+(info.emoji?" · :"+info.emoji+":":"")+(info.key?" · message "+String(info.key).slice(0,12):"");
           else if(action==="bulk_messages_deleted")description+=" deleted "+String(event.detail||"").replace("count=","")+" messages";
           else if(action==="console_command")description+=" ran a console command: "+(event.detail||"unknown");
