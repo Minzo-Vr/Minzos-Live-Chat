@@ -84,6 +84,7 @@ import {getDatabase,ref,onValue,push,set,remove,serverTimestamp} from "https://w
   nameInput.value=String(project.name||"Untitled").slice(0,60);
   codeInput.value=String(project.code||"");
   markSaved();
+  document.dispatchEvent(new CustomEvent("python-project-loaded",{detail:{id}}));
   say("Loaded privately saved project: "+nameInput.value);
  }
  async function saveProject(){
