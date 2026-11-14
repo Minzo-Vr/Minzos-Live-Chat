@@ -26,6 +26,9 @@
   gatewayOpenMinzSign:{name:"Minz Apps",short:"Explore app downloads",category:"Apps",icon:"📱",theme:"apps",
    detail:"Browse Community Hub tools and downloadable app builds. Available formats and signing depend on each release.",
    features:["Browse apps","Available downloads","Build information"]},
+  gatewayOpenInstaller:{name:"App Installer",short:"Download and sign apps",category:"Tools",icon:"📦",theme:"apps",
+   detail:"Download official app packages, open an available signed iOS install, or sign your own IPA with your trusted MinzSign backend and Apple credentials.",
+   features:["Android APK downloads","iOS direct install when configured","Optional secure signing workflow"]},
   gatewayOpenUpdates:{name:"Update Centre",short:"Updates and releases",category:"Tools",icon:"📦",theme:"updates",
    detail:"Find Community Hub release notes, check changes, and explore update downloads and publishing tools.",
    features:["Release notes","Downloads","Update history"]},
@@ -154,7 +157,7 @@
   const card=node("article","store-card");
   meta.hubKey={
    gatewayOpenChat:"chats",gatewayOpenPython:"game-python-editor",gatewayOpenAI:"admin-ai",gatewayOpenShapes:"shapes-colours",gatewayOpenBubbleBuilder:"bubblebuilder",
-   gatewayOpenMinzify:"minzify",gatewayOpenMinzSign:"minz-apps",gatewayOpenUpdates:"update-centre",
+   gatewayOpenMinzify:"minzify",gatewayOpenMinzSign:"minz-apps",gatewayOpenInstaller:"app-installer",gatewayOpenUpdates:"update-centre",
    gatewayOpenGames:"game-hub"
   }[option.id]||"";
   card.dataset.search=[meta.name,meta.short,meta.category,meta.detail].join(" ").toLowerCase();
