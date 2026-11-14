@@ -29,6 +29,7 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
   ["shapes-colours","Shapes & Colours","3D editor and building tools","🎨"],
   ["bubblebuilder","BubbleBuilder 3D","3D bubble building sandbox","🫧"],
   ["minzify","Minzify","Music search and playlists","🎧"],
+  ["music-maker","Music Maker","Play instruments and produce your own music","🎹"],
   ["minz-apps","Minz Apps","Apps and download catalogue","📱"],
   ["app-installer","App Installer","Download and sign your own app packages","📦"],
   ["update-centre","Update Centre","Updates and releases","📦"],
@@ -51,13 +52,13 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
  const ALL_KEYS=new Set(entries.map(item=>item.key));
  const KEY_FOR_BUTTON={
   gatewayOpenChat:"chats",gatewayOpenPython:"game-python-editor",gatewayOpenAI:"admin-ai",gatewayOpenShapes:"shapes-colours",gatewayOpenBubbleBuilder:"bubblebuilder",
-  gatewayOpenMinzify:"minzify",gatewayOpenMinzSign:"minz-apps",gatewayOpenInstaller:"app-installer",gatewayOpenUpdates:"update-centre",
+  gatewayOpenMinzify:"minzify",gatewayOpenMusicMaker:"music-maker",gatewayOpenMinzSign:"minz-apps",gatewayOpenInstaller:"app-installer",gatewayOpenUpdates:"update-centre",
   gatewayOpenGames:"game-hub",gameHubToggle:"game-hub",browserSidebarToggle:"community-browser"
  };
  const pageFile=(location.pathname.split("/").pop()||"index.html").toLowerCase();
  const PAGE_KEYS={
   "minzify.html":"minzify","minzify-spotify.html":"minzify",
-  "minzify-youtube.html":"minzify","shapes-colours.html":"shapes-colours","bubblebuilder.html":"bubblebuilder",
+  "minzify-youtube.html":"minzify","music-maker.html":"music-maker","shapes-colours.html":"shapes-colours","bubblebuilder.html":"bubblebuilder",
   "minzsign.html":"minz-apps","app-installer.html":"app-installer","update-centre.html":"update-centre",
   "python-editor.html":"game-python-editor"
  };
