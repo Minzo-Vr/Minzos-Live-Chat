@@ -1001,7 +1001,7 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
     <p class="gateway-role-note">Select a role to preview its interface access.</p>
     <button type="button" class="gateway-role" data-role="all" aria-pressed="true">🌐 All interfaces</button>
     <button type="button" class="gateway-role" data-role="member" aria-pressed="false">👤 Member</button>
-    <button type="button" class="gateway-role" data-role="plus" aria-pressed="false">⭐ Plus</button>
+    <button type="button" class="gateway-role" data-role="plus" aria-pressed="false">⭐ MIP</button>
     <button type="button" class="gateway-role" data-role="moderator" aria-pressed="false">🛡️ Moderator</button>
     <button type="button" class="gateway-role" data-role="testsubject" aria-pressed="false">🧪 Test Subject</button>
     <button type="button" class="gateway-role" data-role="admin" aria-pressed="false">👑 Admin</button>
@@ -1017,6 +1017,7 @@ button.gateway-option:hover,button.gateway-option:focus-visible{background:#6477
    <div class="gateway-options" tabindex="0" aria-label="Scroll through interfaces">
     <button class="gateway-option" type="button" id="gatewayOpenChat"><span class="gateway-icon">💬</span><span>Chats<small>Enter Community Chat</small></span></button>
     <button class="gateway-option" type="button" id="gatewayOpenAI"><span class="gateway-icon">🤖</span><span>AI (Admin Only)<small>Ask AI questions or import a conversation</small></span></button>
+    <a class="gateway-option" id="gatewayOpenPython" href="python-editor.html"><img src="./python-editor-icon.svg" alt="" class="gateway-icon" style="width:32px;height:32px;border-radius:8px;object-fit:contain"><span>Python Editor<small>Simple coding and MIP advanced tools</small></span></a>
     <a class="gateway-option" id="gatewayOpenBubbleBuilder" href="bubblebuilder.html"><span class="gateway-icon">🫧</span><span>BubbleBuilder 3D<small>Build using 3D bubbles and a thumbstick</small></span></a>
     <a class="gateway-option" id="gatewayOpenShapes" href="shapes-colours.html"><span class="gateway-icon">🎨</span><span>Shapes &amp; Colours<small>Build and colour 3D objects</small></span></a>
     <a class="gateway-option" id="gatewayOpenMinzify" href="minzify.html"><span class="gateway-icon">🎧</span><span>Minzify<small>Free music search, playlists &amp; listening</small></span></a>
@@ -1164,7 +1165,7 @@ document.addEventListener("click",function(event){
  const sidebar=document.getElementById("gatewayRoleSidebar");
  const toggle=document.getElementById("gatewayToggleSidebar");
  toggle.addEventListener("click",()=>{const collapsed=sidebar.classList.toggle("is-collapsed");toggle.setAttribute("aria-expanded",String(!collapsed));toggle.setAttribute("aria-label",collapsed?"Expand roles sidebar":"Collapse roles sidebar");});
- const roleNames={all:"All interfaces",member:"Member",plus:"Plus",moderator:"Moderator",testsubject:"Test Subject",admin:"Admin"};
+ const roleNames={all:"All interfaces",member:"Member",plus:"MIP",moderator:"Moderator",testsubject:"Test Subject",admin:"Admin"};
  sidebar.querySelectorAll("[data-role]").forEach(button=>button.addEventListener("click",()=>{
   sidebar.querySelectorAll("[data-role]").forEach(item=>item.setAttribute("aria-pressed",String(item===button)));
   document.getElementById("gatewayRoleFilter").textContent="Previewing: "+roleNames[button.dataset.role]+" (access settings coming soon)";
@@ -1401,7 +1402,7 @@ document.addEventListener("click",function(event){
             <select id="usernameEffectChoice">
               <option value="none">No effect — normal username</option>
               <option value="member">Member — normal username</option>
-              <option value="plus">✦ Plus — animated gold 🔒</option>
+              <option value="plus">✦ MIP — animated gold 🔒</option>
               <option value="moderator">🛡️ Moderator — animated blue 🔒</option>
               <option value="admin">🌈 Admin — animated rainbow 🔒</option>
               <option value="testsubject">🧪 Test Subject — metallic green 🔒</option>
@@ -1453,37 +1454,37 @@ document.addEventListener("click",function(event){
           <div class="advanced-options-inner"><strong>Toggles</strong>
           <label><input type="checkbox" id="disableMusic"> Disable Music controller</label>
           <label><input type="checkbox" id="disablePfp"> Disable pfp images</label>
-          <label><input type="checkbox" id="showPlusPreviews"> Show all Chat+ features (previews)</label>
-          <small style="display:block;color:#737b8a">Chat+ previews are hidden by default. Showing them does not unlock Plus permissions.</small>
+          <label><input type="checkbox" id="showPlusPreviews"> Show all MIP features (previews)</label>
+          <small style="display:block;color:#737b8a">MIP previews are hidden by default. Showing them does not unlock MIP permissions.</small>
           <div id="plusFeaturePreview" class="plus-preview" hidden>
-            <strong>✦ Chat+ features</strong>
+            <strong>✦ MIP features</strong>
             <div>🔒 Chat rooms — create and join rooms</div>
             <div>🔒 Search bar — find recent messages</div>
             <div>🔒 XP &amp; shop — earn XP and unlock badges</div>
             <div>🔒 HEX theme — choose a chat colour</div>
             <div>🔒 Colour wheel — pick, copy or paste colours</div>
             <div>🔒 Emoji reactions — react to General Chat and room messages</div>
-            <small>Requires Plus or Admin. These are previews, not controls.</small>
+            <small>Requires MIP or Admin. These are previews, not controls.</small>
           </div>
           </div>
         </details>
-        <section id="chatPlusBillingTest" class="plus-preview" data-setting-label="chat plus subscription stripe billing monthly one dollar test checkout" aria-label="Chat+ Subscription">
-          <strong>✦ Chat+ — A$1.00 / month</strong>
+        <section id="chatPlusBillingTest" class="plus-preview" data-setting-label="chat plus subscription stripe billing monthly one dollar test checkout" aria-label="MIP Subscription">
+          <strong>✦ MIP — A$1.00 / month</strong>
           <small id="chatPlusBillingDescription">Web: Stripe test checkout. iPhone/iPad app: Apple In-App Purchase. Subscriptions only activate after server verification.</small>
           <button type="button" id="chatPlusBillingTestButton" disabled>Subscribe for A$1.00/month (Test)</button>
           <button type="button" id="chatPlusBillingManageButton" hidden>Manage subscription</button>
           <button type="button" id="chatPlusBillingRestoreButton" hidden>Restore Apple purchases</button>
           <small id="chatPlusBillingTestStatus" role="status">Checking billing availability…</small>
         </section>
-        <section id="chatPlusDownloads" class="plus-preview" data-setting-label="chat plus downloads apk windows ios chromebook" aria-label="Chat+ Downloads">
-          <strong>⬇ Chat+ Downloads (Test)</strong>
-          <small id="chatPlusDownloadStatus">Checking your Chat+ access…</small>
+        <section id="chatPlusDownloads" class="plus-preview" data-setting-label="chat plus downloads apk windows ios chromebook" aria-label="MIP Downloads">
+          <strong>⬇ MIP Downloads (Test)</strong>
+          <small id="chatPlusDownloadStatus">Checking your MIP access…</small>
           <button type="button" id="chatPlusDownloadButton" disabled>⬇ Download latest app</button>
           <small>Test button only. Installable APK, Windows and iOS files are not available yet. No download will start.</small>
         </section>
         <div class="experimental-panel" data-setting-label="experimental chat rooms search bar xp leveling hex colour color wheel">
           <button type="button" id="experimentalUnlock" class="experimental-unlock" aria-expanded="false">🧪 Experimental <span id="experimentalChevron">▾</span></button>
-          <p id="experimentalHint" class="experimental-hint" role="status">🔒 Plus or Admin role required.</p>
+          <p id="experimentalHint" class="experimental-hint" role="status">🔒 MIP or Admin role required.</p>
           <div id="experimentalFeatures" hidden>
             <strong>Experimental features</strong>
             <div class="chat-color-option"><strong>⏱️ Timed Quick Exit</strong><label><input type="checkbox" id="timedExitEnabled"> Enable automatic chat exit</label><label for="timedExitMinutes">Minutes (1–240)</label><input type="number" id="timedExitMinutes" min="1" max="240" value="15"><button type="button" id="timedExitSave">Save and start timer</button><p id="timedExitStatus" role="status">Disabled by default.</p></div>
@@ -1816,7 +1817,7 @@ document.addEventListener("click",function(event){
           <label for="newRoleColor">Username colour</label><input id="newRoleColor" type="color" value="#E8A838">
           <button id="createCustomRole" type="button">Create role</button>
           <div id="customRoleList"></div><p id="customRoleFeedback" role="status"></p>
-          <small>Custom roles give a coloured nametag only. Admin, Moderator and Plus permissions are fixed and cannot be granted by renaming a custom role.</small>
+          <small>Custom roles give a coloured nametag only. Admin, Moderator and MIP permissions are fixed and cannot be granted by renaming a custom role.</small>
         </details>
         <p id="lockdownAdminStatus">Checking lockdown status…</p>
         <button type="button" id="lockdownBtn" disabled>Checking lockdown…</button>
@@ -2072,21 +2073,21 @@ try{
       chatPlusBillButton.textContent=isApple?"Subscribe with Apple":"Subscribe for A$1.00/month";
       $("chatPlusBillingDescription").textContent=isApple
         ?"Apple App Store subscription. Your Apple purchase price and terms appear on the App Store purchase sheet. Purchases can be restored."
-        :"Stripe Checkout — A$1.00/month. Chat+ is unlocked after secure server verification.";
+        :"Stripe Checkout — A$1.00/month. MIP is unlocked after secure server verification.";
       if(!user){
         chatPlusBillButton.disabled=true;chatPlusBillRestore.disabled=true;chatPlusBillManage.disabled=true;
-        billingMessage("Sign in to purchase Chat+.");return;
+        billingMessage("Sign in to purchase MIP.");return;
       }
       const manuallyPlus=!!(isAdmin||roleMap[user.uid]?.plus===true||roleMap[user.uid]==="plus");
       if(manuallyPlus||paidChatPlus()){
-        chatPlusBillButton.textContent="✓ Chat+ active";
+        chatPlusBillButton.textContent="✓ MIP active";
         chatPlusBillButton.disabled=true;
         const hasSubscription=isApple?paidBillingActive("apple"):paidBillingActive("stripe");
         chatPlusBillManage.hidden=!hasSubscription;
         chatPlusBillManage.disabled=!hasSubscription;
         chatPlusBillManage.textContent=isApple?"Manage Apple subscription":"Manage Stripe subscription";
         chatPlusBillRestore.disabled=!window.CommunityAppleBilling?.isConfigured?.();
-        billingMessage("Chat+ is active on this account. Subscription access is tied to your sign-in.");
+        billingMessage("MIP is active on this account. Subscription access is tied to your sign-in.");
         return;
       }
       if(isApple){
@@ -2105,7 +2106,7 @@ try{
           billingMessage("Your exact price and renewal terms appear in Apple's purchase sheet.");
         }catch(error){
           chatPlusBillButton.disabled=true;
-          billingMessage("Apple Chat+ unavailable: "+String(error.message||error).slice(0,140));
+          billingMessage("Apple MIP unavailable: "+String(error.message||error).slice(0,140));
         }
         return;
       }
@@ -2139,7 +2140,7 @@ try{
       try{
         if(nativeAppleBilling()){
           await window.CommunityAppleBilling.purchase(user.uid);
-          billingMessage("Purchase submitted. Chat+ activates after the server verifies your Apple subscription.");
+          billingMessage("Purchase submitted. MIP activates after the server verifies your Apple subscription.");
         }else{
           if(!billingHealth)throw Error("Stripe checkout is not configured.");
           await billingRequest("/checkout");
@@ -2160,7 +2161,7 @@ try{
       chatPlusBillRestore.disabled=true;
       try{
         await window.CommunityAppleBilling.restore(user.uid);
-        billingMessage("Restore checked. Verified subscriptions will unlock Chat+ shortly.");
+        billingMessage("Restore checked. Verified subscriptions will unlock MIP shortly.");
       }catch(error){billingMessage(String(error?.message||error).slice(0,240));}
       finally{chatPlusBillRestore.disabled=false;}
     });
@@ -2183,7 +2184,7 @@ try{
         updateRoleUI();refreshChatPlusDownloads();void refreshChatPlusBilling();
       },error=>{
         if(user?.uid!==uid)return;
-        console.warn("Chat+ billing entitlement read requires Firebase rules",error);
+        console.warn("MIP billing entitlement read requires Firebase rules",error);
         billingEntitlement=null;void refreshChatPlusBilling();
       });
     }
@@ -2194,13 +2195,13 @@ try{
       const button=document.getElementById("chatPlusDownloadButton");
       if(!status||!button)return;
       const eligible=!!user&&(hasRole(user.uid,"plus")||hasRole(user.uid,"admin"));
-      status.textContent=!user?"Sign in to check access.":eligible?"Chat+ access confirmed — downloads are coming soon.":"🔒 Chat+ membership required.";
+      status.textContent=!user?"Sign in to check access.":eligible?"MIP access confirmed — downloads are coming soon.":"🔒 MIP membership required.";
       button.disabled=!eligible;
     }
     document.getElementById("chatPlusDownloadButton")?.addEventListener("click",()=>{
       refreshChatPlusDownloads();
       if(!user||!(hasRole(user.uid,"plus")||hasRole(user.uid,"admin")))return;
-      alert("Chat+ download button works! App builds and protected downloads are not ready yet.");
+      alert("MIP download button works! App builds and protected downloads are not ready yet.");
     });
     function actualRole(uid){const roles=userRoles(uid);return roles.includes("admin")?"admin":roles.includes("moderator")?"moderator":roles.includes("plus")?"plus":roles.includes("testsubject")?"testsubject":roles.find(k=>customRoles[k])||"member";}
     function displayedRoleEffect(uid){
@@ -2225,7 +2226,7 @@ try{
       for(const opt of choice.options){
         opt.disabled=opt.value!=="none"&&opt.value!=="member"&&!roles.includes(opt.value);
         if(BUILTIN_ROLES.includes(opt.value)){
-          const label={plus:"✦ Plus — animated gold",moderator:"🛡️ Moderator — animated blue",admin:"🌈 Admin — animated rainbow",testsubject:"🧪 Test Subject — metallic green"}[opt.value];
+          const label={plus:"✦ MIP — animated gold",moderator:"🛡️ Moderator — animated blue",admin:"🌈 Admin — animated rainbow",testsubject:"🧪 Test Subject — metallic green"}[opt.value];
           opt.textContent=label+(roles.includes(opt.value)?" ✓":" 🔒");
         }
       }
@@ -2251,7 +2252,7 @@ try{
     function renderRoleChoices(uid){
       const wrap=$("profileRoleChoices");wrap.replaceChildren();
       const current=new Set(userRoles(uid));
-      for(const [id,label] of [["admin","🌈 Admin"],["moderator","🔵 Moderator"],["plus","✨ Plus"],["testsubject","🧪 Test Subject"]]){
+      for(const [id,label] of [["admin","🌈 Admin"],["moderator","🔵 Moderator"],["plus","✨ MIP"],["testsubject","🧪 Test Subject"]]){
         const line=document.createElement("label"),input=document.createElement("input");
         input.type="checkbox";input.value=id;input.checked=current.has(id);
         line.append(input,document.createTextNode(label));wrap.append(line);
@@ -2311,10 +2312,10 @@ try{
       const panel=$("experimentalFeatures"),unlock=$("experimentalUnlock"),hint=$("experimentalHint");
       if(!panel||!unlock)return;
       unlock.disabled=!allowed;
-      unlock.title=allowed?"":"Plus or Admin role required";
-      if(!allowed){panel.hidden=true;hint.textContent="🔒 Experimental features require Plus or Admin.";unlock.setAttribute("aria-expanded","false");}
+      unlock.title=allowed?"":"MIP or Admin role required";
+      if(!allowed){panel.hidden=true;hint.textContent="🔒 Experimental features require MIP or Admin.";unlock.setAttribute("aria-expanded","false");}
       else showExperimentalFeatures();
-      // Existing per-browser preferences remain stored, but Plus-only features are unavailable without a role.
+      // Existing per-browser preferences remain stored, but MIP-only features are unavailable without a role.
       if(typeof applyChatPreferences==="function")applyChatPreferences();
       if(typeof themeApplyPalette==="function" && typeof defaultPalette==="function"){
         if(!allowed)applyAppearanceMode();
@@ -2791,7 +2792,7 @@ try{
     }
     async function switchRoom(n){
       if(n!==0&&(!hasExperimentalAccess()||!chatPrefs.enableRooms)){
-        showError("Chat rooms require an active Chat+ or Admin role.");return;
+        showError("Chat rooms require an active MIP or Admin role.");return;
       }
       if(n===activeRoom)return;
       await clearMyTyping();
@@ -2890,7 +2891,7 @@ try{
         "✨ Multiple roles and role-based username effects!",
         "🌈 Animated Admin rainbow usernames!",
         "💙 Moderator usernames and moderation controls!",
-        "🏆 Chat+ golden usernames and experimental features!",
+        "🏆 MIP golden usernames and experimental features!",
         "⭐ XP levels, /shop and unlockable badges!",
         "🎵 Background music and volume controls!",
         "🖼️ Profile pictures, bios, GIFs and file sharing!",
@@ -2973,7 +2974,7 @@ try{
       const added=[...current].filter(role=>!noticeRoleBaseline.has(role));
       noticeRoleBaseline=current;
       if(added.length){
-        const names=added.map(role=>({admin:"🌈 Admin",moderator:"🛡️ Moderator",plus:"✨ Plus"}[role]||customRoles[role]?.name||role));
+        const names=added.map(role=>({admin:"🌈 Admin",moderator:"🛡️ Moderator",plus:"✨ MIP"}[role]||customRoles[role]?.name||role));
         notifyChat("🎉 New role assigned!","You received: "+names.join(", ")+"!");
       }
     }
@@ -3051,8 +3052,8 @@ try{
       featured:"⌨️ Windows-style Command Console and improved release notes!",
       added:[
         "📢 Admin-only announcement drafts, previews and manual publishing!",
-        "🔒 Chat+ feature restrictions for Plus and Admin roles!",
-        "🎛️ Chat+ settings disabled by default for new users!",
+        "🔒 MIP feature restrictions for MIP and Admin roles!",
+        "🎛️ MIP settings disabled by default for new users!",
         "⌨️ Windows-style command console with a Help command!",
         "🧰 Console commands: clear, whoami, role, version, status, announcements, settings, shop, fullscreen, echo, date and exit!",
         "⬆️⬇️ Console command history using the arrow keys!",
@@ -3152,7 +3153,7 @@ try{
         "🖥️ Added a fullscreen Select User Interface page with a Chats entry!",
         "🔒 Added scrollable Coming Soon interface placeholders!",
         "📂 Added an expandable Roles & Access sidebar on the left of the interface selector!",
-        "👤 Added Member, Plus, Moderator, Test Subject and Admin role previews in the sidebar!",
+        "👤 Added Member, MIP, Moderator, Test Subject and Admin role previews in the sidebar!",
         "📱 Mobile build workflow generates Android debug APK and unsigned iOS device IPA!",
         "📦 Publishing a GitHub Release now triggers a workflow designed to attach the APK and unsigned IPA to that release!",
         "🧪 Verified manual GitHub Actions run 41212818688: Android and iOS builds succeeded and produced downloadable workflow artifacts!"
@@ -4116,7 +4117,7 @@ try{
           else{consoleClose();$("settingsBtn").click();}
           break;
         case "shop":
-          if($("shopOpen").hidden||$("shopOpen").disabled)consolePrint("Shop is unavailable. Chat+ and XP leveling may be required.","error");
+          if($("shopOpen").hidden||$("shopOpen").disabled)consolePrint("Shop is unavailable. MIP and XP leveling may be required.","error");
           else{consoleClose();$("shopOpen").click();}
           break;
         case "fullscreen":consoleClose();$("fullscreenToggle").click();break;
@@ -4445,7 +4446,7 @@ try{
         $("experimentalFeatures").hidden=true;
         $("experimentalUnlock").disabled=true;
         $("experimentalUnlock").setAttribute("aria-expanded","false");
-        $("experimentalHint").textContent="🔒 Experimental features require Plus or Admin.";
+        $("experimentalHint").textContent="🔒 Experimental features require MIP or Admin.";
         return;
       }
       $("experimentalUnlock").disabled=false;
@@ -4765,7 +4766,7 @@ try{
       const node=displayedMessages.get(key);
       if(node){node.scrollIntoView({behavior:"smooth",block:"center"});node.focus({preventScroll:true});}
     }
-    // Chat+ live reactions are stored separately from chat message records.
+    // MIP live reactions are stored separately from chat message records.
     // Server Firebase rules MUST enforce Plus/Admin writes, not just this UI.
     const REACTION_CHOICES=[
       ["thumbsup","👍"],["heart","❤️"],["joy","😂"],["sob","😭"],
@@ -4812,17 +4813,17 @@ try{
       if(!main||!actions)return;
       const bar=document.createElement("div");bar.className="msg-reactions";bar.hidden=true;bar.setAttribute("aria-label","Message reactions");
       const chooser=document.createElement("div");chooser.className="msg-reaction-chooser";chooser.hidden=true;
-      chooser.setAttribute("role","group");chooser.setAttribute("aria-label","Choose a Chat+ reaction");
+      chooser.setAttribute("role","group");chooser.setAttribute("aria-label","Choose a MIP reaction");
       const trigger=document.createElement("button");trigger.type="button";trigger.className="reaction-action";
-      trigger.textContent="😊+";trigger.title="React with emoji — Chat+ only";
-      trigger.setAttribute("aria-label","Add emoji reaction (Chat+ only)");
+      trigger.textContent="😊+";trigger.title="React with emoji — MIP only";
+      trigger.setAttribute("aria-label","Add emoji reaction (MIP only)");
       trigger.setAttribute("aria-expanded","false");trigger.hidden=!canUseChatReactions();
       let currentReactions={},pending=false;
       const myUid=user.uid,roomListenerKey=storageKey;
       async function toggleReaction(id){
         if(!reactionById.has(id)||pending)return;
         if(!canUseChatReactions()||user?.uid!==myUid){
-          chooser.hidden=true;showError("🔒 Emoji reactions require a Chat+ (Plus) or Admin role.");return;
+          chooser.hidden=true;showError("🔒 Emoji reactions require a MIP (Plus) or Admin role.");return;
         }
         pending=true;
         const selfPath="chatMessageReactions/"+roomListenerKey+"/"+id+"/"+myUid;
@@ -4833,7 +4834,7 @@ try{
           chooser.hidden=true;trigger.setAttribute("aria-expanded","false");
         }catch(err){
           const reason=String(err.code||err.message||"");
-          showError("Couldn't update reaction: "+reason+". Ask an admin to check Chat+ reaction Firebase rules.");
+          showError("Couldn't update reaction: "+reason+". Ask an admin to check MIP reaction Firebase rules.");
         }finally{pending=false;}
       }
       function showReactionCounts(){
@@ -4861,7 +4862,7 @@ try{
         b.addEventListener("click",()=>toggleReaction(id));chooser.append(b);
       }
       trigger.addEventListener("click",()=>{
-        if(!canUseChatReactions()){showError("🔒 Chat+ membership required for reactions.");return;}
+        if(!canUseChatReactions()){showError("🔒 MIP membership required for reactions.");return;}
         chooser.hidden=!chooser.hidden;trigger.setAttribute("aria-expanded",String(!chooser.hidden));
       });
       const closeChooser=event=>{
@@ -4880,7 +4881,7 @@ try{
         // Until the RTDB rule is added, reactions will not load or save.
         if(!reactionRulesNoticeShown&&canUseChatReactions()){
           reactionRulesNoticeShown=true;
-          console.warn("Chat+ reaction reads unavailable. Deploy the reaction Firebase rules.",err);
+          console.warn("MIP reaction reads unavailable. Deploy the reaction Firebase rules.",err);
         }
       });
       reactionStreams.set(storageKey,()=>{
@@ -6222,7 +6223,7 @@ try{
       if (!joined || !user || !db || !text || blockedFromChat() || !roomCanPost() || !roomCanView() || (lockdown && !isAdmin)) return;
       if(text.toLowerCase()==="/shop"){
         messageInput.value="";
-        if(!hasExperimentalAccess()||!chatPrefs.enableXp){addSystem("Plus or Admin required. Enable XP leveling in Settings → Experimental to use /shop.");return;}
+        if(!hasExperimentalAccess()||!chatPrefs.enableXp){addSystem("MIP or Admin required. Enable XP leveling in Settings → Experimental to use /shop.");return;}
         $("shopOverlay").hidden=false;drawEconomy();
         return;
       }
@@ -6852,25 +6853,10 @@ $('gameHubChatForm').addEventListener('submit',async e=>{
     </div>
     <div id="gameBrowse">
       <div class="game-search"><input id="gameSearch" type="search" placeholder="Search games… (or type /game name in chat)" aria-label="Search games"></div>
-      <article id="gamePythonFeatured" class="store-game-card store-python-featured" data-hub-game="game-python-editor" data-hub-game-name="Python Editor">
-        <div class="store-python-featured-heading">FEATURED COMMUNITY HUB APP</div>
-        <button type="button" class="store-game-art" id="gamePythonFeaturedArt" aria-label="Preview Python Editor Live">
-          <img class="store-brand-python-icon" src="./python-editor-icon.svg" alt="">
-        </button>
-        <div class="store-game-info">
-          <strong>Python Editor Live</strong>
-          <small>Multiplayer Python coding, shared Run output and private projects.</small>
-          <span class="store-python-available">Live rooms · Invite collaborators</span>
-        </div>
-        <div class="store-game-actions">
-          <button type="button" class="store-game-preview" id="gamePythonFeaturedPreview">Preview</button>
-          <a class="store-game-play" id="gamePythonFeaturedOpen" href="./python-editor.html">Open editor</a>
-        </div>
-      </article>
       <div id="gameGrid" class="game-grid"></div>
     </div>
     <iframe id="gamePlayFrame" title="Game player" hidden allow="fullscreen; gamepad" referrerpolicy="no-referrer"></iframe>
-    <div class="game-note">Python Editor is built into Community Hub. Other games are provided by CBGamesdev/chilibowlflash and their original creators. Some games may not allow embedding.</div>
+    <div class="game-note">Python Editor is in the main Community Hub app launcher. Browser games here are provided by third-party creators; some may not allow embedding.</div>
     <div id="gameHubVersion" style="padding:7px 16px;text-align:right;background:#111827;color:#aab8d0;font:12px system-ui,sans-serif" title="Based on the number of commits in the Community Hub GitHub repository">Version loading…</div>
   </section>
   <script>
@@ -6891,7 +6877,6 @@ $('gameHubChatForm').addEventListener('submit',async e=>{
       })();
       const base="https://cbgamesdev.github.io/chilibowlflash/";
       const games=[
-        ["Python Editor","./python-editor.html"],
         ["2048","2048/index.html"],["Cookie Clicker","cookie/index.html"],["Google Dino","googdino/index.html"],
         ["Google Snake","googsnake/index.html"],["Retro Bowl","retrobowl/index.html"],["Slope","slope/index.html"],
         ["Run 3","run3/index.html"],["Minesweeper","minesweep/index.html"],["Blackjack","blackjack/index.html"],
@@ -6908,12 +6893,8 @@ $('gameHubChatForm').addEventListener('submit',async e=>{
         frame.hidden=true;frame.removeAttribute("src");browse.hidden=false;back.hidden=true;external.hidden=true;
         search.value=query;grid.replaceChildren();
         const normalized=query.toLowerCase().trim();
-        const featured=document.getElementById("gamePythonFeatured");
-        if(featured)featured.hidden=!["python","editor","coding","multiplayer","code","run","live","private"].some(term=>term.includes(normalized))&&
-          !("python editor live multiplayer coding shared output private projects".includes(normalized));
         const found=games.filter(g=>g[0].toLowerCase().includes(normalized));
         for(const [name,path] of found){
-          if(name==="Python Editor")continue; // Its always-visible featured app card is above this list.
           const details=window.CommunityHubStore?.gameDetails(name)||{name,icon:"🎮",short:"Browser game",detail:"Preview this browser game.",features:["Browser game"],launchLabel:"Play game"};
           const tile=document.createElement("article");tile.className="store-game-card";
           tile.dataset.hubGame=window.HubSiteControls?.keyForGame(name)||"game-"+name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
@@ -6936,7 +6917,7 @@ $('gameHubChatForm').addEventListener('submit',async e=>{
           playButton.addEventListener("click",()=>play(name,path));
           actions.append(preview,playButton);tile.append(art,info,actions);grid.append(tile);
         }
-        if(!found.length&&document.getElementById("gamePythonFeatured")?.hidden){const msg=document.createElement("p");msg.textContent="No matching games found.";grid.appendChild(msg);}
+        if(!found.length){const msg=document.createElement("p");msg.textContent="No matching games found.";grid.appendChild(msg);}
         window.HubSiteControls?.refreshUI?.();
       }
       async function play(name,path){
@@ -6944,32 +6925,9 @@ $('gameHubChatForm').addEventListener('submit',async e=>{
         // PIN unlocks are checked for both the Game Hub and each individual game.
         if(window.HubSiteControls&&(!await window.HubSiteControls.requestAccess("game-hub")||
           !await window.HubSiteControls.requestAccess(key)))return;
-        // iOS often cannot reliably scroll a long page inside a flex-sized
-        // iframe. Open our own Python editor directly on touch devices.
-        if(name==="Python Editor"&&
-           window.matchMedia("(max-width: 900px), (pointer: coarse)").matches){
-          window.location.assign("./python-editor.html");
-          return;
-        }
         frame.dataset.hubGame=key;
         browse.hidden=true;frame.hidden=false;back.hidden=false;external.hidden=false;
         const url=/^(?:https?:\/\/|\.\/)/i.test(path)?path:base+path;frame.src=url;frame.title=name==="Python Editor"?"Python Editor":name+" game";external.href=url;
-      }
-      // Dedicated Python Editor entry: it exists in HTML even if the normal
-      // game list cannot load. Its link still works without JavaScript, while
-      // this click handler checks the same Hub and per-app permissions.
-      const pythonFeatured=document.getElementById("gamePythonFeatured");
-      if(pythonFeatured){
-        const preview=()=>window.CommunityHubStore?.openPreview
-          ?window.CommunityHubStore.openPreview(
-            window.CommunityHubStore.gameDetails("Python Editor"),
-            ()=>play("Python Editor","./python-editor.html"))
-          :play("Python Editor","./python-editor.html");
-        document.getElementById("gamePythonFeaturedArt")?.addEventListener("click",preview);
-        document.getElementById("gamePythonFeaturedPreview")?.addEventListener("click",preview);
-        document.getElementById("gamePythonFeaturedOpen")?.addEventListener("click",event=>{
-          event.preventDefault();void play("Python Editor","./python-editor.html");
-        });
       }
       async function open(query=""){
         if(window.HubSiteControls&&!await window.HubSiteControls.requestAccess("game-hub"))return;
