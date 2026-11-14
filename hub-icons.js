@@ -10,6 +10,7 @@
   "gatewayOpenMinzSign":'<rect x="10" y="10" width="44" height="44" rx="10"/><rect x="17" y="17" width="13" height="13" rx="3" fill="#bde7ff" stroke="none"/><rect x="35" y="17" width="13" height="13" rx="3" fill="#bde7ff" stroke="none"/><rect x="17" y="35" width="13" height="13" rx="3" fill="#bde7ff" stroke="none"/><path d="M42 34v13m-6-6 6 6 6-6" stroke="#fff"/>',
   "gatewayOpenUpdates":'<path d="M19 17h25v35H19z" fill="#fff2" /><path d="M26 26h12M26 33h12M26 40h6"/><path d="M46 15a21 21 0 0 1 10 17M56 23v9h-9M15 49A21 21 0 0 1 8 33M8 42v-9h9" stroke="#ffe4a1"/>',
   "gatewayOpenGames":'<path d="M20 24h24c6 0 10 5 12 11l3 11c1 6-5 10-10 7L40 46H24l-9 7c-5 3-11-1-10-7l3-11c2-6 6-11 12-11Z" fill="#d5c8ff" stroke="none"/><path d="M20 32v12m-6-6h12" stroke="#46318e" stroke-width="4"/><circle cx="43" cy="35" r="3.5" fill="#46318e" stroke="none"/><circle cx="50" cy="42" r="3.5" fill="#46318e" stroke="none"/>',
+  "gatewayOpenBrowser":'<rect x="9" y="11" width="46" height="42" rx="7" fill="#183759"/><path d="M9 22h46"/><circle cx="16" cy="17" r="1.5" fill="#aad2ff" stroke="none"/><circle cx="22" cy="17" r="1.5" fill="#a0f3dc" stroke="none"/><circle cx="32" cy="38" r="13" stroke="#d7f4ff"/><path d="M19 38h26M32 25c-7 7-7 19 0 26m0-26c7 7 7 19 0 26" stroke="#b7e3ff" stroke-width="2"/>',
   "gatewayOpenChat":'<path d="M12 13h40v30H32L20 54V43h-8Z" fill="#fff" stroke="none"/><circle cx="22" cy="29" r="3.8" fill="#5669ed" stroke="none"/><circle cx="32" cy="29" r="3.8" fill="#5669ed" stroke="none"/><circle cx="42" cy="29" r="3.8" fill="#5669ed" stroke="none"/>',
   "Python Editor":'<rect x="9" y="12" width="46" height="40" rx="7" fill="#0d244b" stroke="#c4e7ff"/><path d="M9 23h46" stroke="#88a1d8"/><circle cx="16" cy="18" r="1.5" fill="#80e8ac" stroke="none"/><circle cx="22" cy="18" r="1.5" fill="#8bc1ff" stroke="none"/><path d="m20 32-6 6 6 6m11-12 6 6-6 6m10-12-4 12" stroke="#a4f7c2" stroke-width="3.2"/><path d="M28 31c2-3 6-3 8 0" stroke="#ffcb79"/>',
   "2048":'<rect x="9" y="9" width="21" height="21" rx="4" fill="#ffe1a4" stroke="none"/><rect x="34" y="9" width="21" height="21" rx="4" fill="#ffac7a" stroke="none"/><rect x="9" y="34" width="21" height="21" rx="4" fill="#ffcd8c" stroke="none"/><rect x="34" y="34" width="21" height="21" rx="4" fill="#ff906b" stroke="none"/><text x="19.5" y="24.5" text-anchor="middle" font-size="14" font-weight="900" fill="#814b35" stroke="none">2</text><text x="44.5" y="24.5" text-anchor="middle" font-size="14" font-weight="900" fill="#7a3729" stroke="none">4</text><text x="19.5" y="49.5" text-anchor="middle" font-size="14" font-weight="900" fill="#814b35" stroke="none">8</text><text x="44.5" y="49.5" text-anchor="middle" font-size="14" font-weight="900" fill="#77291e" stroke="none">16</text>',
@@ -32,7 +33,8 @@
   "Community Chat":"gatewayOpenChat","Admin AI":"gatewayOpenAI",
   "BubbleBuilder 3D":"gatewayOpenBubbleBuilder","Shapes & Colours":"gatewayOpenShapes",
   "Minzify":"gatewayOpenMinzify","Minz Apps":"gatewayOpenMinzSign",
-  "Update Centre":"gatewayOpenUpdates","Game Hub":"gatewayOpenGames"
+  "Update Centre":"gatewayOpenUpdates","Game Hub":"gatewayOpenGames",
+  "Community Browser":"gatewayOpenBrowser"
  };
  function create(key){
   key=alias[key]||key;
