@@ -19,7 +19,7 @@ const config={
 const app=getApps().find(a=>a.name==="[DEFAULT]")||initializeApp(config);
 const auth=getAuth(app),db=getDatabase(app);
 const simple=$("pythonSimpleMode"),advanced=$("pythonAdvancedMode"),status=$("pythonModeStatus"),editor=$("pythonCode");
-let user=null,roles=null,claimAdmin=false,billing=null,offRoles=null,offBilling=null,authenticationVersion=0;
+let user=null,roles=null,claimAdmin=false,billing=null,offRoles=null,offBilling=null,authenticationVersion=0,sidebarSection=null;
 const starter=['# Welcome to Simple Python!','print("Hello, world!")','','for number in range(1, 4):','    print("Number:", number)'].join("\n");
 const snippets={
  function:['def greet(name):','    print("Hello,", name)','','greet("Minzo")'].join("\n"),
@@ -53,7 +53,7 @@ function mode(next){
  }
  const isAdvanced=next==="advanced";
  document.body.classList.toggle("python-advanced",isAdvanced);
- document.body.classList.remove("python-sidebar-open");
+ document.body.classList.remove("python-sidebar-open");sidebarSection=null;
  simple.classList.toggle("active",!isAdvanced);
  advanced.classList.toggle("active",isAdvanced);
  simple.setAttribute("aria-pressed",String(!isAdvanced));
@@ -86,13 +86,13 @@ function changeCode(next){
  editor.setSelectionRange(0,0);
 }
 function reveal(section){
- const opened=!document.body.classList.contains("python-sidebar-open");
+ const opened=!document.body.classList.contains("python-sidebar-open")||sidebarSection!==section;
+ sidebarSection=opened?section:null;
  document.body.classList.toggle("python-sidebar-open",opened);
- $("simpleProjects").setAttribute("aria-expanded",String(opened));
- $("simpleCollaborate").setAttribute("aria-expanded",String(opened));
+ $("simpleProjects").setAttribute("aria-expanded",String(opened&&section==="projects"));
+ $("simpleCollaborate").setAttribute("aria-expanded",String(opened&&section==="collab"));
  if(opened){
-  const target=$(section==="collab"?"pythonSidebar":"pythonPrivateProjects");
-  const where=section==="collab"?$("pythonSidebar"):target;
+  const where=$(section==="collab"?"pythonSidebar":"pythonPrivateProjects");
   where?.scrollIntoView({block:"start",behavior:"smooth"});
  }
 }
