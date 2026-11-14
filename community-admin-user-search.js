@@ -53,6 +53,12 @@ import {getDatabase,ref,get,onValue,set,push,serverTimestamp,query,orderByChild,
   void set(ref(db,DIRECTORY+"/"+user.uid),record).catch(error=>
    console.warn("Community user directory registration unavailable:",error?.code||error?.message)
   );
+  // Register only the member's public display name for ordinary chat member
+  // search. The chatMemberDirectory rules allow writing only one's own entry.
+  // Do not include email addresses, private bio, avatar or account tokens.
+  void set(ref(db,"chatMemberDirectory/"+user.uid),{
+   name:cleanName(name).slice(0,24),updatedAt:serverTimestamp()
+  }).catch(error=>console.warn("Member profile discovery unavailable:",error?.code||error?.message));
  }
  function watchOwnProfile(user){
   if(unwatchName){unwatchName();unwatchName=null}
