@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#111827">
-<title>Python Editor Live · Community Hub</title>
+<title>Simple Python · Community Hub</title>
 <link rel="icon" type="image/svg+xml" href="./python-editor-icon.svg">
 <link rel="stylesheet" href="./hub-site-controls.css">
 <script type="module" src="./hub-site-controls.js"></script>
@@ -66,6 +66,45 @@ body.shared-active #dirtyState{display:none}
 .badge{display:inline-block;border:1px solid #566c8b;border-radius:30px;color:#cbdaf5;padding:3px 10px;font-size:12px}
 #accountState{font-size:13px;color:#bdd4fb}
 footer{font-size:12px;color:#b1c2de;padding:0 20px 16px;max-width:1540px;margin:auto}
+.python-mode-selector{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;max-width:1540px;margin:14px auto 0;padding:0 18px}
+.python-mode-buttons{display:flex;gap:8px;flex-wrap:wrap}
+.python-mode-buttons button{min-height:43px;border-radius:11px;font-weight:800}
+.python-mode-buttons button.active{background:#6a8eeb;border-color:#bed0ff;color:#091635}
+.python-mip-tag{font-size:10px;letter-spacing:.06em;background:#f7d88b;color:#30220e;border-radius:20px;padding:3px 7px;margin-left:4px}
+#pythonModeStatus{font-size:12px;color:#b9cfec}
+.python-simple-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.python-simple-actions{display:flex;gap:6px;flex-wrap:wrap}
+.python-simple-toolbar button{font-size:12px;padding:8px 11px}
+.python-simple-toolbar label{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#pythonExamples{font-size:13px;max-width:190px;min-height:36px;background:#172945;color:#fff;border:1px solid #60759d;border-radius:9px;padding:6px}
+.python-advanced-tools{background:#223657;border:1px solid #6a83af;border-radius:12px;padding:11px;display:grid;gap:9px}
+.python-advanced-tools strong{color:#d5e7ff;font-size:13px}
+.python-advanced-tools small{color:#acc0df;font-size:12px}
+.python-advanced-snippets{display:flex;flex-wrap:wrap;gap:7px}
+.python-advanced-snippets button{font-size:12px;min-height:34px;padding:7px 11px}
+body:not(.python-advanced) .advanced-only{display:none!important}
+body:not(.python-advanced):not(.python-sidebar-open) .sidebar{display:none!important}
+body:not(.python-advanced):not(.python-sidebar-open) .layout{grid-template-columns:minmax(0,1fr);max-width:1180px}
+body:not(.python-advanced) .python-output-hint{display:none}
+body.python-advanced .python-simple-toolbar{display:none}
+body.python-advanced .sidebar{display:grid}
+body.python-advanced .layout{grid-template-columns:minmax(280px,310px) minmax(0,1fr)}
+body.python-advanced #pythonCode{min-height:420px}
+body.python-sidebar-open .sidebar{display:grid}
+body.python-sidebar-open .layout{align-items:start}
+@media(max-width:900px){
+ body.python-advanced .layout{grid-template-columns:minmax(0,1fr)}
+ .python-mode-selector{padding:0 11px}
+ .python-simple-toolbar{align-items:stretch}
+}
+@media(max-width:520px){
+ .python-mode-buttons{width:100%}
+ .python-mode-buttons>button{flex:1 1 135px}
+ .python-simple-actions{width:100%}
+ .python-simple-actions button{flex:1 1 42%}
+ .python-simple-toolbar label{width:100%;justify-content:space-between}
+}
+
 /* A normal document scrollport is essential on mobile browsers, especially
    when this page was launched from the Game Hub. */
 html{min-height:100%;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -100,11 +139,18 @@ body{height:auto;min-height:100dvh;overflow-x:hidden;overflow-y:visible;
 </head>
 <body>
 <header>
-<div><h1><img src="./python-editor-icon.svg" alt="">Python Editor Live</h1><small>Code together in real time, then run for everyone · Or keep your own projects private</small></div>
+<div><h1><img src="./python-editor-icon.svg" alt="">Python Editor</h1><small>Simple Python for everyone · Advanced Python for MIP</small></div>
 <div><span id="accountState">Checking sign-in…</span> <a href="./?interface=selection" target="_top">Back to Community Hub</a></div>
 </header>
+<section class="python-mode-selector" aria-label="Choose Python editor mode">
+  <div class="python-mode-buttons" role="group" aria-label="Python mode">
+    <button id="pythonSimpleMode" type="button" class="active" aria-pressed="true">Simple Python</button>
+    <button id="pythonAdvancedMode" type="button" aria-pressed="false" disabled>Advanced Python <span class="python-mip-tag">MIP</span></button>
+  </div>
+  <span id="pythonModeStatus" role="status" aria-live="polite">Checking account for MIP access…</span>
+</section>
 <main class="layout">
-<aside class="sidebar">
+<aside class="sidebar" id="pythonSidebar" aria-label="Projects and collaboration">
 <section class="shared-box" aria-label="Live Python collaboration">
 <h2>👥 Shared coding rooms</h2>
 <p>Collaborate like a shared document. Only approved members can see a room's code.</p>
@@ -141,7 +187,7 @@ body{height:auto;min-height:100dvh;overflow-x:hidden;overflow-y:visible;
 <p id="sharedStatus" role="status" aria-live="polite">Sign in to create a shared room.</p>
 </section>
 <hr style="width:100%;border:0;border-top:1px solid #3c5075">
-<h2>📁 My private projects</h2>
+<div id="pythonPrivateProjects"><h2>📁 My private projects</h2>
 <label for="projectList">Projects saved to your account</label>
 <select id="projectList" size="7" aria-label="Private Python projects" disabled></select>
 <div class="actions">
@@ -151,34 +197,61 @@ body{height:auto;min-height:100dvh;overflow-x:hidden;overflow-y:visible;
 <button type="button" id="deleteProject" class="danger" disabled>Delete</button>
 </div>
 <p>Only your signed-in Firebase account can read or change its saved Python code. This is enforced by Realtime Database rules.</p>
-<p id="cloudStatus" role="status" aria-live="polite">Sign in to Community Hub to save projects.</p>
+<p id="cloudStatus" role="status" aria-live="polite">Sign in to Community Hub to save projects.</p></div>
 </aside>
 <section class="workspace">
+<div class="python-simple-toolbar" aria-label="Simple Python controls">
+  <div class="python-simple-actions">
+    <button id="simpleReset" type="button">↻ Reset</button>
+    <button id="simpleSave" type="button">Save</button>
+    <button id="simpleProjects" type="button" aria-expanded="false" aria-controls="pythonSidebar">Open projects</button>
+    <button id="simpleCollaborate" type="button" aria-expanded="false" aria-controls="pythonSidebar">Collaborate</button>
+  </div>
+  <label for="pythonExamples">Example programs
+    <select id="pythonExamples" aria-label="Load a Python example">
+      <option value="">Choose an example…</option>
+      <option value="hello">Hello World</option>
+      <option value="loops">Loops</option>
+      <option value="calculator">Mini calculator</option>
+      <option value="guess">Guess the number</option>
+    </select>
+  </label>
+</div>
+<div class="python-advanced-tools advanced-only" aria-label="MIP advanced code snippets">
+  <strong>Advanced Python · MIP toolkit</strong>
+  <div class="python-advanced-snippets">
+    <button type="button" data-python-snippet="function">Insert function</button>
+    <button type="button" data-python-snippet="class">Insert class</button>
+    <button type="button" data-python-snippet="try">Try / except</button>
+    <button type="button" data-python-snippet="json">Read JSON</button>
+  </div>
+  <small>Advanced mode adds code templates, program input, file import/export and full project/room management.</small>
+</div>
 <div class="bar">
 <div><label for="projectName">Project name</label><input type="text" id="projectName" maxlength="60" value="My first Python script"><span id="sharedCodeTitle">👥 Live room: <strong id="sharedEditorTitle"></strong></span></div>
 <span id="dirtyState" class="badge">Not saved</span>
 </div>
-<div class="editor-panes"><div class="code-pane"><label for="pythonCode">Python code</label>
+<div class="editor-panes"><div class="code-pane"><label for="pythonCode">Your Python code</label>
 <textarea id="pythonCode" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" aria-label="Python code editor"># Hello from Community Hub!
 name = "Python"
 for count in range(1, 4):
     print(f"{count}. Hello, {name}!")</textarea></div>
-<div class="output-pane"><label for="console">Program output · shared live in a room</label>
+<div class="output-pane"><label for="console">Output <span class="python-output-hint">· shared with collaborators in a room</span></label>
 <pre id="console" role="log" aria-live="polite">Press Run Python to execute your code. The Python engine loads on first use.</pre></div></div>
 <div class="bar">
 <div class="buttons">
-<button type="button" id="runCode" class="primary">▶ Run Python</button>
+<button type="button" id="runCode" class="primary">▶ Run</button>
 <button type="button" id="stopCode" disabled>■ Stop</button>
 <button type="button" id="clearOutput">Clear output</button>
 </div>
 <span id="runStatus">Ready to run</span><span id="sharedRunNotice" hidden>Output syncs to everyone in the room</span>
 </div>
-<details>
+<details class="advanced-only">
 <summary>Program input (optional)</summary>
 <label for="programInput">One line for each Python input() call</label>
 <textarea id="programInput" aria-label="Program input lines" placeholder="For example: Alice"></textarea>
 </details>
-<div class="bar">
+<div class="bar advanced-only">
 <div class="buttons">
 <button type="button" id="importCode">Import .py file</button>
 <button type="button" id="exportCode">Download .py</button>
@@ -191,5 +264,6 @@ for count in range(1, 4):
 <footer>Private projects stay under your account. Shared rooms require owner approval; live edits merge using Yjs. In a shared room one browser runs Python and its output is streamed to all participants. Run only trusted code. Python runs locally using Pyodide, with browser and package limitations.</footer>
 <script type="module" src="./python-editor.js"></script>
 <script type="module" src="./python-collab.js"></script>
+<script type="module" src="./python-modes.js"></script>
 </body>
 </html>
