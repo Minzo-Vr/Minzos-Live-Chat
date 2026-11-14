@@ -30,7 +30,7 @@ function updateButtons(){
 }
 async function signOutCurrent(){
  if(!auth.currentUser)return;
- if(!confirm("Sign out of your current Game Hub account? Saved accounts can still be switched to on this device."))return;
+ if(!confirm("Sign out of this account and remove its saved session from this device? Other saved accounts stay available."))return;
  out.disabled=true;
  try{
   if(window.CommunityHubAccountActions?.signOut)await window.CommunityHubAccountActions.signOut();
