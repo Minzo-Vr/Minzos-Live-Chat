@@ -1,0 +1,69 @@
+/* Main Game Hub account actions, admin lookup, and chat profile search. */
+#gatewayAccountActions{position:absolute;z-index:8;top:14px;right:18px;display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100% - 85px)}
+#gatewayAccountActions #gatewayAccountButton{position:static!important;top:auto!important;right:auto!important}
+#gatewayAccountActions button{min-height:38px;background:#ffffff16;color:white;border:1px solid #90abed7a;border-radius:999px;padding:8px 11px;cursor:pointer;font:700 12px system-ui,sans-serif;white-space:nowrap}
+#gatewayAccountActions button:hover{background:#ffffff2e}
+#gatewayAccountActions button:focus-visible{outline:2px solid white;outline-offset:2px}
+#gatewayAccountActions button[hidden]{display:none!important}
+#gatewayAccountActions #gatewaySignOut{border-color:#feb2be88;color:#ffdde2}
+#gatewayAccountActions #gatewayHubAdmin{background:#34518d}
+#gatewaySelection .gateway-main{padding-top:max(92px,clamp(72px,7vw,96px))!important}
+#hubAccountSwitchPanel{border-top:1px solid #ffffff30;margin-top:14px;padding-top:13px}
+#hubAccountSwitchPanel[hidden]{display:none!important}
+#hubAccountSwitchPanel h3{margin:4px 0 7px}
+#hubAccountSwitchPanel p{font-size:12px;color:#c9d7f1}
+#hubAccountSwitchPanel .user-switch-account-setting{border:0!important;background:transparent!important;color:#fff!important;margin:0;padding:0}
+#hubAccountSwitchPanel .user-switch-account-setting strong{display:none}
+#hubAccountSwitchPanel .user-switch-account-setting button{background:#324d83;color:#fff;border:1px solid #7899dc;border-radius:9px;min-height:36px;margin:3px 0;padding:8px 11px;font:700 13px system-ui}
+#hubAccountSwitchPanel #savedAccountsList>div{border:1px solid #7187b455;border-radius:10px;padding:9px;gap:6px}
+#hubAdminMemberModal[hidden]{display:none!important}
+#hubAdminMemberModal{position:fixed;inset:0;z-index:2147483050;display:flex;align-items:center;justify-content:center;background:#060a18de;padding:14px}
+#hubAdminMemberCard{width:min(100%,730px);max-height:min(89dvh,850px);overflow-y:auto;-webkit-overflow-scrolling:touch;background:#182746;color:#f3f7ff;border:1px solid #829acb;border-radius:20px;box-shadow:0 18px 60px #0009;padding:clamp(14px,3vw,24px);font:14px/1.5 system-ui,sans-serif}
+#hubAdminMemberCard p{color:#c7d6ee;margin:9px 0}
+#hubAdminMemberCard button{border:1px solid #8ca9da;border-radius:9px;background:#34558b;color:#fff;cursor:pointer;padding:9px 12px;font:700 13px system-ui,sans-serif}
+#hubAdminMemberCard button:hover{background:#496eab}
+#hubAdminMemberCard input{width:100%;min-width:0;padding:11px 12px;background:#0b1933;color:#fff;border:1px solid #7997cd;border-radius:9px;font:14px system-ui,sans-serif}
+#hubAdminMemberCard label{display:block;font-weight:700;margin:13px 0 7px}
+.hub-admin-member-top,.hub-admin-member-shortcuts,.hub-admin-member-search-row,.hub-admin-member-profile-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.hub-admin-member-top{justify-content:space-between}
+.hub-admin-member-top strong{font-size:19px}
+.hub-admin-member-shortcuts{margin:14px 0}
+.hub-admin-member-search-row input{flex:1}
+#hubAdminMemberResults{display:grid;gap:9px;max-height:32dvh;overflow:auto}
+.hub-admin-member-result{display:flex;align-items:center;gap:9px;padding:10px;background:#101e37;border:1px solid #5676aa;border-radius:13px}
+.hub-member-avatar{display:grid;place-items:center;width:45px;height:45px;flex:none;background:#344973;border:1px solid #9db4e2;border-radius:12px;font-size:25px;overflow:hidden}
+.hub-member-avatar img{width:100%;height:100%;object-fit:cover}
+.hub-admin-member-result-info{min-width:0;flex:1;cursor:pointer}
+.hub-admin-member-result-info strong{display:block;overflow-wrap:anywhere}
+.hub-admin-member-result-info small{color:#b9cde8}
+#hubAdminMemberProfile[hidden]{display:none!important}
+#hubAdminMemberProfile{margin-top:13px;padding:15px;background:#0c1b34;border:1px solid #8aa5da66;border-radius:14px;overflow-wrap:anywhere}
+.hub-admin-member-profile-top{display:flex;align-items:center;gap:10px}
+.hub-admin-member-profile-top h3{margin:0;font-size:19px}
+.hub-admin-member-profile-top small,.hub-admin-member-muted{color:#aebfdb}
+.hub-admin-member-profile-actions{margin-top:13px}
+#chatMemberFinder{border:1px solid var(--theme-border,#b8c5dc);border-radius:12px;margin:12px 0;background:var(--theme-surface,#f3f6ff);color:var(--theme-text,#1d2a48);padding:9px 12px}
+#chatMemberFinder summary{cursor:pointer;font:800 14px system-ui,sans-serif}
+#chatMemberFinder form{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:11px 0 6px}
+#chatMemberFinder input{flex:1 1 140px;min-width:0;border:1px solid var(--theme-border,#91a6ca);border-radius:9px;padding:9px;color:var(--theme-text,#1d2a48);background:var(--theme-surface,#fff);font:14px system-ui}
+#chatMemberFinder form button,#chatMemberFinderResults button{border:1px solid #6b8ce2;border-radius:9px;background:#4f68bc;color:#fff;padding:8px 12px;font:700 13px system-ui;cursor:pointer}
+#chatMemberFinderStatus{font:12px/1.5 system-ui;color:var(--theme-secondary,#586680);margin:7px 0}
+#chatMemberFinderResults{display:grid;gap:7px;max-height:220px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#chatMemberFinderResults button{display:flex;align-items:center;gap:9px;text-align:left;background:var(--theme-surface,#fff);color:var(--theme-text,#213452);border-color:var(--theme-border,#b6c8df)}
+#chatMemberFinderResults button:hover{border-color:#698cce;background:var(--theme-highlight,#e9f0ff)}
+#chatMemberFinderResults button span{font-size:20px}
+#chatMemberFinderResults button strong{flex:1;overflow-wrap:anywhere}
+@media(max-width:700px){
+ #gatewayAccountActions{top:9px;right:9px;max-width:calc(100% - 52px);gap:5px}
+ #gatewayAccountActions button{padding:7px 8px;min-height:34px;font-size:11px}
+ #gatewaySelection .gateway-main{padding-top:126px!important}
+ #hubAdminMemberModal{padding:8px}
+ #hubAdminMemberCard{max-height:95dvh}
+ .hub-admin-member-result{flex-wrap:wrap}
+}
+@media(max-width:390px){
+ #gatewaySelection .gateway-main{padding-top:155px!important}
+ #gatewayAccountActions{max-width:calc(100% - 42px)}
+ #gatewayAccountActions button{font-size:10px}
+ .hub-admin-member-search-row button{flex:1}
+}
