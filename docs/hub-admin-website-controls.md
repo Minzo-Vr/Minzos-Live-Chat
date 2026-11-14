@@ -6,7 +6,7 @@ Community Hub has an **Admin Website Controls** button inside **My Account** on 
 
 1. Open [Community Hub](https://minzo-vr.github.io/Minzos-Live-Chat/?interface=selection) and sign into an account with the Admin role or a verified Firebase custom claim `admin: true`.
 2. Choose **My Account → Admin Website Controls**. In Game Hub, use **Admin** to open the same panel.
-3. Under **Websites & apps**, switch **Disable** on for Chats, Admin AI, Shapes & Colours, Minzify, Minz Apps, Update Centre, Game Hub or Community Browser.
+3. Under **Websites & apps**, switch **Disable** on for Chats, Python Editor, Admin AI, Shapes & Colours, Minzify, Minz Apps, Update Centre, Game Hub or Community Browser.
 4. Under **Individual games**, switch off a particular Game Hub title such as 2048 or Slope without disabling all games.
 5. To open a disabled app as an admin, press its **🔐 Unlock** action and enter your four-digit PIN. Unlock is per experience for 15 minutes in the current tab; the disabled status remains in effect for other users.
 6. Toggle **Disable** off in My Account to fully re-enable an app or game. My Account remains accessible; opening the admin switch panel now requires the Admin PIN.
@@ -15,17 +15,17 @@ A switch set to **Disable** stores the boolean `true` under `hubSiteAvailability
 
 ## Lock for Roles (new)
 
-**Python Editor Live** is pinned as the **first** game in **Game Hub**. The same Admin Website Controls panel now includes a collapsible **🔐 Lock for Roles** section beneath every Hub app and every Game Hub game, including Python Editor.
+**Python Editor** is listed in the **main Community Hub app launcher** alongside Chat, Minzify, and Shapes & Colours. It is not a browser game. It defaults to Simple Python; MIP (Minzo’s Important People) and Admin accounts may open Advanced Python. The same Admin Website Controls panel now includes a collapsible **🔐 Lock for Roles** section beneath every Hub app and every Game Hub game, including Python Editor.
 
 To set a role lock:
 
 1. Sign in to a verified Admin account and open **Game Hub → 🛠 Admin** (or **My Account → Admin Website Controls**); enter the existing Admin PIN.
 2. Scroll to the desired app or game and expand **Lock for Roles**.
-3. Tick any combination of **Signed-in members**, **Chat+**, **Moderator**, **Test Subject**, and **Admin**.
+3. Tick any combination of **Signed-in members**, **MIP**, **Moderator**, **Test Subject**, and **Admin**.
 4. Press **Save role lock**. The allowed roles are stored under `hubSiteRoleLocks/<appKey>` and update in real time for open browsers.
 5. Use **Allow everyone** to remove the role lock without changing the separate **Disable** switch. An empty selection means everyone is allowed.
 
-"Signed-in members" means **all non-guest signed-in accounts**, including those that have additional roles. Choose **Chat+ / Moderator / Test Subject** without Members for more selective access. A user who has multiple roles only needs one matching role. Admins can always bypass **role** restrictions to avoid permanently locking out management, but a globally **Disabled** app still requires its existing Admin PIN unlock.
+"Signed-in members" means **all non-guest signed-in accounts**, including those that have additional roles. Choose **MIP / Moderator / Test Subject** without Members for more selective access. A user who has multiple roles only needs one matching role. Admins can always bypass **role** restrictions to avoid permanently locking out management, but a globally **Disabled** app still requires its existing Admin PIN unlock.
 
 Role locks and **Disable** are independent: Disable overrides role permissions. Locking `game-hub` restricts opening the whole Game Hub; locking `game-python-editor` restricts only Python Editor. Users with insufficient roles see a lock label rather than being able to open the app through the Hub UI.
 
