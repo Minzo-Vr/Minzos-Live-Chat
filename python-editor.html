@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#111827">
 <title>Python Editor Live · Community Hub</title>
+<link rel="icon" type="image/svg+xml" href="./python-editor-icon.svg">
 <link rel="stylesheet" href="./hub-site-controls.css">
 <script type="module" src="./hub-site-controls.js"></script>
 <style>
@@ -14,7 +15,7 @@ button{cursor:pointer;border:1px solid #60759d;border-radius:10px;padding:10px 1
 button:hover:not(:disabled){background:#3c5585}button:disabled{cursor:not-allowed;opacity:.45}
 button.primary{background:#4d71d8;border-color:#839cff}button.danger{background:#65344c}
 a{color:#bed4ff}header{display:flex;align-items:center;gap:14px;justify-content:space-between;flex-wrap:wrap;background:#17233d;border-bottom:1px solid #344565;padding:13px clamp(14px,3vw,28px)}
-header h1{margin:0;font-size:23px}header small{color:#b7c7e7}
+header h1{margin:0;font-size:23px;display:flex;align-items:center;gap:9px}header h1 img{width:36px;height:36px;object-fit:contain;flex:none;border-radius:9px}header small{color:#b7c7e7}
 .layout{display:grid;grid-template-columns:minmax(280px,310px) minmax(0,1fr);gap:18px;max-width:1540px;margin:auto;padding:18px}
 .sidebar,.workspace{background:#151f35;border:1px solid #344767;border-radius:16px;min-width:0}
 .sidebar{padding:16px;align-self:start;display:grid;gap:11px}
@@ -99,7 +100,7 @@ body{height:auto;min-height:100dvh;overflow-x:hidden;overflow-y:visible;
 </head>
 <body>
 <header>
-<div><h1>🐍 Python Editor Live</h1><small>Code together in real time, then run for everyone · Or keep your own projects private</small></div>
+<div><h1><img src="./python-editor-icon.svg" alt="">Python Editor Live</h1><small>Code together in real time, then run for everyone · Or keep your own projects private</small></div>
 <div><span id="accountState">Checking sign-in…</span> <a href="./?interface=selection" target="_top">Back to Community Hub</a></div>
 </header>
 <main class="layout">
