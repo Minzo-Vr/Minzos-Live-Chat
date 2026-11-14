@@ -451,7 +451,12 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
    const row=n("div","hub-site-admin-row");
    const main=n("div","hub-site-admin-main");
    const info=n("div","hub-site-admin-info");
-   info.append(n("strong",null,item.icon+" "+item.name),n("small",null,item.description));
+   const iconName=n("div","hub-site-admin-app-heading");
+   const graphic=window.CommunityHubIcons?.create(item.name);
+   if(graphic)iconName.append(graphic);
+   else iconName.append(n("span",null,item.icon));
+   iconName.append(n("strong",null,item.name));
+   info.append(iconName,n("small",null,item.description));
    const toggles=n("div","hub-site-admin-toggles");
    const label=n("label","hub-site-admin-switch");
    const input=n("input");input.type="checkbox";input.disabled=true;
