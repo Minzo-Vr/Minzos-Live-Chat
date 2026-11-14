@@ -395,6 +395,7 @@ $("sharedJoinRoom").addEventListener("click",()=>void joinRoom(getRoomInput()));
 $("sharedJoinCode").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();void joinRoom(getRoomInput())}});
 $("sharedRequestAccess").addEventListener("click",()=>void requestRoomAccess());
 $("sharedOpenRoom").addEventListener("click",()=>void joinRoom(SELECT.value));
+document.addEventListener("python-open-shared-room",event=>void joinRoom(event.detail?.id));
 SELECT.addEventListener("dblclick",()=>void joinRoom(SELECT.value));
 $("sharedCopyLink").addEventListener("click",async()=>{if(room){await copy(roomLink(room.id));notify("Invite link copied. Others must be approved before joining.")}});
 $("sharedLeaveRoom").addEventListener("click",()=>{
