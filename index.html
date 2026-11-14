@@ -788,7 +788,10 @@
     .audit-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.audit-toolbar strong{margin-right:auto}
     #auditSearch{width:100%;padding:13px;border:1px solid #9ba3b6;border-radius:10px;font:inherit;background:var(--bg,#fff);color:var(--ink,#222)}
     #auditEntries{overflow:auto;flex:1;display:grid;align-content:start;gap:10px}.audit-event{overflow-wrap:anywhere}
-    #auditCollapsible summary{cursor:pointer;font-weight:700}
+    #auditCollapsible[hidden]{display:none!important}
+    #auditCollapsible summary{cursor:pointer;font-weight:700;padding:8px 0;touch-action:manipulation}
+    #auditPreviewEntries{display:grid;gap:8px;margin:12px 0;max-height:340px;overflow:auto}
+    #auditPreviewStatus{font-size:13px;opacity:.85}
 
     .friend-code-box{padding:14px;border-radius:12px;background:rgba(127,127,127,.09);border:1px solid rgba(127,127,127,.2);margin:12px 0}.friend-code-box #myFriendCode{font-size:28px;font-weight:800;letter-spacing:5px;margin:10px 0}.friend-code-row{display:flex;gap:8px;margin-top:8px}.friend-code-row input{min-width:0;flex:1;font-size:20px;letter-spacing:4px}
 
@@ -1843,8 +1846,10 @@ document.addEventListener("click",function(event){
           </div>
         </details>
         <details id="auditCollapsible" class="admin-audit-panel" hidden>
-          <summary>🔒 Admin Activity Log <span style="opacity:.7;font-size:12px">— click to expand</span></summary>
-          <p>View logged actions in a searchable full-screen window.</p>
+          <summary id="auditToggle">🔒 Admin Activity Log <span style="opacity:.7;font-size:12px">— click to expand</span></summary>
+          <p>Recent Admin and MIP events appear below. Open the full-screen window to search more events.</p>
+          <p id="auditPreviewStatus" role="status" aria-live="polite">Expand to load recent activity.</p>
+          <div id="auditPreviewEntries" aria-label="Most recent activity"></div>
           <button type="button" id="auditOpenFull">⛶ Open full-screen logs</button>
         </details>
         <div class="anonymous-admin-setting">
@@ -2394,7 +2399,8 @@ try{
         renderChatAdminGate();
         updateRoleUI();
         $("auditCollapsible").hidden=!isAdmin;
-        if(isAdmin)void refreshActivityLog();
+        if(!isAdmin){$("auditCollapsible").open=false;$("auditOverlay").hidden=true;document.body.style.overflow="";}
+        else if($("auditCollapsible").open||!$("auditOverlay").hidden)void refreshActivityLog();
         if(!hasExperimentalAccess()&&activeRoom!==0)switchRoom(0).catch(console.warn);
       },err=>console.warn("Roles unavailable",err));
       startAppearanceListener();
@@ -4177,17 +4183,19 @@ try{
     // Best-effort client audit. For tamper-proof comprehensive auditing, use a trusted backend.
     async function writeActivityLog(action,detail=""){
       if(!user?.uid)return;
-      try{await push(ref(db,"chatActivityLog"),{uid:user.uid,actorName:(user.displayName||"").slice(0,60),action:String(action).slice(0,50),detail:String(detail).slice(0,1500),at:Date.now()});}
+      try{await push(ref(db,"chatActivityLog"),{uid:user.uid,actorName:String(username||user.displayName||"Member").slice(0,60),action:String(action).slice(0,50),detail:String(detail).slice(0,1500),at:serverTimestamp()});
+        if(isAdmin&&($("auditCollapsible").open||!$("auditOverlay").hidden))void refreshActivityLog();}
       catch(err){console.warn("Activity logging unavailable; Firebase rules may need updating.",err.code||err.message);}
     }
     async function refreshActivityLog(){
-      if(!isAdmin){$("announcementAuditSection").hidden=true;return;}
-      $("announcementAuditSection").hidden=false;
-      const list=$("auditEntries");list.replaceChildren();$("auditStatus").textContent="Loading activity…";
+      if(!isAdmin){$("auditCollapsible").hidden=true;return;}
+      $("auditCollapsible").hidden=false;
+      const list=$("auditEntries"),preview=$("auditPreviewEntries");list.replaceChildren();preview.replaceChildren();$("auditStatus").textContent="Loading activity…";$("auditPreviewStatus").textContent="Loading recent activity…";
       try{
         const snap=await get(query(ref(db,"chatActivityLog"),limitToLast(100)));
         const entries=[];snap.forEach(child=>entries.push(child.val()));entries.reverse();
         $("auditStatus").textContent=entries.length?entries.length+" recent events":"No recorded events yet.";
+        $("auditPreviewStatus").textContent=entries.length?Math.min(entries.length,5)+" newest events":"No recorded events yet. New actions will appear here.";
         for(const event of entries){
           let info={};try{info=JSON.parse(event.detail||"{}");}catch{}
           const action=event.action||"activity";
@@ -4206,12 +4214,14 @@ try{
           const body=document.createElement("div");body.textContent=description;
           const date=document.createElement("small");date.textContent=new Date(event.at||0).toLocaleString();
           item.append(heading,body,date);list.append(item);
+          if(preview.childElementCount<5)preview.append(item.cloneNode(true));
         }
         filterAuditEntries();
-      }catch(err){$("auditStatus").textContent="Log unavailable. Check Admin-only Firebase read rules for chatActivityLog.";}
+      }catch(err){const message="Log unavailable: "+String(err.code||err.message||"unknown").slice(0,90)+". Check Firebase read rules for chatActivityLog.";$("auditStatus").textContent=message;$("auditPreviewStatus").textContent=message;console.warn("Activity log read failed",err);}
     }
     function filterAuditEntries(){const q=$("auditSearch").value.trim().toLocaleLowerCase();let count=0;for(const item of $("auditEntries").children){const show=item.textContent.toLocaleLowerCase().includes(q);item.hidden=!show;if(show)count++;}if(q)$("auditStatus").textContent=count+" matching events";}
     $("auditSearch").addEventListener("input",filterAuditEntries);
+    $("auditCollapsible").addEventListener("toggle",()=>{if($("auditCollapsible").open&&isAdmin)void refreshActivityLog();});
     $("auditOpenFull").addEventListener("click",()=>{if(!isAdmin)return;$("auditOverlay").hidden=false;document.body.style.overflow="hidden";void refreshActivityLog();$("auditSearch").focus();});
     function closeAudit(){ $("auditOverlay").hidden=true;document.body.style.overflow=""; }
     $("auditClose").addEventListener("click",closeAudit);
@@ -5524,7 +5534,7 @@ try{
       $("xpStatus").hidden=!account || !hasExperimentalAccess() || !chatPrefs.enableXp;
       if(roleUnsub){roleUnsub();roleUnsub=null;}if(moderationUnsub){moderationUnsub();moderationUnsub=null;}
       if(!account) {
-        stopFriends();isAdmin=false;startAnnouncementListeners();resetChatIdentity();setAuthDisplay(false);void refreshChatPlusBilling();
+        stopFriends();isAdmin=false;$("auditCollapsible").hidden=true;$("auditCollapsible").open=false;$("auditOverlay").hidden=true;document.body.style.overflow="";startAnnouncementListeners();resetChatIdentity();setAuthDisplay(false);void refreshChatPlusBilling();
         window.HubAdminPin?.lockAll();$("adminArea").open=false;renderChatAdminGate();
         status.textContent="Sign in required";
         return;
