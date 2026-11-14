@@ -35,6 +35,8 @@ assert.ok(rules.chatMessages[".write"].includes("chatRoles"),"Only admins may pu
 assert.ok(rules.chatRoles.$uid[".write"].includes("auth.token.admin"),"Admin role changes must be verified");
 assert.ok(rules.hubSiteAvailability.$key[".write"].includes("game-python-editor"),"Admin availability switches cover Python Editor");
 assert.ok(rules.hubSiteAvailability.$key[".write"].includes("app-installer"),"Admin availability switches cover App Installer");
+assert.ok(rules.hubSiteAvailability.$key[".write"].includes("music-maker"),"Admin availability switches cover Music Maker");
+assert.ok(rules.hubSiteRoleLocks.$key[".write"].includes("music-maker"),"Role-lock policy covers Music Maker");
 assert.ok(rules.hubSiteRoleLocks.$key[".write"].includes("app-installer"),"Role locks cover App Installer");
 assert.ok(!(".read" in rules.hubPythonProjects),"Python projects cannot be publicly readable");
 assert.ok(!(".write" in rules.hubPythonProjects),"Python projects cannot be publicly writable");
