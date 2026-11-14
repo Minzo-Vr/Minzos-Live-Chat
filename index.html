@@ -2587,7 +2587,14 @@ try{
     // incompatible sign-in system. Firebase Auth controls the actual session.
     window.CommunityHubAccountActions={
       async signOut(){
-        await saveActiveAccount().catch(error=>console.warn("Could not cache session for switching:",error));
+        // A real Sign Out also removes the current account's saved session.
+        // Switching accounts (below) keeps its separate saved-session behavior.
+        const uid=auth.currentUser?.uid;
+        if(uid&&accountVaultIds.includes(uid)){
+          await signOut(vaultAuth(uid));
+          accountVaultIds=accountVaultIds.filter(value=>value!==uid);
+          persistAccountVault();
+        }
         await signOut(auth);
         $("settingsOverlay").hidden=true;
       },
