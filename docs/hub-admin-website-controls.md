@@ -85,3 +85,18 @@ The existing account sign-in, app launcher, Cloudinary, GIPHY, custom roles, cha
 - Direct visits to standalone Hub apps display the locked overlay until the app is enabled or the signed-in admin enters the PIN. The Hub launcher and My Account stay accessible.
 - **No Firebase Realtime Database rules change is required** for this UI change; the stored disabled flags and admin-only permissions are unchanged.
 - For real protection against determined users, a backend/edge authentication check must run **before content is served**. GitHub Pages cannot enforce this site-wide.
+
+## Game Hub account actions and member search
+
+The **main Game Hub launcher** (the app selection screen, not the separate Browser Games app) now has a persistent account toolbar:
+
+- **My account / Sign in** opens the existing Firebase sign-in and profile modal.
+- **Switch Account** opens the same saved-account switcher as Chat Settings, including saved sessions and Google/email add-account buttons. It uses Firebase Auth sessions rather than copying passwords into local storage.
+- **Sign Out** signs out of the active Firebase account **and removes that account's saved session** from the device. Other saved accounts are not removed.
+- **Admin Panel**, displayed only after verified admin role/claim checks, opens a PIN-gated admin search and shortcuts to Website & Game Controls and Block / Unblock Users.
+
+The admin user search is a second interface to the existing admin-only `chatAdminUserDirectory` and exact verified `chatEmailDirectory` queries. Firebase Realtime Database rules independently restrict those reads; it does not impersonate other accounts. Public profile details follow user-selected visibility settings. The existing Chat admin user search remains available.
+
+Inside **Community Chat**, **Find a member** searches `chatMemberDirectory` for published display names and opens the **same privacy-aware profile popup** used when tapping an avatar or username. It is a separate ordinary-member search; it never exposes admin-only email lookups. Members' public display names are registered in `chatMemberDirectory` when they next sign in and their profile listener runs.
+
+The repository's current `database.rules.json` already includes both directory rule sections, but **the live Firebase rules must be successfully published** for lookup and account controls that depend on them to work. Earlier GitHub Actions authentication failures prevent automatic deployment until the service-account JSON secret is repaired.
