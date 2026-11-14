@@ -2583,6 +2583,16 @@ try{
       try{await saveActiveAccount();await signOut(auth);$("settingsOverlay").hidden=true;}
       catch(err){$("switchAccountStatus").textContent="Sign-out failed: "+(err.code||err.message);}
     });
+    // Game Hub uses the existing session vault instead of creating a second,
+    // incompatible sign-in system. Firebase Auth controls the actual session.
+    window.CommunityHubAccountActions={
+      async signOut(){
+        await saveActiveAccount().catch(error=>console.warn("Could not cache session for switching:",error));
+        await signOut(auth);
+        $("settingsOverlay").hidden=true;
+      },
+      async refreshSavedAccounts(){await saveActiveAccount().catch(()=>{});await renderSavedAccounts();}
+    };
     $("settingsBtn").addEventListener("click",()=>{
       saveActiveAccount().then(renderSavedAccounts).catch(err=>{console.warn(err);$("switchAccountStatus").textContent="Saved account sessions unavailable in this browser.";});
       $("settingsName").value=savedUsername||username;
@@ -7197,6 +7207,13 @@ $('gameHubChatForm').addEventListener('submit',async e=>{
  modal.innerHTML='<div id="hubAccountCard" role="dialog" aria-modal="true" aria-label="Community Hub account"><button id="hubAccountClose" type="button">✕ Close</button><h2>Community Hub account</h2><p>Use your existing Community Chat account.</p><div id="hubAccountMount"></div><div id="hubSignedIn" hidden><div class="hub-profile"><img id="hubProfileAvatar" alt="Your profile picture" referrerpolicy="no-referrer"><div><strong id="hubProfileName">Community member</strong><p id="hubProfileBio">No bio added yet.</p></div></div><details id="hubEditProfile"><summary>Edit profile settings</summary><form id="hubProfileForm"><label>Username<input id="hubEditName" maxlength="24" required></label><button type="button" data-save="name">Save username</button><label>Bio<textarea id="hubEditBio" maxlength="160" rows="3"></textarea></label><button type="button" data-save="bio">Save bio</button><label>Profile picture<input id="hubEditAvatar" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label><button type="button" data-save="avatar">Upload picture</button><p id="hubEditFeedback" role="status"></p></form></details></div></div>';
  document.body.append(modal);
  const mount=modal.querySelector("#hubAccountMount"),signed=modal.querySelector("#hubSignedIn");
+ const card=modal.querySelector("#hubAccountCard");
+ const switchSection=document.createElement("section");
+ switchSection.id="hubAccountSwitchPanel";switchSection.hidden=true;
+ switchSection.innerHTML='<h3>🔄 Switch Account</h3><p>Choose a saved account, or add a new Google or email account. Saved sessions stay on this device.</p>';
+ const originalSwitch=document.querySelector(".user-switch-account-setting");
+ const switchParent=originalSwitch?.parentNode,switchNext=originalSwitch?.nextSibling;
+ card.append(switchSection);
  let lastFocus=null;
  let authConfirmed=!accountBar.hidden;
  const profileAvatar=modal.querySelector("#hubProfileAvatar"),profileName=modal.querySelector("#hubProfileName"),profileBio=modal.querySelector("#hubProfileBio");
@@ -7225,9 +7242,37 @@ $('gameHubChatForm').addEventListener('submit',async e=>{
    window.dispatchEvent(new CustomEvent("community-hub-profile-save",{detail:{requestId,field,value,file}}));
  }));
  function loggedIn(){return authConfirmed || !accountBar.hidden;}
- function update(){const yes=loggedIn();text.textContent=yes?"My account":"Sign in";signed.hidden=!yes;if(!modal.hidden&&yes&&gate.parentNode===mount){gate.hidden=true;}}
- function close(){modal.hidden=true;if(gate.parentNode===mount){parent.insertBefore(gate,next);gate.hidden=loggedIn();}lastFocus?.focus();}
- button.addEventListener("click",()=>{lastFocus=document.activeElement;modal.hidden=false;mount.append(gate);gate.hidden=loggedIn();update();modal.querySelector("#hubAccountClose").focus();});
+ function update(){
+   const yes=loggedIn();
+   text.textContent=yes?"My account":"Sign in";
+   signed.hidden=!yes||!switchSection.hidden;
+   if(!modal.hidden&&gate.parentNode===mount)gate.hidden=yes||!switchSection.hidden;
+ }
+ function restoreSwitcher(){
+   if(originalSwitch&&switchParent&&originalSwitch.parentNode!==switchParent)
+     switchParent.insertBefore(originalSwitch,switchNext);
+   switchSection.hidden=true;
+ }
+ function close(){
+   modal.hidden=true;restoreSwitcher();
+   if(gate.parentNode===mount){parent.insertBefore(gate,next);gate.hidden=loggedIn();}
+   lastFocus?.focus();
+ }
+ button.addEventListener("click",()=>{
+   lastFocus=document.activeElement;restoreSwitcher();
+   modal.hidden=false;mount.append(gate);update();modal.querySelector("#hubAccountClose").focus();
+ });
+ window.communityOpenSwitchAccount=async()=>{
+   if(modal.hidden)button.click();
+   switchSection.hidden=false;
+   if(originalSwitch)switchSection.append(originalSwitch);
+   update();
+   if(window.CommunityHubAccountActions?.refreshSavedAccounts){
+     try{await window.CommunityHubAccountActions.refreshSavedAccounts();}
+     catch(error){const status=document.getElementById("switchAccountStatus");if(status)status.textContent="Saved accounts unavailable: "+String(error.message||error);}
+   }
+   switchSection.querySelector("#savedAccountsList button:not([disabled]), #addGoogleAccount, #addEmailAccount")?.focus();
+ };
  modal.querySelector("#hubAccountClose").addEventListener("click",close);
 
  modal.addEventListener("click",e=>{if(e.target===modal)close();});
