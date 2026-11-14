@@ -14,7 +14,7 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
  const ROLES_PATH="hubSiteRoleLocks";
  const ROLE_OPTIONS=[
   ["member","Signed-in members (any role)"],
-  ["plus","Chat+"],
+  ["plus","MIP"],
   ["moderator","Moderator"],
   ["testsubject","Test Subject"],
   ["admin","Admin"]
@@ -24,6 +24,7 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
  const RETURN_URL="./?interface=selection";
  const SITE_ITEMS=[
   ["chats","Community Chat","Chat messages, rooms and friends","💬"],
+  ["game-python-editor","Python Editor","Simple Python and MIP advanced tools","🐍"],
   ["admin-ai","Admin AI","Admin-only AI workspace","🤖"],
   ["shapes-colours","Shapes & Colours","3D editor and building tools","🎨"],
   ["bubblebuilder","BubbleBuilder 3D","3D bubble building sandbox","🫧"],
@@ -34,7 +35,6 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
   ["community-browser","Community Browser","Built-in browser sidebar","🌐"]
  ];
  const GAME_ITEMS=[
-  ["Python Editor","🐍"],
   ["2048","🔢"],["Cookie Clicker","🍪"],["Google Dino","🦖"],
   ["Google Snake","🐍"],["Retro Bowl","🏈"],["Slope","⚡"],
   ["Run 3","🚀"],["Minesweeper","💣"],["Blackjack","🃏"],
@@ -49,7 +49,7 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
   ...GAME_ITEMS.map(([name,icon])=>({key:keyForGame(name),name,icon,description:"Game Hub game",category:"Individual games"}))];
  const ALL_KEYS=new Set(entries.map(item=>item.key));
  const KEY_FOR_BUTTON={
-  gatewayOpenChat:"chats",gatewayOpenAI:"admin-ai",gatewayOpenShapes:"shapes-colours",gatewayOpenBubbleBuilder:"bubblebuilder",
+  gatewayOpenChat:"chats",gatewayOpenPython:"game-python-editor",gatewayOpenAI:"admin-ai",gatewayOpenShapes:"shapes-colours",gatewayOpenBubbleBuilder:"bubblebuilder",
   gatewayOpenMinzify:"minzify",gatewayOpenMinzSign:"minz-apps",gatewayOpenUpdates:"update-centre",
   gatewayOpenGames:"game-hub",gameHubToggle:"game-hub",browserSidebarToggle:"community-browser"
  };
@@ -362,9 +362,7 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
   unlockButton.id="hubSiteDownUnlock";unlockButton.type="button";unlockButton.hidden=true;
   unlockButton.addEventListener("click",async()=>{
    if(!currentPage)return;
-   // Python Editor is a Game Hub app: both levels must be unlocked if disabled.
-   if(currentPage==="game-python-editor"&&!await requestAccess("game-hub"))return;
-   await requestAccess(currentPage);
+    await requestAccess(currentPage);
   });
   card.append(message,unlockButton,link);overlay.append(card);
   document.body.append(overlay);return overlay;
@@ -372,13 +370,13 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
  function enforcePage(){
   if(currentPage){
    const overlay=createPageBlock();
-   const locked=!canUse(currentPage)||(currentPage==="game-python-editor"&&!canUse("game-hub"));
+   const locked=!canUse(currentPage);
    overlay.hidden=!locked;
    const button=$("hubSiteDownUnlock");
    if(button)button.hidden=!locked||!isAdmin;
    if(locked) document.getElementById("hubSiteDownText").textContent=
     (entries.find(x=>x.key===currentPage)?.name||"This site")+
-    (roleRestricted(currentPage)||(currentPage==="game-python-editor"&&roleRestricted("game-hub"))
+    (roleRestricted(currentPage)
      ?" is locked to permitted roles. Sign in with an eligible account.":" is temporarily disabled by a Community Hub administrator.");
    return;
   }
