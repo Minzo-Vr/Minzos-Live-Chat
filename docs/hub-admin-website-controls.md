@@ -6,7 +6,7 @@ Community Hub has an **Admin Website Controls** button inside **My Account** on 
 
 1. Open [Community Hub](https://minzo-vr.github.io/Minzos-Live-Chat/?interface=selection) and sign into an account with the Admin role or a verified Firebase custom claim `admin: true`.
 2. Choose **My Account → Admin Website Controls**. In Game Hub, use **Admin** to open the same panel.
-3. Under **Websites & apps**, switch **Disable** on for Chats, Python Editor, Admin AI, Shapes & Colours, Minzify, Minz Apps, Update Centre, Game Hub or Community Browser.
+3. Under **Websites & apps**, switch **Disable** on for Chats, Python Editor, Admin AI, Shapes & Colours, Minzify, Minz Apps, App Installer, Update Centre, Game Hub or Community Browser.
 4. Under **Individual games**, switch off a particular Game Hub title such as 2048 or Slope without disabling all games.
 5. To open a disabled app as an admin, press its **🔐 Unlock** action and enter your four-digit PIN. Unlock is per experience for 15 minutes in the current tab; the disabled status remains in effect for other users.
 6. Toggle **Disable** off in My Account to fully re-enable an app or game. My Account remains accessible; opening the admin switch panel now requires the Admin PIN.
