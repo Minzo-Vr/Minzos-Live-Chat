@@ -179,3 +179,97 @@
  #communityGameHub .store-game-art{width:66px;height:66px}
 }
 @media(prefers-reduced-motion:reduce){.store-card{transition:none!important}.store-card:hover{transform:none!important}}
+
+/* Distinct original SVG icons for every launcher app and Game Hub title. */
+.store-app-art > .store-vector-icon,
+#communityGameHub .store-game-art > .store-vector-icon{
+ width:67%;height:67%;display:block;position:relative;z-index:1;
+ filter:drop-shadow(0 7px 8px #07152655);flex-shrink:0;
+}
+.store-app-art > img.store-brand-chat-icon{
+ width:64%;height:64%;object-fit:contain;border-radius:23%;
+ position:relative;z-index:1;filter:drop-shadow(0 8px 10px #10184d77);
+}
+#hubStorePreview .store-dialog-icon > .store-vector-icon,
+#hubStorePreview .store-dialog-icon > img{
+ width:70%;height:70%;display:block;object-fit:contain;
+}
+#hubStorePreview .store-preview-visual-art > .store-vector-icon,
+#hubStorePreview .store-preview-visual-art > img{
+ width:104px;height:104px;display:block;object-fit:contain;
+ filter:drop-shadow(0 12px 16px #0005);
+}
+/* Each game has an identifiable background rather than identical emojis. */
+#communityGameHub [data-hub-game="game-python-editor"] .store-game-art{background:linear-gradient(135deg,#19457a,#1b1d56)}
+#communityGameHub [data-hub-game="game-2048"] .store-game-art{background:linear-gradient(135deg,#e6aa71,#814773)}
+#communityGameHub [data-hub-game="game-cookie-clicker"] .store-game-art{background:linear-gradient(135deg,#aa723d,#4d3159)}
+#communityGameHub [data-hub-game="game-google-dino"] .store-game-art{background:linear-gradient(135deg,#438c6d,#182c57)}
+#communityGameHub [data-hub-game="game-google-snake"] .store-game-art{background:linear-gradient(135deg,#3ba877,#244369)}
+#communityGameHub [data-hub-game="game-retro-bowl"] .store-game-art{background:linear-gradient(135deg,#b06e4b,#43365f)}
+#communityGameHub [data-hub-game="game-slope"] .store-game-art{background:linear-gradient(135deg,#18766c,#243258)}
+#communityGameHub [data-hub-game="game-run-3"] .store-game-art{background:linear-gradient(135deg,#534ba2,#1a1c46)}
+#communityGameHub [data-hub-game="game-minesweeper"] .store-game-art{background:linear-gradient(135deg,#5a7395,#2d355a)}
+#communityGameHub [data-hub-game="game-blackjack"] .store-game-art{background:linear-gradient(135deg,#2c825f,#213f49)}
+#communityGameHub [data-hub-game="game-moto-x3m"] .store-game-art{background:linear-gradient(135deg,#ba6a3c,#45284f)}
+#communityGameHub [data-hub-game="game-block-blast"] .store-game-art{background:linear-gradient(135deg,#536fdf,#273e73)}
+#communityGameHub [data-hub-game="game-gorilla-tag"] .store-game-art{background:linear-gradient(135deg,#707589,#3b3565)}
+#communityGameHub [data-hub-game="game-twerk-race-3d"] .store-game-art{background:linear-gradient(135deg,#bb5e94,#683d8d)}
+/* Permanent Python Editor Live card, visible before dynamic game tiles render. */
+#communityGameHub #gamePythonFeatured{
+ display:grid;grid-template-columns:106px minmax(0,1fr) auto;
+ grid-template-rows:auto auto;gap:8px 15px;align-items:center;
+ min-width:0;margin:6px 4px 17px;padding:15px;
+ border:1px solid #81bdeb;border-radius:21px;
+ background:linear-gradient(110deg,#183963,#1b2b4c 57%,#20254c);
+ box-shadow:0 12px 30px #0003;
+}
+#communityGameHub #gamePythonFeatured[hidden]{display:none!important}
+#communityGameHub #gamePythonFeatured .store-python-featured-heading{
+ grid-column:1/-1;grid-row:1;
+ color:#a8ddff;font:900 11px/1.35 system-ui,sans-serif;
+ letter-spacing:.11em;
+}
+#communityGameHub #gamePythonFeatured .store-game-art{
+ grid-column:1;grid-row:2;width:106px;height:106px;min-width:0;aspect-ratio:1;
+ border-radius:18px;display:grid;place-items:center;
+}
+#communityGameHub #gamePythonFeatured .store-game-info{
+ grid-column:2;grid-row:2;min-width:0;
+}
+#communityGameHub #gamePythonFeatured .store-game-info strong{
+ color:#fff;font:900 clamp(18px,2vw,25px)/1.3 system-ui,sans-serif;
+}
+#communityGameHub #gamePythonFeatured .store-game-info small{font-size:13px}
+#communityGameHub #gamePythonFeatured .store-python-available{
+ display:inline-block;margin-top:8px;color:#9fecc5;
+ font:700 12px/1.3 system-ui,sans-serif;
+}
+#communityGameHub #gamePythonFeatured .store-game-actions{
+ grid-column:3;grid-row:2;display:flex;flex-direction:column;min-width:148px;
+}
+#communityGameHub #gamePythonFeatured .store-game-actions a{
+ display:inline-flex;align-items:center;justify-content:center;
+ min-height:40px;text-decoration:none;
+ border:1px solid #a8c0ff;border-radius:999px;
+ font:850 13px system-ui,sans-serif;
+ color:#101e42;background:#a5c1ff;
+}
+#communityGameHub #gamePythonFeatured .store-game-actions a:hover{background:#d0e1ff}
+@media(max-width:700px){
+ #communityGameHub #gamePythonFeatured{
+  grid-template-columns:66px minmax(0,1fr);grid-template-rows:auto auto auto;
+  gap:9px 10px;margin:2px 0 13px;padding:11px;border-radius:15px;
+ }
+ #communityGameHub #gamePythonFeatured .store-python-featured-heading{grid-column:1/-1;grid-row:1;font-size:9px}
+ #communityGameHub #gamePythonFeatured .store-game-art{
+  grid-column:1;grid-row:2;width:66px;height:66px;border-radius:11px;
+ }
+ #communityGameHub #gamePythonFeatured .store-game-info{grid-column:2;grid-row:2}
+ #communityGameHub #gamePythonFeatured .store-game-info strong{font-size:16px}
+ #communityGameHub #gamePythonFeatured .store-game-info small{font-size:11px}
+ #communityGameHub #gamePythonFeatured .store-python-available{font-size:10px;margin-top:5px}
+ #communityGameHub #gamePythonFeatured .store-game-actions{
+  grid-column:1/-1;grid-row:3;flex-direction:row;flex-wrap:wrap;
+ }
+ #communityGameHub #gamePythonFeatured .store-game-actions > *{flex:1 1 110px}
+}
