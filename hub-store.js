@@ -8,6 +8,9 @@
   gatewayOpenChat:{name:"Community Chat",short:"Chat, friends & rooms",category:"Social",icon:"💬",theme:"chat",
    detail:"Stay in touch with your community through messages, mentions, rooms, friends, profiles and group chats.",
    features:["Public chat and rooms","Friends & direct messages","Mentions and profiles"]},
+  gatewayOpenPython:{name:"Python Editor",short:"Simple Python · MIP Advanced",category:"Coding",icon:"🐍",theme:"python",
+   detail:"Write and run Python in the beginner-friendly editor, or unlock Advanced Python with a MIP membership. Collaborate in shared rooms and save code to your own account.",
+   features:["Simple Run / Stop / Reset editor","Advanced tools for MIP","Live collaboration rooms","Private saved Python projects"]},
   gatewayOpenAI:{name:"Admin AI",short:"An AI workspace for admins",category:"Admin only",icon:"🤖",theme:"ai",
    detail:"Ask questions, review project ideas, and work with the admin-only Community Hub AI tools. Verified administrator access is required.",
    features:["Verified admin access","Chat and project memory","Review suggested edits"]},
@@ -31,7 +34,6 @@
    features:["Searchable game library","Full-screen player","Game previews"]}
  };
  const GAMES={
-  "Python Editor":{icon:"🐍",detail:"Code Python with friends in live rooms. Share editing and Run output, or save your own private scripts.",features:["Live multiplayer rooms","Run code for everyone","Private account projects","Invite and approve collaborators"]},
   "2048":{icon:"🔢",detail:"Slide number tiles together to combine matching values and try to reach 2048.",features:["Number puzzle","Strategy","Tile merging"]},
   "Cookie Clicker":{icon:"🍪",detail:"Click cookies to collect more and build up your cookie production.",features:["Idle game","Click to collect","Upgrades"]},
   "Google Dino":{icon:"🦖",detail:"An endless runner where you jump over obstacles with a pixel-style dinosaur.",features:["Runner","Timing","High scores"]},
@@ -151,7 +153,7 @@
  function addAppCard(option,meta){
   const card=node("article","store-card");
   meta.hubKey={
-   gatewayOpenChat:"chats",gatewayOpenAI:"admin-ai",gatewayOpenShapes:"shapes-colours",gatewayOpenBubbleBuilder:"bubblebuilder",
+   gatewayOpenChat:"chats",gatewayOpenPython:"game-python-editor",gatewayOpenAI:"admin-ai",gatewayOpenShapes:"shapes-colours",gatewayOpenBubbleBuilder:"bubblebuilder",
    gatewayOpenMinzify:"minzify",gatewayOpenMinzSign:"minz-apps",gatewayOpenUpdates:"update-centre",
    gatewayOpenGames:"game-hub"
   }[option.id]||"";
@@ -229,9 +231,9 @@
  }
  function gameDetails(name){
   const details=GAMES[name]||{icon:"🎮",detail:"Preview this browser game before launching it.",features:["Browser game"]};
-  return {name,short:details.detail,category:name==="Python Editor"?"Game Hub app":"Browser game",icon:details.icon,theme:"games",detail:details.detail,
+  return {name,short:details.detail,category:"Browser game",icon:details.icon,theme:"games",detail:details.detail,
    hubKey:window.HubSiteControls?.keyForGame(name)||"game-"+name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""),
-   features:details.features,launchLabel:name==="Python Editor"?"Open editor":"Play game"};
+   features:details.features,launchLabel:"Play game"};
  }
  window.addEventListener("community-hub-availability-change",()=>{
   if(!dialog||dialog.hidden||!currentPreviewMeta)return;
