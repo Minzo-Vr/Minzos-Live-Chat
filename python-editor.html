@@ -145,7 +145,7 @@ body{height:auto;min-height:100dvh;overflow-x:hidden;overflow-y:visible;
 <section class="python-mode-selector" aria-label="Choose Python editor mode">
   <div class="python-mode-buttons" role="group" aria-label="Python mode">
     <button id="pythonSimpleMode" type="button" class="active" aria-pressed="true">Simple Python</button>
-    <button id="pythonAdvancedMode" type="button" aria-pressed="false" disabled>Advanced Python <span class="python-mip-tag">MIP</span></button>
+    <button id="pythonAdvancedMode" type="button" aria-pressed="false" disabled>Advanced Python <span class="python-mip-tag" title="Minzo’s Important People">MIP</span></button>
   </div>
   <span id="pythonModeStatus" role="status" aria-live="polite">Checking account for MIP access…</span>
 </section>
@@ -232,10 +232,11 @@ body{height:auto;min-height:100dvh;overflow-x:hidden;overflow-y:visible;
 <span id="dirtyState" class="badge">Not saved</span>
 </div>
 <div class="editor-panes"><div class="code-pane"><label for="pythonCode">Your Python code</label>
-<textarea id="pythonCode" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" aria-label="Python code editor"># Hello from Community Hub!
-name = "Python"
-for count in range(1, 4):
-    print(f"{count}. Hello, {name}!")</textarea></div>
+<textarea id="pythonCode" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" aria-label="Python code editor"># Welcome to Simple Python!
+print("Hello, world!")
+
+for number in range(1, 4):
+    print("Number:", number)</textarea></div>
 <div class="output-pane"><label for="console">Output <span class="python-output-hint">· shared with collaborators in a room</span></label>
 <pre id="console" role="log" aria-live="polite">Press Run Python to execute your code. The Python engine loads on first use.</pre></div></div>
 <div class="bar">
@@ -246,8 +247,8 @@ for count in range(1, 4):
 </div>
 <span id="runStatus">Ready to run</span><span id="sharedRunNotice" hidden>Output syncs to everyone in the room</span>
 </div>
-<details class="advanced-only">
-<summary>Program input (optional)</summary>
+<details>
+<summary>Program input (optional, for input() programs)</summary>
 <label for="programInput">One line for each Python input() call</label>
 <textarea id="programInput" aria-label="Program input lines" placeholder="For example: Alice"></textarea>
 </details>
