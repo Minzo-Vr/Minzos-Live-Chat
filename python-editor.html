@@ -7,6 +7,7 @@
 <title>Simple Python · Community Hub</title>
 <link rel="icon" type="image/svg+xml" href="./python-editor-icon.svg">
 <link rel="stylesheet" href="./hub-site-controls.css">
+<link rel="stylesheet" href="./python-docs.css">
 <script type="module" src="./hub-site-controls.js"></script>
 <style>
 :root{color-scheme:dark;font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;background:#0b1220;color:#eef4ff}
@@ -137,11 +138,31 @@ body{height:auto;min-height:100dvh;overflow-x:hidden;overflow-y:visible;
 }
 </style>
 </head>
-<body>
+<body class="python-home">
 <header>
 <div><h1><img src="./python-editor-icon.svg" alt="">Python Editor</h1><small>Simple Python for everyone · Advanced Python for MIP</small></div>
 <div><span id="accountState">Checking sign-in…</span> <a href="./?interface=selection" target="_top">Back to Community Hub</a></div>
 </header>
+<section id="pythonFileHome" class="python-file-home" aria-label="Python documents">
+ <div class="python-home-top">
+  <div><span class="python-home-kicker">MINZO'S PYTHON</span><h2>My Python files</h2><p>Open a file to start editing, just like a document. Changes to shared rooms sync with collaborators.</p></div>
+  <button type="button" id="pythonHomeNew" class="primary">＋ New Python file</button>
+ </div>
+ <div class="python-home-filters" role="group" aria-label="Filter Python files">
+  <button type="button" class="active" data-python-filter="all" aria-pressed="true">All files</button>
+  <button type="button" data-python-filter="mine" aria-pressed="false">My files</button>
+  <button type="button" data-python-filter="shared" aria-pressed="false">Shared with me</button>
+ </div>
+ <div class="python-home-toolbar"><span id="pythonHomeCount">Loading files…</span><button type="button" id="pythonHomeJoin">Join a shared room</button></div>
+ <div id="pythonFileGrid" class="python-file-grid" aria-live="polite"></div>
+ <p id="pythonHomeHint" class="python-home-hint" role="status">Sign in to Community Hub to access your saved files.</p>
+</section>
+<div id="pythonDocumentShell" class="python-document-shell">
+ <div class="python-docs-toolbar">
+  <button type="button" id="pythonBackFiles" aria-label="Back to all files">← My files</button>
+  <div class="python-docs-file-title"><span aria-hidden="true">🐍</span><strong id="pythonDocumentTitle">Untitled Python file</strong><small id="pythonDocumentSubtitle">Your Python document</small></div>
+  <span id="pythonDocumentSaveState">Ready</span>
+ </div>
 <section class="python-mode-selector" aria-label="Choose Python editor mode">
   <div class="python-mode-buttons" role="group" aria-label="Python mode">
     <button id="pythonSimpleMode" type="button" class="active" aria-pressed="true">Simple Python</button>
@@ -262,9 +283,11 @@ for number in range(1, 4):
 </div>
 </section>
 </main>
+</div>
 <footer>Private projects stay under your account. Shared rooms require owner approval; live edits merge using Yjs. In a shared room one browser runs Python and its output is streamed to all participants. Run only trusted code. Python runs locally using Pyodide, with browser and package limitations.</footer>
 <script type="module" src="./python-editor.js"></script>
 <script type="module" src="./python-collab.js"></script>
 <script type="module" src="./python-modes.js"></script>
+<script src="./python-docs.js" defer></script>
 </body>
 </html>
