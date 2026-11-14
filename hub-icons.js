@@ -38,9 +38,11 @@
  };
  function create(key){
   key=alias[key]||key;
-  if(key==="gatewayOpenChat"){
+  if(key==="gatewayOpenChat"||key==="Python Editor"){
    const img=document.createElement("img");
-   img.src="./app-icon.svg";img.alt="";img.decoding="async";img.className="store-brand-chat-icon";
+   img.src=key==="gatewayOpenChat"?"./app-icon.svg":"./python-editor-icon.svg";
+   img.alt="";img.decoding="async";
+   img.className=key==="gatewayOpenChat"?"store-brand-chat-icon":"store-brand-python-icon";
    return img;
   }
   const graphic=glyphs[key]||glyphs.default;
