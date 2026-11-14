@@ -29,7 +29,7 @@
   gatewayOpenUpdates:{name:"Update Centre",short:"Updates and releases",category:"Tools",icon:"📦",theme:"updates",
    detail:"Find Community Hub release notes, check changes, and explore update downloads and publishing tools.",
    features:["Release notes","Downloads","Update history"]},
-  gatewayOpenGames:{name:"Game Hub",short:"Play browser games",category:"Games",icon:"🎮",theme:"games",
+  gatewayOpenGames:{name:"Browser Games",short:"Play browser games",category:"Games",icon:"🎮",theme:"games",
    detail:"Explore a searchable collection of browser games. Preview a title, play in the Game Hub player, or open it on its source website.",
    features:["Searchable game library","Full-screen player","Game previews"]}
  };
@@ -208,8 +208,8 @@
   if(!main)return;
   const brand=main.querySelector(".gateway-brand");
   const kicker=node("div","gateway-store-kicker","Community Hub · Discover");
-  brand.before(kicker);brand.textContent="Explore Apps & Games";
-  const sub=main.querySelector(".gateway-subtitle");if(sub)sub.textContent="Your apps, creative tools and games—all in one place. Preview before you open.";
+  brand.before(kicker);brand.textContent="Minzo’s Game Hub";
+  const sub=main.querySelector(".gateway-subtitle");if(sub)sub.textContent="Choose Community Chat, Python Editor, Minzify, creative tools, and more. Preview before you open.";
   const filter=$("gatewayRoleFilter");
   const toolbar=node("div","gateway-store-toolbar");
   const input=node("input");input.type="search";input.id="gatewayAppSearch";input.placeholder="Search apps and games…";input.setAttribute("aria-label","Search Community Hub apps");
