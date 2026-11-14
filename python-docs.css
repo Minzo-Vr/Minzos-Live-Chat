@@ -1,0 +1,73 @@
+/* Document-style Python workspace. Native scrolling on mobile and iPad. */
+:root{color-scheme:light}
+body{background:#f7f9fc;color:#172b4d}
+body>header{background:#fff;color:#233553;border-bottom:1px solid #e1e7ef}
+body>header small,body>header #accountState{color:#536780}
+body>header a{color:#2563b5}
+.python-file-home{max-width:1240px;margin:0 auto;padding:clamp(18px,3vw,38px) clamp(12px,3vw,28px) 80px}
+.python-home-top{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.python-home-kicker{font-size:11px;font-weight:900;letter-spacing:.14em;color:#426bb0}
+.python-home-top h2{font-size:clamp(26px,4vw,38px);margin:4px 0 6px;font-weight:750;color:#162c50}
+.python-home-top p{margin:0;color:#596a83;max-width:660px}
+.python-file-home button{background:#fff;border:1px solid #d4deeb;color:#2e4464;border-radius:999px}
+.python-file-home button:hover:not(:disabled){background:#eaf1fd}
+.python-file-home button.primary{background:#3369cc;color:white;border-color:#3369cc}
+.python-home-filters{display:flex;gap:8px;flex-wrap:wrap;margin:30px 0 18px}
+.python-home-filters button{font-size:13px;padding:9px 19px}
+.python-home-filters button.active{background:#dce9ff;border-color:#9bbbf6;color:#144f9b}
+.python-home-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;color:#526782;font-size:13px}
+.python-file-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:17px}
+.python-file-card{border:1px solid #dbe3ef;border-radius:15px;background:#fff;box-shadow:0 3px 14px #1c36540a;overflow:hidden;min-width:0;display:flex;flex-direction:column}
+.python-file-card:hover{border-color:#93b5eb;box-shadow:0 8px 26px #21487b19}
+.python-file-card .python-file-open{display:block;width:100%;padding:0;border:0;border-radius:0;text-align:left;background:transparent;color:#182f52}
+.python-file-card .python-file-open:hover{background:#f6f9ff}
+.python-file-thumbnail{min-height:136px;background:#edf3fc;display:flex;align-items:center;justify-content:center;position:relative}
+.python-file-thumbnail:before{content:"";width:84px;height:102px;background:#fff;border:1px solid #d8e2ef;border-radius:8px;box-shadow:0 5px 13px #2b44691b}
+.python-file-thumbnail svg{position:absolute;width:52px;height:52px;stroke:#4072bf;fill:none;stroke-width:2.3}
+.python-file-card.shared .python-file-thumbnail{background:#e8f7f1}
+.python-file-card.shared .python-file-thumbnail svg{stroke:#278468}
+.python-file-name{display:block;font-size:15px;font-weight:760;padding:14px 14px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.python-file-meta{display:block;color:#61718a;font-size:12px;padding:0 14px 14px}
+.python-file-card-footer{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-top:1px solid #eef1f6;color:#677a92;font-size:11px;gap:8px}
+.python-file-card-footer button{border:0;border-radius:8px;padding:6px 8px;font-size:12px}
+.python-home-hint{color:#64748b;font-size:13px;min-height:20px;margin-top:18px}
+.python-file-empty{grid-column:1/-1;border:1px dashed #bacbe2;background:#fff;border-radius:14px;padding:38px 20px;text-align:center;color:#64748b}
+.python-document-shell{max-width:1500px;margin:0 auto}
+.python-docs-toolbar{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid #dce5ef;padding:11px clamp(12px,3vw,25px);display:flex;align-items:center;gap:13px;flex-wrap:wrap}
+.python-docs-toolbar button{border:1px solid #d6e0ee;border-radius:9px;background:#f6f9fd;color:#244774;font-size:13px;padding:9px 12px}
+.python-docs-file-title{display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 180px;flex-wrap:wrap}
+.python-docs-file-title strong{font-size:17px;color:#1e3355;max-width:min(60vw,480px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.python-docs-file-title small{font-size:11px;color:#70809a}
+#pythonDocumentSaveState{color:#477059;font-size:12px}
+body.python-home .python-document-shell,body.python-home>footer{display:none!important}
+body:not(.python-home) .python-file-home{display:none!important}
+body:not(.python-home) .python-document-shell{display:block}
+body:not(.python-home) .layout{max-width:1440px}
+body:not(.python-home) .workspace{background:#fff;border:1px solid #dce3ee;box-shadow:0 3px 15px #243c5b0d;color:#263956}
+body:not(.python-home) .workspace label{color:#344d72}
+body:not(.python-home) #pythonCode{background:#fff;color:#142846;border:1px solid #cbd8e9;border-radius:9px;line-height:1.7;box-shadow:0 3px 10px #1a31510a}
+body:not(.python-home) .python-mode-buttons button{background:#fff;color:#31496d;border-color:#d6e0ee}
+body:not(.python-home) .python-mode-buttons button.active{background:#dce9ff;color:#194b95;border-color:#9ab9eb}
+body:not(.python-home) #pythonModeStatus{color:#566e8c}
+body:not(.python-home) #projectName{background:#fff;color:#1e3454;border:1px solid #c9d5e5}
+body:not(.python-home) #pythonExamples{background:#fff;color:#233b60}
+body:not(.python-home) .badge{color:#4a6383}
+body:not(.python-home) .sidebar{background:#fff;color:#243a5b;border-color:#d6e1ef}
+body:not(.python-home) .sidebar h2,body:not(.python-home) .sidebar label{color:#273e5d}
+body:not(.python-home) .sidebar p,body:not(.python-home) .sidebar .small{color:#536983}
+body:not(.python-home) .sidebar select,body:not(.python-home) .shared-box input{background:#f8fbff;color:#1f3554}
+body:not(.python-home) .shared-box{background:#eef4fc;border-color:#c9d8eb}
+body:not(.python-home) .shared-box p,body:not(.python-home) #sharedStatus{color:#4b6281}
+body:not(.python-home) footer{color:#526784}
+@media(max-width:600px){
+ .python-file-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .python-file-thumbnail{min-height:112px}
+ .python-file-name{font-size:13px;padding:10px 10px 2px}
+ .python-file-meta{padding:0 10px 10px;font-size:11px}
+ .python-file-card-footer{padding:7px 10px}
+ .python-home-top{align-items:stretch}
+ .python-home-top>button{width:100%}
+ .python-docs-toolbar{position:static;gap:8px}
+ .python-docs-file-title small{display:none}
+}
+@media(max-width:350px){.python-file-grid{grid-template-columns:1fr}}
