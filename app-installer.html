@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101827">
+<meta name="description" content="Download Community Hub apps, open signed iOS installs when available, and sign an IPA using your own signing credentials.">
+<title>App Installer — Community Hub</title>
+<link rel="icon" href="./app-icon.svg" type="image/svg+xml">
+<style>
+:root{color-scheme:dark;--bg:#0c1321;--panel:#152238;--line:#33455d;--text:#f2f6ff;--muted:#b8c7da;--blue:#8fc5ff;--mint:#96eed0;--danger:#ffb9c4}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 85% -5%,#244879 0,transparent 36%),radial-gradient(circle at 0 40%,#173a45 0,transparent 40%),var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}a{color:var(--blue)}.shell{max-width:1080px;margin:0 auto;padding:22px clamp(16px,4vw,38px) 52px}nav{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.brand{font-weight:850;letter-spacing:-.4px;font-size:21px}nav a{text-decoration:none;border:1px solid var(--line);padding:9px 13px;border-radius:12px;font-weight:700}.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:2px;color:var(--mint);font-weight:800}.hero{padding:46px 0 18px}.hero h1{font-size:clamp(36px,7vw,64px);letter-spacing:-2.5px;line-height:1.05;margin:10px 0 14px}.hero h1 span{color:var(--mint)}.hero p{font-size:16px;color:var(--muted);max-width:690px;margin:0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px;margin:30px 0}.panel{padding:25px;background:linear-gradient(155deg,#18283f,#121d2e);border:1px solid var(--line);border-radius:21px;min-width:0}.panel h2{font-size:22px;letter-spacing:-.4px;margin:10px 0 7px}.panel p{color:var(--muted);font-size:14px;margin:0 0 18px}.symbol{display:grid;place-items:center;width:58px;height:58px;border-radius:16px;background:#275174;font-size:30px}.symbol.apple{background:#294258}.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid #79b1e6;border-radius:12px;padding:11px 16px;font-size:14px;font-weight:780;line-height:1.3;min-height:44px;color:#101d30;background:#a6d4ff;text-decoration:none;cursor:pointer}.btn.secondary{color:#ecf6ff;background:#243e59;border-color:#506b86}.btn:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid #ffdf95;outline-offset:3px}.btn[aria-disabled=true],.btn:disabled{background:#334156;color:#bac3ce;border-color:#465366;cursor:not-allowed}.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.note{font-size:12px;color:#c8d7e6;margin-top:14px;line-height:1.5}.full{margin-top:18px}.full h2{margin:0 0 7px;font-size:22px}.full p{margin-bottom:14px}label{display:block;color:#e1effe;font-weight:680;font-size:13px;margin:12px 0 6px}input{display:block;width:100%;min-height:44px;border-radius:10px;border:1px solid #566882;background:#0c192a;color:#f5f8ff;padding:11px 12px;font:inherit}input[type=file]{padding:10px;background:#0d1b2d}input::placeholder{color:#9cb2c7}.status{font-size:13px;color:var(--muted);padding-top:11px;min-height:25px;overflow-wrap:anywhere}.status.error{color:var(--danger)}.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.hint{border-left:3px solid #7aafdb;padding:8px 0 8px 13px;margin:14px 0;color:#bfd4e9;font-size:13px}details{padding:0}summary{font-weight:770;cursor:pointer;font-size:18px}details>p{margin-top:13px}.results{margin-top:13px;display:flex;flex-wrap:wrap;gap:10px}.results:empty{display:none}.results a{overflow-wrap:anywhere}.footer{font-size:12px;color:#b5c6db;margin:30px 0 0}.warn{color:#ffd9b2!important}
+@media(max-width:700px){.grid,.two{grid-template-columns:1fr}.hero{padding:34px 0 4px}.panel{padding:20px}.actions .btn{flex:1}}
+</style>
+<link rel="stylesheet" href="./hub-site-controls.css">
+<script type="module" src="./hub-site-controls.js"></script>
+<link rel="stylesheet" href="./hub-user-access.css">
+<script type="module" src="./hub-user-access.js"></script>
+<script src="./app-installer-config.js"></script>
+<script src="./minzsign-config.js"></script>
+</head>
+<body><div class="shell">
+<nav><div class="brand">📦 Minz <span style="color:var(--mint)">App Installer</span></div><a href="./?interface=selection">← Game Hub</a></nav>
+<header class="hero"><div class="eyebrow">Community Hub / Apps</div><h1>Download. Sign.<br><span>Install.</span></h1><p>Get the official Community Hub app build or prepare an IPA you own for supported iPhone and iPad installation. Nothing is installed without your action.</p></header>
+<main>
+<div class="grid">
+<section class="panel" aria-labelledby="androidHeading"><div class="symbol" aria-hidden="true">🤖</div><h2 id="androidHeading">Android</h2><p>Download the Community Chat APK from the existing GitHub Release, then open it in Android's Downloads or Files app.</p><div class="actions"><a class="btn" id="androidDownload" href="https://github.com/Minzo-Vr/Minzos-Live-Chat/releases" rel="noopener noreferrer">⬇ Download APK</a><a class="btn secondary" href="https://github.com/Minzo-Vr/Minzos-Live-Chat/releases" target="_blank" rel="noopener noreferrer">All releases</a></div><div class="note">Your phone may ask you to allow installation from the app used to open the APK. Only install builds you trust.</div></section>
+<section class="panel" aria-labelledby="iosHeading"><div class="symbol apple" aria-hidden="true">🍎</div><h2 id="iosHeading">iPhone &amp; iPad</h2><p>One-tap Safari installation works only if an eligible, already-signed IPA and HTTPS install manifest have been supplied.</p><div class="actions"><a class="btn" id="iosInstall" href="#" aria-disabled="true">Install on iPhone / iPad</a><a class="btn secondary" href="https://github.com/Minzo-Vr/Minzos-Live-Chat/releases" target="_blank" rel="noopener noreferrer">Browse IPA releases</a></div><div id="iosStatus" class="status" role="status">Checking install link…</div><div class="note">An IPA download by itself is not an installation. If no compatible signed build is configured, direct install remains unavailable.</div></section>
+</div>
+<section class="panel full" aria-labelledby="urlHeading"><h2 id="urlHeading">Download an IPA or APK from a link</h2><p>Already have a direct download link for a file you trust? Open it here. This does not sign, verify or install the file automatically.</p><label for="customUrl">HTTPS file URL (.ipa or .apk)</label><input id="customUrl" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://example.com/my-app.ipa"><div class="actions" style="margin-top:12px"><a id="customDownload" class="btn secondary" href="#" aria-disabled="true">⬇ Open download</a></div><div id="customStatus" class="status" role="status"></div></section>
+<section class="panel full" aria-labelledby="signHeading">
+<details id="signer"><summary id="signHeading">🔐 Sign an IPA with your own Apple certificate</summary>
+<p>Use the existing MinzSign backend to re-sign an app you own or are permitted to distribute. You need a matching <strong>.p12 certificate</strong>, <strong>.mobileprovision</strong> profile and certificate password. A website cannot create valid Apple signing credentials for free.</p>
+<div class="hint">Private-key warning: A .p12 contains sensitive signing keys. Signing uploads these files and the password to your configured server, where they must be decrypted temporarily. Use only your own trusted backend. Files are not sent while the backend is unconfigured.</div>
+<p id="signStatus" class="status" role="status">Checking backend connection…</p>
+<form id="signForm">
+<div class="two"><div><label for="ipaFile">IPA package</label><input type="file" id="ipaFile" accept=".ipa" required></div><div><label for="certFile">Signing certificate (.p12)</label><input type="file" id="certFile" accept=".p12" required></div></div>
+<div class="two"><div><label for="profileFile">Provisioning profile (.mobileprovision)</label><input type="file" id="profileFile" accept=".mobileprovision" required></div><div><label for="certPassword">Certificate password</label><input type="password" id="certPassword" autocomplete="off" required></div></div>
+<div class="actions" style="margin-top:17px"><button class="btn" id="signSubmit" type="submit" disabled>Sign IPA</button></div>
+</form><div id="signResult" class="results" role="status"></div>
+<div class="note">Signed downloads expire after 15 minutes. The one-tap Install option is returned only for eligible in-house profiles. Ad Hoc and development profiles have their own device/installation requirements.</div>
+<p style="margin-top:18px"><a href="./minzsign.html">Explore other Community Hub apps</a></p>
+</details></section>
+</main>
+<div class="footer">Only distribute software you are authorised to share. This installer does not bypass Apple's signing, provisioning or device-trust checks. <a href="https://support.apple.com/en-au/118254" target="_blank" rel="noopener noreferrer">Apple's enterprise installation guidance</a>.</div>
+</div>
+<script type="module">
+import {getApps,initializeApp} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {getAuth,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+const $=id=>document.getElementById(id);
+const note=(el,message,error=false)=>{el.textContent=message;el.classList.toggle("error",error)};
+function secureUrl(value,extension) {
+  try {
+    const url=new URL(String(value||"").trim());
+    if(url.protocol!=="https:" || url.username || url.password || !url.hostname) return null;
+    if(extension&&!new RegExp("\\."+extension+"$","i").test(url.pathname))return null;
+    return url.href;
+  }catch{return null}
+}
+function apiOrigin(value){
+  try{
+    const u=new URL(String(value||"").trim());
+    return u.protocol==="https:"&&!u.username&&!u.password&&u.pathname==="/"&&!u.search&&!u.hash?u.origin:null;
+  }catch{return null}
+}
+const apk=secureUrl(window.MINZ_INSTALLER_APK_URL,"apk");
+if(apk){$("androidDownload").href=apk}else{
+  $("androidDownload").setAttribute("aria-disabled","true");
+  $("androidDownload").addEventListener("click",e=>e.preventDefault());
+}
+const manifest=secureUrl(window.MINZ_INSTALLER_MANIFEST_URL,"plist");
+const install=$("iosInstall");
+if(manifest){
+  install.href="itms-services://?action=download-manifest&url="+encodeURIComponent(manifest);
+  install.removeAttribute("aria-disabled");
+  note($("iosStatus"),"Signed iOS install link configured. Open this page in Safari on a compatible device.");
+}else{
+  install.addEventListener("click",e=>e.preventDefault());
+  note($("iosStatus"),"Not configured: no eligible signed iOS build and manifest have been published.");
+}
+const input=$("customUrl"),custom=$("customDownload");
+function refreshDownload(){
+  const link=secureUrl(input.value);
+  if(link&&/\.(ipa|apk)$/i.test(new URL(link).pathname)){
+    custom.href=link;custom.setAttribute("target","_blank");custom.setAttribute("rel","noopener noreferrer");
+    custom.removeAttribute("aria-disabled");note($("customStatus"),"Opens the file source directly. Signing and device installation are separate.");
+  }else{
+    custom.href="#";custom.removeAttribute("target");custom.setAttribute("aria-disabled","true");
+    note($("customStatus"),input.value.trim()?"Enter a direct HTTPS URL ending in .ipa or .apk.":"");
+  }
+}
+input.addEventListener("input",refreshDownload);
+custom.addEventListener("click",e=>{if(custom.getAttribute("aria-disabled")==="true")e.preventDefault()});
+refreshDownload();
+
+const signStatus=$("signStatus"),signForm=$("signForm"),signSubmit=$("signSubmit"),signResult=$("signResult");
+const api=apiOrigin(window.MINZSIGN_API_URL);
+let backendReady=false,account=null,busy=false;
+function updateSignButton(){
+  signSubmit.disabled=!backendReady||!account||account.isAnonymous||busy;
+  if(!api)note(signStatus,"Signing unavailable: the owner has not deployed and connected MinzSign yet.");
+  else if(!backendReady)note(signStatus,"Signer offline or not configured. Check your backend deployment.");
+  else if(!account||account.isAnonymous)note(signStatus,"Backend connected. Sign in to a full Game Hub account before uploading.");
+  else note(signStatus,"Backend connected and account recognised. Signing also requires valid Apple credentials.");
+}
+updateSignButton();
+if(api){
+  fetch(api+"/health",{cache:"no-store"}).then(async res=>res.ok?res.json():null).then(data=>{
+    backendReady=data?.ready===true;updateSignButton();
+  }).catch(()=>{backendReady=false;updateSignButton()});
+}
+try{
+  const config={apiKey:"AIzaSyB4wOgGUTR-fgweHtsJiK9XyykU_PND0GE",authDomain:"website-chat-80038.firebaseapp.com",databaseURL:"https://website-chat-80038-default-rtdb.firebaseio.com/",projectId:"website-chat-80038",appId:"1:42470201717:web:890e9ebf1f0865c8ea9b3c"};
+  const app=getApps().find(x=>x.name==="[DEFAULT]")||initializeApp(config);
+  onAuthStateChanged(getAuth(app),user=>{account=user;updateSignButton()});
+}catch(error){note(signStatus,"Cannot read your account. Open Game Hub and sign in first.",true)}
+signForm.addEventListener("submit",async event=>{
+  event.preventDefault();
+  if(!backendReady||!account||account.isAnonymous||busy){updateSignButton();return}
+  const ipaFile=$("ipaFile").files[0],certFile=$("certFile").files[0],profileFile=$("profileFile").files[0],password=$("certPassword").value;
+  if(!ipaFile||!certFile||!profileFile||!password)return;
+  if(!/\.ipa$/i.test(ipaFile.name)||!/\.p12$/i.test(certFile.name)||!/\.mobileprovision$/i.test(profileFile.name)){
+    note(signStatus,"Choose .ipa, .p12 and .mobileprovision files.",true);return;
+  }
+  if(ipaFile.size>250*1024*1024||certFile.size>256*1024||profileFile.size>3*1024*1024){
+    note(signStatus,"One or more files exceed the signing service size limits.",true);return;
+  }
+  busy=true;signResult.replaceChildren();updateSignButton();note(signStatus,"Signing request submitted…");
+  try{
+    const token=await account.getIdToken();
+    const body=new FormData();
+    body.append("ipa",ipaFile);body.append("certificate",certFile);body.append("profile",profileFile);body.append("password",password);
+    const response=await fetch(api+"/api/sign",{method:"POST",headers:{"Authorization":"Bearer "+token},body});
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok)throw Error(result?.error||"Signing failed (HTTP "+response.status+").");
+    const path=result?.downloadPath,manifestPath=result?.installManifestPath;
+    if(typeof path!=="string"||!/^\/api\/files\/[a-f0-9]{64}\/signed\.ipa$/.test(path))throw Error("The signer returned an unexpected download path.");
+    const fileLink=document.createElement("a");fileLink.className="btn";fileLink.href=api+path;fileLink.textContent="⬇ Download signed IPA";fileLink.rel="noopener noreferrer";
+    signResult.append(fileLink);
+    if(typeof manifestPath==="string"&&/^\/api\/files\/[a-f0-9]{64}\/manifest\.plist$/.test(manifestPath)){
+      const installLink=document.createElement("a");installLink.className="btn secondary";
+      installLink.href="itms-services://?action=download-manifest&url="+encodeURIComponent(api+manifestPath);
+      installLink.textContent="Install signed IPA in Safari";signResult.append(installLink);
+    }
+    note(signStatus,"Signing finished. Download or install promptly; links expire after 15 minutes.");
+  }catch(error){note(signStatus,"Signing failed: "+String(error?.message||error).slice(0,220),true)}
+  finally{$("certPassword").value="";busy=false;signSubmit.disabled=!backendReady||!account||account.isAnonymous}
+});
+</script>
+</body>
+</html>
