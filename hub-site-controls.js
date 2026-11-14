@@ -31,7 +31,7 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
   ["minzify","Minzify","Music search and playlists","🎧"],
   ["minz-apps","Minz Apps","Apps and download catalogue","📱"],
   ["update-centre","Update Centre","Updates and releases","📦"],
-  ["game-hub","Game Hub","Browser games and game chat","🎮"],
+  ["game-hub","Browser Games","Browser games and game chat","🎮"],
   ["community-browser","Community Browser","Built-in browser sidebar","🌐"]
  ];
  const GAME_ITEMS=[
