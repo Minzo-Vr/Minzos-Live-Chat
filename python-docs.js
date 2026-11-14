@@ -47,15 +47,25 @@ function card({name,type,date,id}){
  const open=document.createElement("button");open.type="button";open.textContent="Open";
  const activate=()=>{
   if(type==="shared"){
-   if(currentRoom()&&$("sharedEditorTitle").textContent===name){openEditor();return;}
    rooms.value=id;
-   $("sharedOpenRoom").click();
+   // Request by room ID even when the sidebar's Open button is disabled
+   // because another room is currently active.
+   document.dispatchEvent(new CustomEvent("python-open-shared-room",{detail:{id}}));
    // The room-change event opens the document once Firebase authorizes it.
   }else{
    if(currentRoom()){ $("sharedStatus").textContent="Leave the shared room before opening a private file.";openEditor();document.body.classList.add("python-sidebar-open");return; }
    list.value=id;
-   $("loadProject").click();
-   if($("projectName").value.trim()===name){openEditor();}
+   // Programmatic selection does not fire change. Refresh Load's disabled
+   // state before using the existing permission and unsaved-changes checks.
+   list.dispatchEvent(new Event("change",{bubbles:true}));
+   const load=$("loadProject");
+   if(load.disabled){
+    $("pythonHomeHint").textContent="This file is not available yet. Check that you are signed in and try again.";
+    return;
+   }
+   // A successful load emits python-project-loaded. Do not open the editor
+   // when the user cancels the unsaved-changes confirmation.
+   load.click();
   }
  };
  button.addEventListener("click",activate);
@@ -97,6 +107,7 @@ function newFile(){
  $("projectName").focus();
  $("projectName").select();
 }
+document.addEventListener("python-project-loaded",()=>openEditor());
 $("pythonHomeNew").addEventListener("click",newFile);
 $("pythonBackFiles").addEventListener("click",showHome);
 $("pythonHomeJoin").addEventListener("click",()=>{
