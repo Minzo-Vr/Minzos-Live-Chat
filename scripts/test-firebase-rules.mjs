@@ -34,6 +34,8 @@ assert.ok(rules.chatProfiles.$uid.name[".write"].includes("'custom'"),"Profile n
 assert.ok(rules.chatMessages[".write"].includes("chatRoles"),"Only admins may purge all messages");
 assert.ok(rules.chatRoles.$uid[".write"].includes("auth.token.admin"),"Admin role changes must be verified");
 assert.ok(rules.hubSiteAvailability.$key[".write"].includes("game-python-editor"),"Admin availability switches cover Python Editor");
+assert.ok(rules.hubSiteAvailability.$key[".write"].includes("app-installer"),"Admin availability switches cover App Installer");
+assert.ok(rules.hubSiteRoleLocks.$key[".write"].includes("app-installer"),"Role locks cover App Installer");
 assert.ok(!(".read" in rules.hubPythonProjects),"Python projects cannot be publicly readable");
 assert.ok(!(".write" in rules.hubPythonProjects),"Python projects cannot be publicly writable");
 assert.ok(rules.hubPythonProjects.$uid.$projectId[".write"].includes("auth.uid === $uid"),"Private code writes must be UID-owned");
@@ -92,6 +94,7 @@ assert.equal(evaluate(changeSettings,{user:adminRole,roles}),true,"DB admin can 
 assert.equal(evaluate(changeSettings,{user:moderator,roles}),false,"Moderator cannot edit admin settings");
 const editRoleLocks=rules.hubSiteRoleLocks.$key[".write"];
 assert.equal(evaluate(editRoleLocks,{user:adminRole,roles,key:"game-python-editor"}),true,"Verified admin can set Python Editor role lock");
+assert.equal(evaluate(editRoleLocks,{user:adminRole,roles,key:"app-installer"}),true,"Verified admin can set App Installer role lock");
 assert.equal(evaluate(editRoleLocks,{user:adminClaim,roles,key:"game-hub"}),true,"Admin custom claim can set Game Hub role lock");
 assert.equal(evaluate(editRoleLocks,{user:member,roles,key:"game-python-editor"}),false,"Members cannot change role locks");
 assert.equal(evaluate(editRoleLocks,{user:moderator,roles,key:"game-python-editor"}),false,"Moderators cannot change role locks");
