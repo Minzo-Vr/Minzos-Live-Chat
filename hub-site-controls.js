@@ -611,12 +611,20 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
   }).catch(error=>{console.warn("Admin token verification unavailable:",error.code||error.message);refresh()});
  }
  function guardDirectLaunch(event){
-  const el=event.target.closest?.("[id]");
-  if(!el)return;
+  // Walk all ancestors: nested icons/labels can have their own id,
+  // so closest("[id]") can miss the actual launcher button.
+  let el=event.target;
+  while(el&&el!==document&&!KEY_FOR_BUTTON[el.id])el=el.parentElement;
+  if(!el||el===document)return;
   const key=KEY_FOR_BUTTON[el.id];
-  if(key&&!canUse(key)){
-   event.preventDefault();event.stopImmediatePropagation();
-   if(isAdmin)void requestAccess(key).then(ok=>{if(ok&&el.isConnected)el.click()});
+  if(!canUse(key)){
+   event.preventDefault();
+   event.stopPropagation();
+   event.stopImmediatePropagation();
+   if(isAdmin)void requestAccess(key).then(ok=>{
+    // Only a successful PIN check may replay the launch.
+    if(ok&&el.isConnected&&canUse(key))el.click();
+   });
    else unavailableToast(key);
   }
  }
