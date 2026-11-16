@@ -155,8 +155,13 @@ import {getDatabase,ref,onValue,set,update,push,serverTimestamp} from "https://w
   const unlock=n("button",null,"Unlock app");unlock.type="submit";
   actions.append(cancel,unlock);form.append(pinStatus,actions);
   card.append(title,explanation,form);pinModal.append(card);document.body.append(pinModal);
-  cancel.addEventListener("click",()=>closePin(false));
-  pinModal.addEventListener("click",event=>{if(event.target===pinModal)closePin(false)});
+  cancel.addEventListener("click",event=>{
+   event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+   closePin(false);
+  });
+  pinModal.addEventListener("click",event=>{
+   if(event.target===pinModal){event.preventDefault();event.stopPropagation();closePin(false)}
+  });
   pinModal.addEventListener("keydown",event=>{
    if(event.key==="Escape"){event.preventDefault();event.stopImmediatePropagation();closePin(false)}
    if(event.key==="Tab"){
