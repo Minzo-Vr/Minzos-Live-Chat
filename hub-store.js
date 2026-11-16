@@ -101,12 +101,29 @@
   const foot=node("div","store-preview-foot");
   const cancel=node("button",null,"Close");cancel.type="button";cancel.addEventListener("click",()=>closePreview());
   const launch=node("button",null,"Open app");launch.type="button";launch.id="hubStoreLaunch";
-  launch.addEventListener("click",async()=>{
+  launch.addEventListener("click",async event=>{
+   event.preventDefault();event.stopPropagation();
+   if(launch.disabled)return;
    const open=activeLaunch,meta=currentPreviewMeta,gate=window.HubSiteControls;
    if(typeof open!=="function")return;
-   if(gate&&(meta?.category==="Browser game"||meta?.category==="Game Hub app")&&!await gate.requestAccess("game-hub"))return;
-   if(gate&&meta?.hubKey&&!await gate.requestAccess(meta.hubKey))return;
-   closePreview(false);open();
+   launch.disabled=true;
+   try{
+    // Every required access check must explicitly succeed. Cancel leaves the
+    // preview open and must never fall through to the app's launch function.
+    if(gate&&(meta?.category==="Browser game"||meta?.category==="Game Hub app")){
+     const allowed=await gate.requestAccess("game-hub");
+     if(allowed!==true)return;
+    }
+    if(gate&&meta?.hubKey){
+     const allowed=await gate.requestAccess(meta.hubKey);
+     if(allowed!==true)return;
+    }
+    if(open!==activeLaunch||meta!==currentPreviewMeta)return;
+    closePreview(false);
+    open();
+   }finally{
+    launch.disabled=false;
+   }
   });
   foot.append(cancel,launch);
   panel.append(head,visual,featureHeading,tags,foot);dialog.append(panel);
