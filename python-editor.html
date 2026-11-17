@@ -174,18 +174,18 @@ body{height:auto;min-height:100dvh;overflow-x:hidden;overflow-y:visible;
 <aside class="sidebar" id="pythonSidebar" aria-label="Projects and collaboration">
 <section class="shared-box" aria-label="Live Python collaboration">
 <h2>👥 Shared coding rooms</h2>
-<p>Collaborate like a shared document. Only approved members can see a room's code.</p>
-<div id="sharedMemberUid">Your account ID: <span id="sharedOwnUid">Sign in first</span></div>
+<p>Use a room code to connect. The same code connects your team to one live Python file. Room owners approve new members.</p>
+<label for="sharedJoinCode">Room code</label>
+<input type="text" id="sharedJoinCode" maxlength="20" placeholder="Enter your 12–16 character code" autocomplete="off" autocapitalize="characters" spellcheck="false">
 <div class="shared-actions">
-<button type="button" id="sharedCopyUid">Copy my ID</button>
-<button type="button" id="sharedCreateRoom" class="primary">＋ New room</button>
+<button type="button" id="sharedJoinRoom" class="primary">Connect / Create</button>
+<button type="button" id="sharedCreateRoom">Generate code</button>
 </div>
-<label for="sharedRoomList">My shared rooms</label>
+<div id="sharedMemberUid" class="small">Account: <span id="sharedOwnUid">Sign in first</span> <button type="button" id="sharedCopyUid">Copy ID</button></div>
+<label for="sharedRoomList">Your connected rooms</label>
 <select id="sharedRoomList" size="3" aria-label="My collaboration rooms" disabled></select>
 <button type="button" id="sharedOpenRoom">Open selected room</button>
-<label for="sharedJoinCode">Join using an invite link or room code</label>
-<input type="text" id="sharedJoinCode" placeholder="Paste shared room link or code" autocomplete="off">
-<button type="button" id="sharedJoinRoom">Open room / request access</button>
+
 <div id="roomAccessPrompt" hidden>
 <p>This room is private. Ask the owner for access to collaborate.</p>
 <button type="button" id="sharedRequestAccess" class="primary">Request access</button>
@@ -226,7 +226,7 @@ body{height:auto;min-height:100dvh;overflow-x:hidden;overflow-y:visible;
     <button id="simpleReset" type="button">↻ Reset</button>
     <button id="simpleSave" type="button">Save</button>
     <button id="simpleProjects" type="button" aria-expanded="false" aria-controls="pythonSidebar">Open projects</button>
-    <button id="simpleCollaborate" type="button" aria-expanded="false" aria-controls="pythonSidebar">Collaborate</button>
+    <button id="simpleCollaborate" type="button" aria-expanded="false" aria-controls="pythonSidebar">Rooms</button>
   </div>
   <label for="pythonExamples">Example programs
     <select id="pythonExamples" aria-label="Load a Python example">
@@ -246,7 +246,7 @@ body{height:auto;min-height:100dvh;overflow-x:hidden;overflow-y:visible;
     <button type="button" data-python-snippet="try">Try / except</button>
     <button type="button" data-python-snippet="json">Read JSON</button>
   </div>
-  <small>Advanced mode adds code templates, program input, file import/export and full project/room management.</small>
+  <small>Advanced mode adds code templates, program input and file import/export. Room controls work the same in both modes.</small>
 </div>
 <div class="bar">
 <div><label for="projectName">Project name</label><input type="text" id="projectName" maxlength="60" value="My first Python script"><span id="sharedCodeTitle">👥 Live room: <strong id="sharedEditorTitle"></strong></span></div>
