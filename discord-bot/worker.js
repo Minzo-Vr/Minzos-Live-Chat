@@ -370,7 +370,7 @@ export default {
    if(!youtubeResetting){
      let youtubeDeleted=0;
      try{youtubeDeleted=await processYouTubeDeletions(env);}catch(err){console.error("YouTube timed deletion",err);}
-     try{await processYouTubeScheduled(env,youtubeDeleted>=8?10:15);}catch(err){console.error("YouTube scheduled uploader",err);}
+     try{await processYouTubeScheduled(env,10);}catch(err){console.error("YouTube scheduled uploader",err);}
    }
    let cursor;
    do{
@@ -419,7 +419,7 @@ export default {
    if(!isSupportAdmin(data,env))return reply("Only administrators in the configured server can use /youtube.",true);
    const channelId=String(data.data?.options?.find(option=>option.name==="channel")?.value||"");
    if(!/^\d{15,22}$/.test(channelId))return reply("Choose a Discord text channel.",true);
-   return json({type:4,data:{content:"📺 **YouTube Auto Upload**\nChannel: <#"+channelId+">\nStart loads the public @minzo-vr archive and posts oldest to newest at about one video per second (up to 15 per minute). Stop leaves existing links in place. Reset deletes the video-link messages posted by this uploader in the selected channel; it never deletes your YouTube originals. Each link auto-deletes after one hour.",flags:64,allowed_mentions:{parse:[]},components:[{type:1,components:[{type:2,style:1,label:"Start Auto Upload",custom_id:"youtube-start:"+channelId},{type:2,style:2,label:"Stop Upload",custom_id:"youtube-stop:"+channelId},{type:2,style:4,label:"Reset & Delete All",custom_id:"youtube-reset:"+channelId}]}]}});
+   return json({type:4,data:{content:"📺 **YouTube Auto Upload**\nChannel: <#"+channelId+">\nStart loads the public @minzo-vr archive and posts oldest to newest at about one video per second (up to 10 per minute). Stop leaves existing links in place. Reset deletes the video-link messages posted by this uploader in the selected channel; it never deletes your YouTube originals. Each link auto-deletes after one hour.",flags:64,allowed_mentions:{parse:[]},components:[{type:1,components:[{type:2,style:1,label:"Start Auto Upload",custom_id:"youtube-start:"+channelId},{type:2,style:2,label:"Stop Upload",custom_id:"youtube-stop:"+channelId},{type:2,style:4,label:"Reset & Delete All",custom_id:"youtube-reset:"+channelId}]}]}});
  }
  if(name==="sad"){
    const options=Object.fromEntries((data.data?.options||[]).map(o=>[o.name,o.value]));
