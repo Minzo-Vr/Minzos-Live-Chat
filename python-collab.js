@@ -311,8 +311,8 @@ async function joinRoom(id){
  }finally{if(openingRoom===id)openingRoom=""}
 }
 async function requestRoomAccess(){
- const id=getRoomInput();
- if(!safeRoomId(id)||!account)return notify("Sign in and paste a valid room link or code.");
+ const id=$("sharedJoinCode").value.trim().toUpperCase();
+ if(!safeRoomId(id)||!account)return notify("Sign in and enter a valid room code.");
  wanted=id;
  try{
   await set(ref(db,REQUEST_ROOT+"/"+id+"/"+account.uid),{name:identity(),at:Date.now()});
