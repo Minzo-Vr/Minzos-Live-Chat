@@ -310,11 +310,6 @@ async function joinRoom(id){
   notify("Could not enter room: "+niceError(err)+". You can request access from the owner.");
  }finally{if(openingRoom===id)openingRoom=""}
 }
-function getRoomInput(){
- const val=$("sharedJoinCode").value.trim();
- if(!val)return"";
- try{const parsed=new URL(val);return parsed.searchParams.get("room")||""}catch{return val}
-}
 async function requestRoomAccess(){
  const id=getRoomInput();
  if(!safeRoomId(id)||!account)return notify("Sign in and paste a valid room link or code.");
@@ -325,20 +320,36 @@ async function requestRoomAccess(){
   $("roomAccessPrompt").hidden=false;
  }catch(err){notify("Access request failed: "+niceError(err))}
 }
-async function createRoom(){
+async function createRoom(requestedId){
  if(!account||room)return notify("Leave the current room before creating another.");
- const title=(window.prompt("Name your shared Python room:","Python team")||"").trim().slice(0,80);
- if(!title)return;
- const uid=account.uid,id=push(ref(db,ROOM_ROOT)).key;
+ const id=String(requestedId||"").trim().toUpperCase();
+ if(!safeRoomId(id))return notify("Use a room code with 12–16 letters or numbers.");
+ const title="Python room "+id.slice(0,6);
+ const uid=account.uid;
  const seed=new Y.Doc();seed.getText("code").insert(0,CODE.value.slice(0,MAX_LENGTH));
  const state=to64(Y.encodeStateAsUpdate(seed));seed.destroy();
  try{
-  notify("Creating your private collaboration room…");
+  // Never overwrite an existing room when two people choose the same code.
+  const existing=await get(ref(db,path(id)));
+  if(existing.exists())return void joinRoom(id);
+  notify("Creating room "+id+"…");
   await set(ref(db,path(id)),{ownerUid:uid,title,members:{[uid]:true},document:{state,updatedAt:Date.now()},createdAt:Date.now()});
   await set(ref(db,INDEX_ROOT+"/"+uid+"/"+id),true);
+  $("sharedJoinCode").value=id;
   await joinRoom(id);
-  notify("Room created! Copy the invite link. Visitors request access; you approve them.");
+  notify("Room created. Share this code; the owner must approve new members.");
  }catch(err){notify("Could not create room: "+niceError(err))}
+}
+async function connectOrCreateRoom(){
+ const id=$("sharedJoinCode").value.trim().toUpperCase();
+ if(!safeRoomId(id))return notify("Enter a room code with 12–16 letters or numbers.");
+ $("sharedJoinCode").value=id;
+ if(!account)return notify("Sign in to Community Hub first.");
+ try{
+  const existing=await get(ref(db,path(id)));
+  if(existing.exists())await joinRoom(id);
+  else await createRoom(id);
+ }catch(err){notify("Could not connect: "+niceError(err))}
 }
 function refreshRoomList(){
  const selected=SELECT.value;SELECT.replaceChildren();
@@ -390,9 +401,15 @@ onAuthStateChanged(auth,async user=>{
 });
 
 $("sharedCopyUid").addEventListener("click",async()=>{if(account){await copy(account.uid);notify("Your account ID is ready to share with a room owner.")}});
-$("sharedCreateRoom").addEventListener("click",()=>void createRoom());
-$("sharedJoinRoom").addEventListener("click",()=>void joinRoom(getRoomInput()));
-$("sharedJoinCode").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();void joinRoom(getRoomInput())}});
+$("sharedCreateRoom").addEventListener("click",()=>{
+ const alphabet="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+ const code=Array.from({length:12},()=>alphabet[Math.floor(Math.random()*alphabet.length)]).join("");
+ $("sharedJoinCode").value=code;
+ void createRoom(code);
+});
+$("sharedJoinRoom").addEventListener("click",()=>void connectOrCreateRoom());
+$("sharedJoinCode").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();void connectOrCreateRoom()}});
+
 $("sharedRequestAccess").addEventListener("click",()=>void requestRoomAccess());
 $("sharedOpenRoom").addEventListener("click",()=>void joinRoom(SELECT.value));
 document.addEventListener("python-open-shared-room",event=>void joinRoom(event.detail?.id));
