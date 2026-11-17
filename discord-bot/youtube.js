@@ -203,7 +203,7 @@ export async function processYouTubeDeletions(env) {
       const response = await fetch(DISCORD_API + "/channels/" + record.channelId + "/messages/" + record.messageId, {
         method: "DELETE", headers: botHeaders(env)
       });
-      if (response.ok || response.status === 404 || response.status === 403) {
+      if (response.ok || response.status === 404) {
         await env.SAD_MESSAGES.delete(key.name);
       }
     }
