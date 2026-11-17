@@ -1,7 +1,7 @@
 // Community Hub Discord bot. Keep OAuth, Firebase, roles and existing commands unchanged.
 import {TICKET_TYPES,ticketAction,ensureTicketPanels,completeTicketInteraction,completeTicketSetupInteraction} from "./tickets.js";
 import {ensureOneWordStories,moderateOneWordStories,finishOneWordSetup} from "./one-word-stories.js";
-import {handleYouTubeStartButton,processYouTubeScheduled,processYouTubeDeletions} from "./youtube.js";
+import {handleYouTubeButton,processYouTubeScheduled,processYouTubeDeletions,processYouTubeReset} from "./youtube.js";
 // Support categories are deliberately selected server-side; a label alone does not grant permissions.
 const SUPPORT_CATEGORIES=Object.freeze({
  chats:{label:"Chats",focus:"Support chat messages, rooms, mentions, friends, DMs, notifications, music and moderation."},
@@ -365,8 +365,13 @@ export default {
      }catch(err){console.error("1 Word Stories moderation",err);}
    }
    if(!env.SAD_MESSAGES)return;
-   try{await processYouTubeScheduled(env);}catch(err){console.error("YouTube scheduled uploader",err);}
-   try{await processYouTubeDeletions(env);}catch(err){console.error("YouTube timed deletion",err);}
+   let youtubeResetting=false;
+   try{youtubeResetting=await processYouTubeReset(env);}catch(err){console.error("YouTube reset",err);}
+   if(!youtubeResetting){
+     let youtubeDeleted=0;
+     try{youtubeDeleted=await processYouTubeDeletions(env);}catch(err){console.error("YouTube timed deletion",err);}
+     try{await processYouTubeScheduled(env,youtubeDeleted>=8?10:15);}catch(err){console.error("YouTube scheduled uploader",err);}
+   }
    let cursor;
    do{
      const page=await env.SAD_MESSAGES.list({prefix:"sad:",limit:1000,...(cursor?{cursor}:{})});
@@ -390,7 +395,7 @@ export default {
  let data;try{data=JSON.parse(raw);}catch{return new Response("Bad request",{status:400});}
  if(data.type===1)return json({type:1});
  if(data.type===3&&String(data.data?.custom_id||"").startsWith("role-retry:")){try{return await retryRoleRequest(data,env);}catch(e){console.error("Role retry",e);return reply("Could not retry right now. Please try later.",true);}}
- if(data.type===3&&String(data.data?.custom_id||"").startsWith("youtube-start:")){try{return await handleYouTubeStartButton(data,env);}catch(e){console.error("YouTube start button",e);return reply("Could not start YouTube Auto Upload. Check the Worker logs and try again.",true);}}
+ if(data.type===3&&String(data.data?.custom_id||"").startsWith("youtube-")){try{return await handleYouTubeButton(data,env);}catch(e){console.error("YouTube control button",e);return reply("Could not complete that YouTube control. Check the Worker logs and try again.",true);}}
  if(data.type===3){
    const ticket=ticketAction(data.data?.custom_id);
    if(!ticket)return reply("Unsupported button.",true);
@@ -414,7 +419,7 @@ export default {
    if(!isSupportAdmin(data,env))return reply("Only administrators in the configured server can use /youtube.",true);
    const channelId=String(data.data?.options?.find(option=>option.name==="channel")?.value||"");
    if(!/^\d{15,22}$/.test(channelId))return reply("Choose a Discord text channel.",true);
-   return json({type:4,data:{content:"📺 **YouTube Auto Upload**\nChannel: <#"+channelId+">\nPress the button to load all public @minzo-vr videos and post them oldest to newest, one per minute. Each video post is deleted after one hour.",flags:64,allowed_mentions:{parse:[]},components:[{type:1,components:[{type:2,style:1,label:"Start Auto Upload",custom_id:"youtube-start:"+channelId}]}]}});
+   return json({type:4,data:{content:"📺 **YouTube Auto Upload**\nChannel: <#"+channelId+">\nStart loads the public @minzo-vr archive and posts oldest to newest at about one video per second (up to 15 per minute). Stop leaves existing links in place. Reset deletes the video-link messages posted by this uploader in the selected channel; it never deletes your YouTube originals. Each link auto-deletes after one hour.",flags:64,allowed_mentions:{parse:[]},components:[{type:1,components:[{type:2,style:1,label:"Start Auto Upload",custom_id:"youtube-start:"+channelId},{type:2,style:2,label:"Stop Upload",custom_id:"youtube-stop:"+channelId},{type:2,style:4,label:"Reset & Delete All",custom_id:"youtube-reset:"+channelId}]}]}});
  }
  if(name==="sad"){
    const options=Object.fromEntries((data.data?.options||[]).map(o=>[o.name,o.value]));
@@ -480,7 +485,7 @@ export default {
    return json({type:5,data:{flags:64}});
  }
  if(name==="ping")return reply("🏓 Pong! Community Chat bot is online.");
- if(name==="help")return reply("**Community Hub commands**\n/ask — select an app category or Generic Question\n/ping — bot health\n/sad — timed self-deleting message\n/help — commands\n/latest — latest published update\n/updates — three recent updates\n/status — website link\n/announce — admin-only Discord announcement\n/applications — admin-only application open/closed announcements\n/setup_applications — create private application review channel\n/setup_tickets — install/repair private ticket panels\n/setup_one_word_stories — create or repair #1-word-stories\n/youtube — share @minzo-vr videos one per minute (admin only)\n/add-role-to-user — server-admin-only linked Community Chat role assignment");
+ if(name==="help")return reply("**Community Hub commands**\n/ask — select an app category or Generic Question\n/ping — bot health\n/sad — timed self-deleting message\n/help — commands\n/latest — latest published update\n/updates — three recent updates\n/status — website link\n/announce — admin-only Discord announcement\n/applications — admin-only application open/closed announcements\n/setup_applications — create private application review channel\n/setup_tickets — install/repair private ticket panels\n/setup_one_word_stories — create or repair #1-word-stories\n/youtube — start, stop or reset @minzo-vr video sharing (admin only)\n/add-role-to-user — server-admin-only linked Community Chat role assignment");
  if(name==="status")return reply("Community Chat: https://minzo-vr.github.io/Minzos-Live-Chat/ (open to check availability)");
 
  if(name==="setup_applications"){
