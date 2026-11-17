@@ -179,7 +179,7 @@ export async function processYouTubeScheduled(env) {
         job.status = "complete";
         job.completedAt = Date.now();
       } else {
-        job.nextPostAt = Date.now() + 60000;
+        job.nextPostAt = (Math.floor(Date.now() / 60000) + 1) * 60000;
       }
       await saveJob(env.SAD_MESSAGES, jobKey, job);
     }
