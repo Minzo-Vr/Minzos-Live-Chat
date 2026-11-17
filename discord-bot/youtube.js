@@ -8,7 +8,7 @@ const POSTED_PREFIX = "youtube:posted:";
 const LEGACY_DELETE_PREFIX = "youtube:delete:";
 const ACTIVE = new Set(["resolving", "scanning", "posting"]);
 const POST_BATCH_SIZE = 5;
-const DEFAULT_POSTS_PER_TICK = 15;
+const DEFAULT_POSTS_PER_TICK = 10;
 const POST_INTERVAL_MS = 1100;
 
 function json(data, status = 200) {
@@ -114,7 +114,7 @@ export async function handleYouTubeStartButton(data, env) {
     createdAt: Date.now()
   };
   await saveJob(env.SAD_MESSAGES, jobKey, job);
-  return ephemeral("✅ YouTube Auto Upload started. I'm loading the public @minzo-vr archive first, then posting oldest to newest at about one video per second (up to 15 per minute). Each link is deleted after one hour.");
+  return ephemeral("✅ YouTube Auto Upload started. I'm loading the public @minzo-vr archive first, then posting oldest to newest at about one video per second (up to 10 per minute). Each link is deleted after one hour.");
 }
 
 async function handleYouTubeStopButton(data, env, channelId) {
