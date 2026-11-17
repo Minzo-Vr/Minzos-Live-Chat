@@ -433,8 +433,10 @@ export async function processYouTubeDeletions(env) {
   let deleted = 0;
   const now = Date.now();
   const page = await env.SAD_MESSAGES.list({prefix: POSTED_PREFIX, limit: 1000});
+  let channelsScanned = 0;
   for (const key of page.keys) {
-    if (deleted >= 10) break;
+    if (deleted >= 10 || channelsScanned >= 10) break;
+    channelsScanned++;
     const record = await env.SAD_MESSAGES.get(key.name, "json");
     if (!record || !Array.isArray(record.messages)) continue;
     const keep = [];
@@ -461,10 +463,12 @@ export async function processYouTubeDeletions(env) {
   // Clean up per-message records created by the earlier uploader version.
   const legacy = await env.SAD_MESSAGES.list({prefix: LEGACY_DELETE_PREFIX, limit: 1000});
   let legacyDone = 0;
+  let legacyScanned = 0;
   for (const key of legacy.keys) {
-    if (legacyDone >= 2) break;
+    if (legacyDone >= 2 || legacyScanned >= 10) break;
     const suffix = key.name.slice(LEGACY_DELETE_PREFIX.length);
     if (suffix.includes(":")) continue;
+    legacyScanned++;
     const record = await env.SAD_MESSAGES.get(key.name, "json");
     if (!record || record.expiresAt > now) continue;
     const response = await deleteDiscord(record.channelId, record.messageId, env);
