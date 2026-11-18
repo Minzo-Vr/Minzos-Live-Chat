@@ -415,6 +415,25 @@ export default {
   return json({type:5,data:{flags:64}});
  }
 
+ if(name==="percentage"){
+  if(!isSupportAdmin(data,env))return reply("Only administrators in the configured server can use /percentage.",true);
+  if(!env.SAD_MESSAGES)return reply("Percentage storage is not configured. Ask the bot owner to bind SAD_MESSAGES KV.",true);
+  const options=Object.fromEntries((data.data?.options||[]).map(option=>[option.name,option.value]));
+  const userId=String(options.user||"");
+  const percentage=Number(options.percentage);
+  if(!/^\\d{15,22}$/.test(userId)||!Number.isInteger(percentage)||percentage<0||percentage>100)
+    return reply("Choose a server member and a whole-number percentage from 0 to 100.",true);
+  const key="user-percentage:"+data.guild_id+":"+userId;
+  const record={guildId:String(data.guild_id),userId,percentage,updatedBy:String(data.member?.user?.id||""),updatedAt:Date.now()};
+  try{
+    await env.SAD_MESSAGES.put(key,JSON.stringify(record),{expirationTtl:31536000});
+    const dm=await discordDM(userId,"📊 **Your percentage has been updated!**\\n\\nYour current percentage is **"+percentage+"%**.",env);
+    return reply("✅ Set <@"+userId+">'s percentage to **"+percentage+"%**. "+(dm?"I also sent them a DM.":"The percentage was saved, but I couldn't DM them (their DMs may be closed)."),true);
+  }catch(error){
+    console.error("Set user percentage",error);
+    return reply("Couldn't save that percentage. Check that SAD_MESSAGES is working.",true);
+  }
+ }
  if(name==="youtube"){
    if(!isSupportAdmin(data,env))return reply("Only administrators in the configured server can use /youtube.",true);
    const channelId=String(data.data?.options?.find(option=>option.name==="channel")?.value||"");
