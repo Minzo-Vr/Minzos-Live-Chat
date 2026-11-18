@@ -32,7 +32,7 @@ export const commands=[
  {type:3,name:"results",description:"When applicants hear back (optional)",required:false}
 ]},
 {name:"add-role-to-user",description:"Give a linked Community Chat account a role",default_member_permissions:"8",options:[{type:6,name:"user",description:"Discord user to receive the role",required:true},{type:3,name:"role",description:"Community Chat role",required:true,choices:[{name:"Moderator",value:"moderator"},{name:"Plus",value:"plus"},{name:"Test Subject",value:"testsubject"},{name:"Admin",value:"admin"}]}]},
-{name:"youtube",description:"Share all @minzo-vr videos to a Discord channel",default_member_permissions:"8",options:[{type:7,name:"channel",description:"Text channel to receive the YouTube video links",required:true,channel_types:[0]}]},
+{name:"youtube",description:"Share all @minzo-vr videos to a Discord channel",default_member_permissions:"8",options:[{type:7,name:"channel",description:"Text channel to receive the YouTube video links",required:true,channel_types:[0]}]},\n{name:"percentage",description:"Set a member percentage and DM them",default_member_permissions:"8",options:[{type:6,name:"user",description:"Server member to update",required:true},{type:4,name:"percentage",description:"Percentage from 0 to 100",required:true,min_value:0,max_value:100}]},
 {name:"announce",description:"Post an admin announcement to Discord",default_member_permissions:"8",options:[{type:3,name:"message",description:"Announcement text",required:true,max_length:1500}]}
 ];
 
