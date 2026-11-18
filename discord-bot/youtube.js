@@ -317,7 +317,13 @@ export async function processYouTubeScheduled(env, maxPosts = DEFAULT_POSTS_PER_
         await saveJob(env.SAD_MESSAGES, jobKey, job);
       }
       if (job.nextIndex >= job.videos.length) {
-        await postDiscord(job.channelId, "✅ **Finished Auto Video Upload!**", env);
+        const finishedMessage = await postDiscord(job.channelId, "✅ **Finished Auto Video Upload!**", env);
+        // Treat the completion notice like the video links: remove it after one hour too.
+        postedData.messages.push({
+          messageId: finishedMessage.id,
+          expiresAt: Date.now() + 3600000
+        });
+        await env.SAD_MESSAGES.put(postedKey, JSON.stringify(postedData), {expirationTtl: 86400});
         job.status = "complete";
         job.completedAt = Date.now();
         await saveJob(env.SAD_MESSAGES, jobKey, job);
