@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://minzo-vr.github.io/Minzos-Live-Chat/sitemap.xml
