@@ -74,6 +74,7 @@ function validChannelId(value) {
 function buttonRow(channelId) {
   return [{type: 1, components: [
     {type: 2, style: 1, label: "Start Auto Upload", custom_id: "youtube-start:" + channelId},
+    {type: 2, style: 3, label: "Continue", custom_id: "youtube-continue:" + channelId},
     {type: 2, style: 2, label: "Stop Upload", custom_id: "youtube-stop:" + channelId},
     {type: 2, style: 4, label: "Reset & Delete All", custom_id: "youtube-reset:" + channelId}
   ]}];
@@ -115,6 +116,35 @@ export async function handleYouTubeStartButton(data, env) {
   };
   await saveJob(env.SAD_MESSAGES, jobKey, job);
   return ephemeral("✅ YouTube Auto Upload started. I'm loading the public @minzo-vr archive first, then posting oldest to newest at about one video per second (up to 10 per minute). Video links will stay in the channel until you manually delete them or use Reset & Delete All.");
+}
+
+async function handleYouTubeContinueButton(data, env, channelId) {
+  if (!isAdmin(data, env)) return ephemeral("Only administrators in the configured server can continue YouTube Auto Upload.");
+  if (!env.SAD_MESSAGES) return ephemeral("YouTube Auto Upload needs the existing SAD_MESSAGES KV binding.");
+  if (!env.YOUTUBE_API_KEY) return ephemeral("The YouTube API key is not set yet. Add the YOUTUBE_API_KEY secret to the community-chat-discord-bot Worker first.");
+  if (!validChannelId(channelId)) return ephemeral("That upload channel is invalid. Run /youtube again.");
+  if (await env.SAD_MESSAGES.get(RESET_PREFIX + data.guild_id)) return ephemeral("A reset is still deleting the previous video posts. Continue again when it has finished.");
+  const jobKey = JOB_PREFIX + data.guild_id;
+  const existing = await env.SAD_MESSAGES.get(jobKey, "json");
+  if (existing && ACTIVE.has(existing.status)) return ephemeral("A YouTube upload is already running in <#" + existing.channelId + ">.");
+  const postedData = await env.SAD_MESSAGES.get(POSTED_PREFIX + channelId, "json");
+  const uploadedCount = Array.isArray(postedData?.videoIds) ? postedData.videoIds.length : 0;
+  await env.SAD_MESSAGES.delete(STOP_PREFIX + data.guild_id);
+  const job = {
+    runId: crypto.randomUUID(),
+    status: "resolving",
+    guildId: String(data.guild_id),
+    channelId,
+    handle: HANDLE,
+    videos: [],
+    pageToken: null,
+    nextIndex: 0,
+    pages: 0,
+    continueMode: true,
+    createdAt: Date.now()
+  };
+  await saveJob(env.SAD_MESSAGES, jobKey, job);
+  return ephemeral("▶️ **Continue Auto Upload started.** I'll scan @minzo-vr and skip videos already posted by this uploader, continuing with the next unposted video in chronological order. " + uploadedCount + " video(s) are already tracked as uploaded.");
 }
 
 async function handleYouTubeStopButton(data, env, channelId) {
@@ -181,6 +211,7 @@ async function handleYouTubeResetCancel(data, env) {
 export async function handleYouTubeButton(data, env) {
   const customId = String(data.data?.custom_id || "");
   if (customId.startsWith("youtube-start:")) return handleYouTubeStartButton(data, env);
+  if (customId.startsWith("youtube-continue:")) return handleYouTubeContinueButton(data, env, customId.slice("youtube-continue:".length));
   if (customId.startsWith("youtube-stop:")) return handleYouTubeStopButton(data, env, customId.slice("youtube-stop:".length));
   if (customId.startsWith("youtube-reset-confirm:")) return handleYouTubeResetConfirm(data, env, customId.slice("youtube-reset-confirm:".length));
   if (customId.startsWith("youtube-reset-cancel:")) return handleYouTubeResetCancel(data, env);
@@ -262,6 +293,11 @@ export async function processYouTubeScheduled(env, maxPosts = DEFAULT_POSTS_PER_
             const dateOrder = String(a.publishedAt).localeCompare(String(b.publishedAt));
             return dateOrder || a.id.localeCompare(b.id);
           });
+          if (job.continueMode) {
+            const postedData = await env.SAD_MESSAGES.get(POSTED_PREFIX + job.channelId, "json") || {};
+            const uploadedIds = new Set(Array.isArray(postedData.videoIds) ? postedData.videoIds : []);
+            job.videos = job.videos.filter(video => !uploadedIds.has(video.id));
+          }
           job.status = "posting";
           job.nextIndex = 0;
         }
@@ -281,8 +317,9 @@ export async function processYouTubeScheduled(env, maxPosts = DEFAULT_POSTS_PER_
         return;
       }
       const postedKey = POSTED_PREFIX + job.channelId;
-      const postedData = await env.SAD_MESSAGES.get(postedKey, "json") || {messages: []};
+      const postedData = await env.SAD_MESSAGES.get(postedKey, "json") || {messages: [], videoIds: []};
       postedData.messages = Array.isArray(postedData.messages) ? postedData.messages : [];
+      postedData.videoIds = Array.isArray(postedData.videoIds) ? postedData.videoIds : [];
       let postedThisTick = 0;
 
       while (postedThisTick < maxPosts && job.nextIndex < job.videos.length) {
@@ -298,9 +335,8 @@ export async function processYouTubeScheduled(env, maxPosts = DEFAULT_POSTS_PER_
         }
         const video = job.videos[job.nextIndex];
         const posted = await postDiscord(job.channelId, "https://www.youtube.com/watch?v=" + video.id, env);
-        postedData.messages.push({
-          messageId: posted.id
-        });
+        postedData.messages.push({messageId: posted.id});
+        if (!postedData.videoIds.includes(video.id)) postedData.videoIds.push(video.id);
         job.nextIndex++;
         postedThisTick++;
 
