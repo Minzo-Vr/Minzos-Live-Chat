@@ -114,7 +114,7 @@ export async function handleYouTubeStartButton(data, env) {
     createdAt: Date.now()
   };
   await saveJob(env.SAD_MESSAGES, jobKey, job);
-  return ephemeral("✅ YouTube Auto Upload started. I'm loading the public @minzo-vr archive first, then posting oldest to newest at about one video per second (up to 10 per minute). Each link is deleted after one hour.");
+  return ephemeral("✅ YouTube Auto Upload started. I'm loading the public @minzo-vr archive first, then posting oldest to newest at about one video per second (up to 10 per minute). Video links will stay in the channel until you manually delete them or use Reset & Delete All.");
 }
 
 async function handleYouTubeStopButton(data, env, channelId) {
@@ -130,7 +130,7 @@ async function handleYouTubeStopButton(data, env, channelId) {
   job.status = "stopped";
   job.updatedAt = Date.now();
   await saveJob(env.SAD_MESSAGES, jobKey, job);
-  return ephemeral("⏸️ **Upload stopped.** The bot will not post any more videos. Links already posted in Discord are left in place and will still auto-delete after one hour.");
+  return ephemeral("⏸️ **Upload stopped.** The bot will not post any more videos. Links already posted in Discord are left in place and will not auto-delete.");
 }
 
 async function handleYouTubeResetPrompt(data, env, channelId) {
@@ -291,7 +291,7 @@ export async function processYouTubeScheduled(env, maxPosts = DEFAULT_POSTS_PER_
           if (stopNow?.runId === job.runId || await env.SAD_MESSAGES.get(resetKey)) {
             job.status = stopNow?.runId === job.runId ? "stopped" : "resetting";
             job.updatedAt = Date.now();
-            await env.SAD_MESSAGES.put(postedKey, JSON.stringify(postedData), {expirationTtl: 86400});
+            await env.SAD_MESSAGES.put(postedKey, JSON.stringify(postedData), {expirationTtl: 2592000});
             await saveJob(env.SAD_MESSAGES, jobKey, job);
             return;
           }
@@ -299,31 +299,27 @@ export async function processYouTubeScheduled(env, maxPosts = DEFAULT_POSTS_PER_
         const video = job.videos[job.nextIndex];
         const posted = await postDiscord(job.channelId, "https://www.youtube.com/watch?v=" + video.id, env);
         postedData.messages.push({
-          messageId: posted.id,
-          expiresAt: Date.now() + 3600000
+          messageId: posted.id
         });
         job.nextIndex++;
         postedThisTick++;
 
         if (postedThisTick % POST_BATCH_SIZE === 0) {
-          await env.SAD_MESSAGES.put(postedKey, JSON.stringify(postedData), {expirationTtl: 86400});
+          await env.SAD_MESSAGES.put(postedKey, JSON.stringify(postedData), {expirationTtl: 2592000});
           await saveJob(env.SAD_MESSAGES, jobKey, job);
         }
         if (job.nextIndex < job.videos.length && postedThisTick < maxPosts) await sleep(POST_INTERVAL_MS);
       }
 
       if (postedThisTick % POST_BATCH_SIZE !== 0) {
-        await env.SAD_MESSAGES.put(postedKey, JSON.stringify(postedData), {expirationTtl: 86400});
+        await env.SAD_MESSAGES.put(postedKey, JSON.stringify(postedData), {expirationTtl: 2592000});
         await saveJob(env.SAD_MESSAGES, jobKey, job);
       }
       if (job.nextIndex >= job.videos.length) {
         const finishedMessage = await postDiscord(job.channelId, "✅ **Finished Auto Video Upload!**", env);
-        // Treat the completion notice like the video links: remove it after one hour too.
-        postedData.messages.push({
-          messageId: finishedMessage.id,
-          expiresAt: Date.now() + 3600000
-        });
-        await env.SAD_MESSAGES.put(postedKey, JSON.stringify(postedData), {expirationTtl: 86400});
+        // Track the completion notice so Reset & Delete All can remove it too.
+        postedData.messages.push({messageId: finishedMessage.id});
+        await env.SAD_MESSAGES.put(postedKey, JSON.stringify(postedData), {expirationTtl: 2592000});
         job.status = "complete";
         job.completedAt = Date.now();
         await saveJob(env.SAD_MESSAGES, jobKey, job);
@@ -435,54 +431,6 @@ export async function processYouTubeReset(env) {
 }
 
 export async function processYouTubeDeletions(env) {
-  if (!env.SAD_MESSAGES) return 0;
-  let deleted = 0;
-  const now = Date.now();
-  const page = await env.SAD_MESSAGES.list({prefix: POSTED_PREFIX, limit: 1000});
-  let channelsScanned = 0;
-  for (const key of page.keys) {
-    if (deleted >= 10 || channelsScanned >= 10) break;
-    channelsScanned++;
-    const record = await env.SAD_MESSAGES.get(key.name, "json");
-    if (!record || !Array.isArray(record.messages)) continue;
-    const keep = [];
-    let changed = false;
-    for (const item of record.messages) {
-      if (deleted >= 10 || item.expiresAt > now) {
-        keep.push(item);
-        continue;
-      }
-      const response = await deleteDiscord(key.name.slice(POSTED_PREFIX.length), item.messageId, env);
-      if (response.ok || response.status === 404) {
-        deleted++;
-        changed = true;
-      } else {
-        keep.push(item);
-      }
-    }
-    if (changed) {
-      if (keep.length) await env.SAD_MESSAGES.put(key.name, JSON.stringify({messages: keep}), {expirationTtl: 86400});
-      else await env.SAD_MESSAGES.delete(key.name);
-    }
-  }
-
-  // Clean up per-message records created by the earlier uploader version.
-  const legacy = await env.SAD_MESSAGES.list({prefix: LEGACY_DELETE_PREFIX, limit: 1000});
-  let legacyDone = 0;
-  let legacyScanned = 0;
-  for (const key of legacy.keys) {
-    if (legacyDone >= 2 || legacyScanned >= 10) break;
-    const suffix = key.name.slice(LEGACY_DELETE_PREFIX.length);
-    if (suffix.includes(":")) continue;
-    legacyScanned++;
-    const record = await env.SAD_MESSAGES.get(key.name, "json");
-    if (!record || record.expiresAt > now) continue;
-    const response = await deleteDiscord(record.channelId, record.messageId, env);
-    if (response.ok || response.status === 404) {
-      await env.SAD_MESSAGES.delete(key.name);
-      legacyDone++;
-      deleted++;
-    }
-  }
-  return deleted;
+  // YouTube uploader posts are permanent. Do not process legacy deletion records.
+  return 0;
 }
