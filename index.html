@@ -2568,11 +2568,29 @@ try{
           button.disabled=true;$("switchAccountStatus").textContent="Switching account…";
           try{
             await saveActiveAccount();
-            await updateCurrentUser(auth,instance.currentUser);
+            const savedUser=instance.currentUser;
+            if(!savedUser)throw new Error("This saved account's session has expired. Please add it again.");
+            const googleAccount=savedUser.providerData.some(p=>p.providerId==="google.com");
+            await signOut(auth);
+            let result;
+            if(googleAccount){
+              const provider=new GoogleAuthProvider();
+              provider.setCustomParameters({prompt:"select_account"});
+              result=await signInWithPopup(auth,provider);
+            }else{
+              const email=savedUser.email||"";
+              const password=prompt("Enter the password for "+email+" to switch to this account:");
+              if(password===null){$("switchAccountStatus").textContent="Switch cancelled.";return;}
+              result=await signInWithEmailAndPassword(auth,email,password);
+            }
+            if(result.user.uid!==uid){
+              await signOut(auth);
+              throw new Error("You signed in with a different account. Please choose the saved account and try again.");
+            }
             $("settingsOverlay").hidden=true;
             $("switchAccountStatus").textContent="";
           }catch(err){$("switchAccountStatus").textContent="Switch failed: "+(err.code||err.message);}
-          finally{renderSavedAccounts().catch(console.warn);}
+          finally{button.disabled=false;renderSavedAccounts().catch(console.warn);}
         });
         const remove=document.createElement("button");remove.type="button";remove.textContent="Forget";remove.title="Forget this saved session";remove.disabled=current;
         remove.addEventListener("click",async()=>{
