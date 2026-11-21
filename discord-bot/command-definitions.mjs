@@ -1,4 +1,6 @@
 export const commands=[
+{name:"speak",description:"Make Minzo Voice AI speak in your voice channel",options:[{type:3,name:"phrase",description:"What should the bot say?",required:true,max_length:180},{type:3,name:"voice",description:"Choose a voice",required:false,choices:[{name:"Natural",value:"natural"},{name:"Robot",value:"robot"}]}]},
+{name:"stop",description:"Stop Minzo Voice AI speaking"},
 {name:"ping",description:"Check Community Chat bot"},
 {name:"ask",description:"Ask Community Hub AI about any app or general topic",options:[
  {type:3,name:"question",description:"What would you like to ask?",required:true,max_length:1200},
@@ -38,4 +40,4 @@ export const commands=[
 ];
 
 // User-install and guild-install public commands. Do not also register them at guild scope.
-export const PUBLIC_COMMAND_NAMES=["ping","ask","sad","help","latest","updates","status"];
+export const PUBLIC_COMMAND_NAMES=["speak","stop","ping","ask","sad","help","latest","updates","status"];
