@@ -2607,7 +2607,7 @@ try{
       try{
         await saveActiveAccount();
         const temporary=initializeAccountApp(firebaseConfig,"community-chat-email-add-"+Date.now());
-        const secondary=initializeAuth(temporary,{persistence:[]});
+        const secondary=initializeAuth(temporary,{persistence:[inMemoryPersistence]});
         const result=await signInWithEmailAndPassword(secondary,email.trim(),password);
         await updateCurrentUser(vaultAuth(result.user.uid),result.user);
         if(!accountVaultIds.includes(result.user.uid)){accountVaultIds.push(result.user.uid);persistAccountVault();}
