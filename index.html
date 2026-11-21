@@ -2571,6 +2571,11 @@ try{
             const savedUser=instance.currentUser;
             if(!savedUser)throw new Error("This saved account's session has expired. Please add it again.");
             const googleAccount=savedUser.providerData.some(p=>p.providerId==="google.com");
+            let password=null;
+            if(!googleAccount){
+              password=prompt("Enter the password for "+(savedUser.email||"this account")+" to switch to it:");
+              if(password===null){$("switchAccountStatus").textContent="Switch cancelled.";return;}
+            }
             await signOut(auth);
             let result;
             if(googleAccount){
@@ -2578,10 +2583,7 @@ try{
               provider.setCustomParameters({prompt:"select_account"});
               result=await signInWithPopup(auth,provider);
             }else{
-              const email=savedUser.email||"";
-              const password=prompt("Enter the password for "+email+" to switch to this account:");
-              if(password===null){$("switchAccountStatus").textContent="Switch cancelled.";return;}
-              result=await signInWithEmailAndPassword(auth,email,password);
+              result=await signInWithEmailAndPassword(auth,savedUser.email||"",password);
             }
             if(result.user.uid!==uid){
               await signOut(auth);
