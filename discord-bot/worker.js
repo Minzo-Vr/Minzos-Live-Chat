@@ -405,6 +405,11 @@ export default {
  }
  if(data.type!==2)return reply("Unsupported interaction.",true);
  const name=data.data?.name;
+ if(name==="speak"||name==="stop"){
+  if(!data.guild_id||String(data.guild_id)!==String(env.DISCORD_GUILD_ID))return reply("Voice commands only work in the configured server.",true);
+  ctx.waitUntil(finishVoiceBridge(data,env,name));
+  return json({type:5,data:{flags:64}});
+ }
  if(name==="ask"){
   if(!data.guild_id||!env.ASK_CHANNEL_ID||data.channel_id!==env.ASK_CHANNEL_ID)
    return reply("This command can ONLY be used in "+(env.ASK_CHANNEL_ID?"<#"+env.ASK_CHANNEL_ID+">":"the designated support channel")+".",true);
@@ -552,3 +557,17 @@ export default {
  }
  return reply("Unknown command. Try /help.",true);
 }};
+async function finishVoiceBridge(data,env,name){
+ let message;
+ try{
+  if(!env.VOICE_API_URL||!env.VOICE_API_SECRET)throw Error("Voice bridge not configured");
+  const url=new URL("/"+name,env.VOICE_API_URL);
+  if(url.protocol!=="https:")throw Error("HTTPS required");
+  const options=Object.fromEntries((data.data?.options||[]).map(o=>[o.name,o.value]));
+  const response=await fetch(url,{method:"POST",redirect:"error",headers:{"Authorization":"Bearer "+env.VOICE_API_SECRET,"Content-Type":"application/json"},body:JSON.stringify({guildId:data.guild_id,userId:data.member?.user?.id,phrase:options.phrase,voice:options.voice||"natural"}),signal:AbortSignal.timeout(28000)});
+  const result=await response.json();
+  message=response.ok&&result.ok?(name==="stop"?"Speaking stopped.":"Minzo Voice AI is speaking in "+result.channel+"!"):(response.status===401?"Voice bridge authentication failed.":String(result.error||"Voice request failed.").slice(0,300));
+ }catch(error){console.error("Voice bridge failed",error);message="Voice service unavailable. Check Railway and Cloudflare configuration.";}
+ const response=await fetch("https://discord.com/api/v10/webhooks/"+encodeURIComponent(env.DISCORD_APPLICATION_ID)+"/"+encodeURIComponent(data.token)+"/messages/@original",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({content:message,allowed_mentions:{parse:[]}})});
+ if(!response.ok)console.error("Voice reply failed",response.status);
+}
