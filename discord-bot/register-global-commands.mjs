@@ -39,6 +39,7 @@ for(const name of names){
     integration_types:[0,1],
     contexts:[0,1,2]
   };
+  if(name==="speak"||name==="stop"){command.integration_types=[0];command.contexts=[0];}
   if(name==="ask"){
     command.description="Ask Community Hub AI about any app or general topic";
     command.options=[
