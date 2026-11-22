@@ -1,4 +1,11 @@
 export const commands=[
+{name:"loggings",description:"Configure private opt-in custom status logging",default_member_permissions:"8",options:[
+ {type:3,name:"action",description:"Logging action",required:false,choices:[{name:"View settings",value:"view"},{name:"Enable",value:"enable"},{name:"Disable",value:"disable"}]},
+ {type:7,name:"channel",description:"Private administrator text channel (required for enabling)",required:false,channel_types:[0]}
+]},
+{name:"status-sharing",description:"Choose whether your visible custom status changes are shared with admins",options:[
+ {type:3,name:"action",description:"Your opt-in preference; logs expire after 24 hours",required:true,choices:[{name:"Opt in",value:"on"},{name:"Opt out",value:"off"},{name:"View preference",value:"view"}]}
+]},
 {name:"speak",description:"Make Minzo Voice AI speak in your voice channel",options:[{type:3,name:"phrase",description:"What should the bot say?",required:true,max_length:180},{type:3,name:"voice",description:"Choose a voice",required:false,choices:[{name:"Natural",value:"natural"},{name:"Robot",value:"robot"}]}]},
 {name:"stop",description:"Stop Minzo Voice AI speaking"},
 {name:"ping",description:"Check Community Chat bot"},
