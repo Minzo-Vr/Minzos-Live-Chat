@@ -55,3 +55,16 @@ This Gateway bot also handles normal messages in **#1-word-stories**, deleting a
 Required for this feature: `DISCORD_BOT_TOKEN` and `DISCORD_GUILD_ID` (the existing server ID `1564239312613015585`); optional `ONE_WORD_STORIES_CHANNEL_ID` to pin the listener to the specific channel. If that optional ID is absent, it listens by the exact channel name `1-word-stories` in the configured server. Enable **Message Content Intent** in the Developer Portal and grant the bot **View Channel**, **Read Message History**, and **Manage Messages** in the story channel. The existing Cloudflare Worker provides slower, minute-by-minute moderation if this Gateway listener is offline.
 
 The AI help service's `HELP_CHANNEL_ID` and `OPENAI_API_KEY` are now optional for running just the story moderator. `GuildMembers` intent is requested only when optional `ROLE_SYNC_MAP` is configured. Full instructions: [ONE_WORD_STORIES.md](../ONE_WORD_STORIES.md).
+
+
+## Optional custom status logging (/loggings)
+
+The Cloudflare Worker handles guild slash commands, storage, and 24-hour log deletion; this always-on Gateway process detects visible custom status changes. It never tracks online/offline transitions, hidden statuses or initial presence snapshots. Users must explicitly opt in with /status-sharing action:on before status updates are posted. They can opt out at any time; KV propagation can take time. Only use this feature for disclosed server moderation, not individual monitoring or profiling.
+
+1. Enable Presence Intent for the existing Live Chatter bot in the Discord Developer Portal.
+2. Set the same randomly generated high-entropy STATUS_LOG_SECRET in both the Worker and Gateway service. Never put it in GitHub.
+3. Set STATUS_LOG_WORKER_URL to the deployed Worker HTTPS base URL on the Gateway service. DISCORD_GUILD_ID must match both services. The Worker requires the existing SAD_MESSAGES KV binding and scheduled deletion cron.
+4. Redeploy both services, then register the guild slash commands through the existing registration workflow.
+5. Create a text channel denying View Channel to @everyone. Add the bot directly with View Channel, Send Messages and Embed Links; do not add other View Channel permission overwrites. Administrators can already see the channel. Announce the opt-in feature to all members.
+6. Run /loggings action:enable channel:#status-logs. Members opt in individually via /status-sharing action:on.
+7. Test from a consenting account by changing a visible custom status twice while the listener is connected. Confirm logs appear, test opt-out, and confirm the scheduled deletion after 24 hours. Logging is disabled by default and may miss changes when disconnected or rate-limited. The bot cannot reconstruct history or bypass profile privacy.

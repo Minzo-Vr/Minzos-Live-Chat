@@ -1,4 +1,5 @@
 import {Client, GatewayIntentBits, Events} from "discord.js";
+import {setupStatusLogging} from "./status-logging.js";
 import {setupRoleSync} from "./role-sync.js";
 import {ONE_WORD_STORIES_CHANNEL_NAME,isStoryMessageValid} from "./one-word-rules.mjs";
 
@@ -6,6 +7,7 @@ import {ONE_WORD_STORIES_CHANNEL_NAME,isStoryMessageValid} from "./one-word-rule
 if(!process.env.DISCORD_BOT_TOKEN)throw Error("Missing DISCORD_BOT_TOKEN.");
 const gatewayIntents=[GatewayIntentBits.Guilds,GatewayIntentBits.GuildMessages,GatewayIntentBits.MessageContent];
 if(process.env.ROLE_SYNC_MAP)gatewayIntents.push(GatewayIntentBits.GuildMembers);
+if(process.env.STATUS_LOG_SECRET&&process.env.STATUS_LOG_WORKER_URL&&process.env.DISCORD_GUILD_ID)gatewayIntents.push(GatewayIntentBits.GuildPresences);
 const client=new Client({intents:gatewayIntents});
 const cooldowns=new Map();
 const MAX_QUESTION=1200;
@@ -165,4 +167,5 @@ client.on(Events.MessageUpdate,(before,after)=>{
 
 client.on(Events.Error,error=>console.error("Discord client error:",error));
 setupRoleSync(client);
+setupStatusLogging(client);
 await client.login(process.env.DISCORD_BOT_TOKEN);

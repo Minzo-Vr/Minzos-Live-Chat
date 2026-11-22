@@ -1,4 +1,5 @@
 // Community Hub Discord bot. Keep OAuth, Firebase, roles and existing commands unchanged.
+import {statusLogCommand,statusLogBridge} from "./status-logging.js";
 import {TICKET_TYPES,ticketAction,ensureTicketPanels,completeTicketInteraction,completeTicketSetupInteraction} from "./tickets.js";
 import {ensureOneWordStories,moderateOneWordStories,finishOneWordSetup} from "./one-word-stories.js";
 import {handleYouTubeButton,processYouTubeScheduled,processYouTubeDeletions,processYouTubeReset} from "./youtube.js";
@@ -388,6 +389,7 @@ export default {
    }while(cursor);
  },
  async fetch(request,env,ctx){
+ if(new URL(request.url).pathname==="/status-log/bridge")return statusLogBridge(request,env);
  const oauth=await handleOAuth(request,env);if(oauth)return oauth;
  if(request.method!=="POST")return new Response("Community Chat bot endpoint", {status:200});
  const raw=await request.text();
@@ -405,6 +407,9 @@ export default {
  }
  if(data.type!==2)return reply("Unsupported interaction.",true);
  const name=data.data?.name;
+ if(name==="loggings"||name==="status-sharing"){
+  try{return await statusLogCommand(data,env,name);}catch{ return reply("Could not update status logging. Check the Worker configuration.",true);}
+ }
  if(name==="speak"||name==="stop"){
   if(!data.guild_id||String(data.guild_id)!==String(env.DISCORD_GUILD_ID))return reply("Voice commands only work in the configured server.",true);
   ctx.waitUntil(finishVoiceBridge(data,env,name));
@@ -509,7 +514,7 @@ export default {
    return json({type:5,data:{flags:64}});
  }
  if(name==="ping")return reply("🏓 Pong! Community Chat bot is online.");
- if(name==="help")return reply("**Community Hub commands**\n/ask — select an app category or Generic Question\n/ping — bot health\n/sad — timed self-deleting message\n/help — commands\n/latest — latest published update\n/updates — three recent updates\n/status — website link\n/announce — admin-only Discord announcement\n/applications — admin-only application open/closed announcements\n/setup_applications — create private application review channel\n/setup_tickets — install/repair private ticket panels\n/setup_one_word_stories — create or repair #1-word-stories\n/youtube — start, stop or reset @minzo-vr video sharing (admin only)\n/add-role-to-user — server-admin-only linked Community Chat role assignment");
+ if(name==="help")return reply("**Community Hub commands**\n/ask — select an app category or Generic Question\n/ping — bot health\n/sad — timed self-deleting message\n/help — commands\n/latest — latest published update\n/updates — three recent updates\n/status — website link\n/announce — admin-only Discord announcement\n/applications — admin-only application open/closed announcements\n/setup_applications — create private application review channel\n/setup_tickets — install/repair private ticket panels\n/loggings — configure opt-in custom status logs (admin only)\n/status-sharing — opt in or out of status sharing\n/setup_one_word_stories — create or repair #1-word-stories\n/youtube — start, stop or reset @minzo-vr video sharing (admin only)\n/add-role-to-user — server-admin-only linked Community Chat role assignment");
  if(name==="status")return reply("Community Chat: https://minzo-vr.github.io/Minzos-Live-Chat/ (open to check availability)");
 
  if(name==="setup_applications"){
