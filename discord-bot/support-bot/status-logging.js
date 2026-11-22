@@ -37,7 +37,10 @@ export function setupStatusLogging(client){
  const busy=new Set(), last=new Map();
  async function bridge(body){
   const r=await fetch(endpoint,{method:"POST",headers:{authorization:"Bearer "+secret,"content-type":"application/json"},body:JSON.stringify(body),redirect:"error",signal:AbortSignal.timeout(5000)});
-  if(!r.ok)return null;
+  if(!r.ok){
+   console.warn("Status sharing bridge "+body.action+" failed: HTTP "+r.status);
+   return null;
+  }
   return await r.json();
  }
  client.on(Events.PresenceUpdate,async(before,after)=>{
@@ -51,10 +54,12 @@ export function setupStatusLogging(client){
   try{
    const check=await bridge({action:"check",guild,user});
    if(!check?.allowed)return;
-   await bridge({action:"publish",guild,user,text:current});
+   const published=await bridge({action:"publish",guild,user,text:current});
+   if(!published?.ok||!published?.allowed)return;
+   console.log("Opt-in status log delivered");
    last.set(user,Date.now());
    if(last.size>2000)for(const [id,time] of last)if(time<Date.now()-10000)last.delete(id);
-  }catch{console.warn("Status sharing bridge unavailable");}
+  }catch(error){console.warn("Status sharing bridge unavailable:",error?.name||"Error");}
   finally{busy.delete(user);}
  });
 }
