@@ -38,7 +38,7 @@ async function privateChannel(env,id){
 }
 async function createPrivateChannel(env){
  const meResponse=await discord(env,"/users/@me");
- if(!meResponse.ok)throw Error("Could not identify Live Chatter");
+ if(!meResponse.ok)return {ok:false,reason:"Live Chatter identity lookup failed (Discord HTTP "+meResponse.status+"). Check the Cloudflare bot token."};
  const me=await meResponse.json();
  const created=await discord(env,"/guilds/"+env.DISCORD_GUILD_ID+"/channels",{method:"POST",body:JSON.stringify({
   name:"status-logs",type:0,topic:"Private administrator logs of opt-in custom status sharing; messages expire after 24 hours.",
@@ -51,7 +51,7 @@ async function createPrivateChannel(env){
  const channel=await created.json();
  return {ok:true,id:channel.id};
 }
-export async function statusLogCommand(data,env,name){
+async function statusLogCommand(data,env,name){
  const user=data.member?.user?.id;
  if(!env.DISCORD_GUILD_ID||data.guild_id!==env.DISCORD_GUILD_ID||!ID.test(user||""))
   return privateReply("This command is only available in the configured server.");
@@ -76,22 +76,45 @@ export async function statusLogCommand(data,env,name){
  if(opts.action==="enable"){
   if(!env.STATUS_LOG_SECRET)return privateReply("The Gateway bridge secret (STATUS_LOG_SECRET) is not configured.");
   let channel=opts.channel;
+  console.log("Status logging: beginning private channel setup");
   if(!channel){
-   const cfg=await settings(env);
+   let cfg;
+   try{cfg=await settings(env);}catch(error){console.error("Status logging settings read failed",error?.name);return privateReply("Could not read logging settings from SAD_MESSAGES KV. Check the KV binding and quota.");}
    if(cfg.channel&&(await privateChannel(env,cfg.channel)).ok)channel=cfg.channel;
    else{
-    const created=await createPrivateChannel(env);
+    let created;
+    try{created=await createPrivateChannel(env);}catch(error){console.error("Status logging channel creation failed",error?.name);return privateReply("Could not contact Discord to create a channel. Try selecting your existing private channel explicitly.");}
     if(!created.ok)return privateReply(created.reason);
     channel=created.id;
    }
   }
-  const check=await privateChannel(env,channel);
+  let check;
+  try{check=await privateChannel(env,channel);}catch(error){console.error("Status logging channel verification failed",error?.name);return privateReply("Could not complete Discord channel verification. Check Live Chatter’s access and retry.");}
   if(!check.ok)return privateReply(check.reason);
-  await env.SAD_MESSAGES.put(KEY,JSON.stringify({enabled:true,channel}));
+  try{await env.SAD_MESSAGES.put(KEY,JSON.stringify({enabled:true,channel}));}catch(error){console.error("Status logging settings write failed",error?.name);return privateReply("Channel permissions are valid, but Cloudflare could not save logging settings in SAD_MESSAGES KV. Check the KV quota.");}
+  console.log("Status logging: private channel verified and settings saved");
   return privateReply("Status logging enabled in <#"+channel+"> for members who choose /status-sharing action:on. Announce this optional feature in your server. Logs expire after 24 hours.");
  }
  const cfg=await settings(env);
  return privateReply("**Live Chatter Logging**\nCustom status logging: "+(cfg.enabled?"Enabled in <#"+cfg.channel+">":"Disabled")+"\nOpt-in members only • 24-hour retention • hidden statuses excluded\nUse /loggings action:enable channel:#channel, omit channel to create a private one, or use action:disable.");
+}
+// Defer first so Discord's three-second acknowledgment deadline does not interrupt setup.
+export async function finishStatusLogInteraction(data,env,name){
+ let payload;
+ try{
+  const result=await statusLogCommand(data,env,name);
+  payload=(await result.json()).data;
+ }catch(error){
+  console.error("Status logging unexpected failure",error?.name, String(error?.message||"").replace(/https?:\/\/\S+/g,"[url]").slice(0,180));
+  payload={content:"Status logging encountered an unexpected Worker error ("+(error?.name||"Error")+"). Check the Worker logs.",allowed_mentions:{parse:[]}};
+ }
+ const app=String(data.application_id||env.DISCORD_APPLICATION_ID||"");
+ if(!ID.test(app)||typeof data.token!=="string")return;
+ const update=await fetch(API+"/webhooks/"+app+"/"+encodeURIComponent(data.token)+"/messages/@original",{
+  method:"PATCH",headers:{"content-type":"application/json"},
+  body:JSON.stringify({content:payload?.content||"Status logging did not return a result.",allowed_mentions:{parse:[]}})
+ });
+ if(!update.ok)console.error("Status logging interaction reply failed",update.status);
 }
 function equal(a,b){
  if(typeof a!=="string"||typeof b!=="string"||a.length!==b.length)return false;
