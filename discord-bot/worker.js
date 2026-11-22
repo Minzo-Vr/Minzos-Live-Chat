@@ -1,5 +1,5 @@
 // Community Hub Discord bot. Keep OAuth, Firebase, roles and existing commands unchanged.
-import {statusLogCommand,statusLogBridge} from "./status-logging.js";
+import {finishStatusLogInteraction,statusLogBridge} from "./status-logging.js";
 import {TICKET_TYPES,ticketAction,ensureTicketPanels,completeTicketInteraction,completeTicketSetupInteraction} from "./tickets.js";
 import {ensureOneWordStories,moderateOneWordStories,finishOneWordSetup} from "./one-word-stories.js";
 import {handleYouTubeButton,processYouTubeScheduled,processYouTubeDeletions,processYouTubeReset} from "./youtube.js";
@@ -408,7 +408,8 @@ export default {
  if(data.type!==2)return reply("Unsupported interaction.",true);
  const name=data.data?.name;
  if(name==="loggings"||name==="status-sharing"){
-  try{return await statusLogCommand(data,env,name);}catch{ return reply("Could not update status logging. Check the Worker configuration.",true);}
+  ctx.waitUntil(finishStatusLogInteraction(data,env,name));
+  return json({type:5,data:{flags:64}});
  }
  if(name==="speak"||name==="stop"){
   if(!data.guild_id||String(data.guild_id)!==String(env.DISCORD_GUILD_ID))return reply("Voice commands only work in the configured server.",true);
